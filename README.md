@@ -4,6 +4,18 @@ An open source agentic learning platform.
 
 > Early days. The foundation is in place; the platform itself is not built yet.
 
+## What wissly does
+
+You bring your own material — a script, a slide deck, your notes. wissly
+breaks it into a knowledge base, generates study artefacts from it, and
+tracks what you can actually do. Not only flashcards and quizzes: layered
+summaries, cloze, free recall, explain-it-back, ordering, practice exams. Every
+generated claim points back at the passage it came from, and how much grain a
+subject carries is how much of it you have not learned yet.
+
+The full catalogue, the staging and the decisions behind them are in
+[`docs/superpowers/specs/2026-07-24-wissly-feature-set-design.md`](docs/superpowers/specs/2026-07-24-wissly-feature-set-design.md).
+
 ## Stack
 
 | Layer | Choice |

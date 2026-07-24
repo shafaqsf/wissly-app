@@ -7,7 +7,7 @@ commits, code, comments, docs.
 
 | Kind of change | Where |
 | --- | --- |
-| A feature, or a fix to one | Feature branch in its own worktree, then a PR |
+| A feature, or a fix to one | Feature branch in its own worktree, pushed for review |
 | Configuration, tooling, CI, dependency bumps, docs | Directly on `main` |
 
 Configuration is not a feature. Adding a linter rule, bumping Next.js, or
@@ -32,7 +32,7 @@ refactor/v0.4.0-agent-run-store
 ```
 
 The version in the name is a statement of intent. If the scope of the branch
-changes, rename the branch (`git branch -m`) before opening the PR.
+changes, rename the branch (`git branch -m`) before pushing it.
 
 Two branches must never claim the same version. Check `git tag` and the open
 branches before you pick one.
@@ -58,7 +58,7 @@ edited only on `main`, immediately after the merge:
 ```bash
 git switch main && git pull
 npm version 0.3.0 --no-git-tag-version   # package.json + package-lock.json
-# add the CHANGELOG.md entry — the PR body carries the text
+# add the CHANGELOG.md entry — handed over with the push
 git commit -am "chore(release): 0.3.0"
 git tag -a v0.3.0 -m "0.3.0"
 git push && git push --tags
@@ -104,9 +104,10 @@ The directory name is the branch name with `/` replaced by `-`.
 git worktree add ../feat-v0.3.0-openrouter-client -b feat/v0.3.0-openrouter-client
 cd ../feat-v0.3.0-openrouter-client && npm install
 
-# finish
+# finish — push only; the maintainer opens and squash-merges the PR
 git push -u origin feat/v0.3.0-openrouter-client
-# open and squash-merge the PR on GitHub, then:
+
+# after the maintainer has merged it
 cd ../wissly-app
 git worktree remove ../feat-v0.3.0-openrouter-client
 git branch -d feat/v0.3.0-openrouter-client
@@ -115,24 +116,34 @@ git branch -d feat/v0.3.0-openrouter-client
 Each worktree needs its own `npm install` and its own `.env.local` — neither
 is tracked by git.
 
-## Pull requests
+## Handover: push, then stop
 
-PRs are squash-merged, so the PR title becomes the single commit on `main`.
-Write it as a Conventional Commit:
+**Pull requests are opened, reviewed and merged by the maintainer. Nobody
+else — no contributor tooling, no coding agent — creates, edits, comments on
+or merges them.** Work on a branch ends at the push:
 
+```bash
+git push -u origin feat/v0.3.0-openrouter-client
 ```
-feat(agent): add OpenRouter chat completion client
-```
 
-The PR body states the target version and carries the CHANGELOG text ready to
-paste:
+Along with the push, hand over two things as plain output — not committed,
+not written into any file:
 
-```markdown
-Target version: 0.3.0
+1. A suggested PR title, formatted as a Conventional Commit. PRs are
+   squash-merged, so this title becomes the single commit on `main`.
 
-### Added
-- OpenRouter chat completion client with configurable model and retry on 429.
-```
+   ```
+   feat(agent): add OpenRouter chat completion client
+   ```
+
+2. The CHANGELOG entry for the target version, ready to paste.
+
+   ```markdown
+   ### Added
+   - OpenRouter chat completion client with configurable model and retry on 429.
+   ```
+
+The maintainer decides what to do with both.
 
 ## Test-driven development
 

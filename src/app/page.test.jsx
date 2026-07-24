@@ -1,37 +1,40 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { getClaims, redirect } = vi.hoisted(() => ({
+  getClaims: vi.fn(),
+  redirect: vi.fn((url) => {
+    throw new Error(`NEXT_REDIRECT:${url}`)
+  }),
+}))
+
+vi.mock('@/lib/supabase/server.js', () => ({
+  createClient: vi.fn(async () => ({ auth: { getClaims } })),
+}))
+vi.mock('next/navigation', () => ({ redirect }))
+
 import Home from './page'
 
-describe('Home page', () => {
-  it('names the platform in the main heading', () => {
-    render(<Home />)
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: /wissly/i }),
-    ).toBeInTheDocument()
+describe('the root route', () => {
+  it('takes a signed-in learner straight to their dashboard', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null })
+
+    await expect(Home()).rejects.toThrow('NEXT_REDIRECT:/dashboard')
   })
 
-  it('states what the platform is for', () => {
-    render(<Home />)
+  it('sends a signed-out visitor to sign in', async () => {
+    getClaims.mockResolvedValue({ data: null, error: null })
 
-    expect(screen.getByText(/agentic learning platform/i)).toBeInTheDocument()
+    await expect(Home()).rejects.toThrow('NEXT_REDIRECT:/sign-in')
   })
 
-  it('says the platform is open source', () => {
-    render(<Home />)
+  it('renders nothing of its own — it is a junction, not a page', async () => {
+    getClaims.mockResolvedValue({ data: null, error: null })
 
-    expect(screen.getByText(/open source/i)).toBeInTheDocument()
-  })
-
-  it('exposes exactly one main landmark', () => {
-    render(<Home />)
-
-    expect(screen.getAllByRole('main')).toHaveLength(1)
-  })
-
-  it('carries a single grain field, so the noise reads as one signal', () => {
-    const { container } = render(<Home />)
-
-    expect(container.querySelectorAll('.grain')).toHaveLength(1)
+    await expect(Home()).rejects.toThrow()
+    expect(redirect).toHaveBeenCalledTimes(1)
   })
 })

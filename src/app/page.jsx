@@ -1,26 +1,13 @@
-export default function Home() {
-  return (
-    <main
-      className="grain grain-field flex flex-1 flex-col justify-center px-6 py-24"
-      style={{ "--grain": "var(--grain-2)" }}
-    >
-      <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-6">
-        <p className="font-mono text-label text-ink-muted uppercase">
-          Open source
-        </p>
+import { redirect } from 'next/navigation';
 
-        <h1 className="font-display text-display-xl font-extrabold">wissly</h1>
+import { createClient } from '@/lib/supabase/server.js';
 
-        <p className="text-title text-ink-muted">
-          An agentic learning platform. Learning is the move from noise to
-          signal — this interface says so with its own grain.
-        </p>
+/* `/` is a junction, not a page. A learner opening wissly wants the thing
+   they came for — their dashboard, or the sign-in that leads to it. What the
+   platform is belongs in the README, not in the way. */
+export default async function Home() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
 
-        <p className="text-body-s text-ink-muted border-rule border-t pt-6">
-          Under construction. The foundation is in place; the platform is not
-          built yet.
-        </p>
-      </div>
-    </main>
-  );
+  redirect(data?.claims?.sub ? '/dashboard' : '/sign-in');
 }

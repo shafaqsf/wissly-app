@@ -55,7 +55,21 @@ describe('the proxy', () => {
     expect(response.headers.get('location')).toBeNull()
   })
 
-  it('leaves the landing page open to everyone', async () => {
+  it.each(['/review', '/progress', '/library'])(
+    'guards %s, which sits in the dashboard frame and holds a learner\'s work',
+    async (path) => {
+      signedOut()
+
+      const response = await run(path)
+
+      expect(response.status).toBe(307)
+      const location = new URL(response.headers.get('location'))
+      expect(location.pathname).toBe('/sign-in')
+      expect(location.searchParams.get('next')).toBe(path)
+    },
+  )
+
+  it('leaves the root junction to decide for itself', async () => {
     signedOut()
 
     const response = await run('/')

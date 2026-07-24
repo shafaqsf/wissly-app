@@ -5,7 +5,7 @@ import DashboardShell from '@/components/shell/dashboard-shell';
 import { createClient } from '@/lib/supabase/server.js';
 
 /* The route group keeps `/dashboard` out of a nested URL segment while every
-   page inside it shares one frame. The landing page at `/` is untouched. */
+   page inside it shares one frame. `/` is a junction that redirects here. */
 export default async function DashboardLayout({ children }) {
   // The proxy already turned a signed-out visitor away, but that check is
   // optimistic — it reads a cookie before the request reaches this tree.

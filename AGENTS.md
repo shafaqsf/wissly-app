@@ -33,11 +33,16 @@ run it, confirm it fails *for the reason you expect*, then write the smallest
 code that makes it pass. `npm test` before every commit.
 
 **Row level security.** RLS is a first-class requirement, not a hardening pass
-at the end. The Supabase anon key is public — the database is the only thing
-protecting the data. A migration that creates a table without
-`enable row level security` and at least one policy is incomplete and must not
-be committed. The service role key is server-only and never reaches a
-`NEXT_PUBLIC_` variable.
+at the end. The Supabase publishable key reaches the browser, so the database
+is the only thing protecting the data. A migration that creates a table in an
+exposed schema without `enable row level security` and at least one policy is
+incomplete and must not be committed. `TO authenticated` alone is not a
+policy — it checks the role, not which rows that role may touch; pair it with
+an ownership predicate. `UPDATE` policies need both `USING` and `WITH CHECK`,
+and an `UPDATE` without a `SELECT` policy silently affects zero rows. Views
+bypass RLS unless created `WITH (security_invoker = true)`. The secret key is
+server-only, bypasses RLS entirely, and never reaches a `NEXT_PUBLIC_`
+variable or a client component.
 
 **No pull requests.** Push feature branches; the maintainer opens, reviews and
 merges every PR. Never create, edit, comment on or merge one. On push, hand

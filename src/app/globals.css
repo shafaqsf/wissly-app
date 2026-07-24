@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
+/* Tokens are defined in docs/DESIGN.md. Change them there first. */
+
+@theme {
+  /* Colour — ink on paper, no hue anywhere. */
+  --color-paper: #ffffff;
+  --color-paper-sunk: #f4f4f4;
+  --color-rule: #e4e4e4;
+  --color-ink-faint: #9a9a9a;
+  --color-ink-muted: #5c5c5c;
+  --color-ink: #000000;
+
+  /* Type */
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --text-display-xl: 4.5rem;
+  --text-display-xl--line-height: 1;
+  --text-display-xl--letter-spacing: -0.03em;
+  --text-display-l: 3rem;
+  --text-display-l--line-height: 1.05;
+  --text-display-l--letter-spacing: -0.02em;
+  --text-heading: 1.875rem;
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.01em;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.3;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.6;
+  --text-body-s: 0.9375rem;
+  --text-body-s--line-height: 1.6;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.08em;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+
+  /* Shape — controls only; structural surfaces stay square. */
+  --radius-control: 4px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Grain intensities. See "Grain" in docs/DESIGN.md. */
+  --grain-0: 0;
+  --grain-1: 0.035;
+  --grain-2: 0.07;
+  --grain-3: 0.14;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Grain -----------------------------------------------------------
+   Attach `.grain` to a positioned element and set --grain to one of the
+   intensity tokens. The layer is inert: it never intercepts a pointer. */
+
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain-image);
+  opacity: var(--grain, var(--grain-1));
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* A grainy gradient: sunk paper at the focus, clean paper at the edge,
+   grain on top. Reserved for hero fields, agent work states and empty
+   states — see docs/DESIGN.md. */
+.grain-field {
+  background-image: radial-gradient(
+    ellipse 80% 60% at 50% 35%,
+    var(--color-paper-sunk) 0%,
+    var(--color-paper) 70%
+  );
+}
+
+/* The drift: an agent is still working. */
+.grain-working::before {
+  animation: grain-drift 8s ease-in-out infinite alternate;
+}
+
+@keyframes grain-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-8px, 6px, 0);
+  }
+}
+
+/* --- Interaction floor ---------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain-working::before {
+    animation: none;
+  }
+
+  .grain::before {
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 639px) {
+  :root {
+    --text-display-xl: 2.75rem;
+    --text-display-l: 2.125rem;
+  }
 }

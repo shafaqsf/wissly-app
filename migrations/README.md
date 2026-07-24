@@ -2,6 +2,26 @@
 
 Plain SQL, applied in ascending filename order. Nothing else determines order.
 
+## Applying them
+
+By hand, in the Supabase dashboard: **SQL Editor → New query**, paste the file,
+run it. One file per query, in ascending order, and never a file that has
+already been applied — these migrations are forward-only and not idempotent
+beyond the `if not exists` guards they carry themselves.
+
+There is no migration runner and no direct Postgres connection string in the
+environment. The publishable and secret keys speak to PostgREST, which cannot
+execute DDL, so nothing in the application can apply a migration — by design.
+
+The cost of applying by hand is that the database has no record of what ran.
+**The files in this directory are that record.** A file merged to `main` is one
+that has been applied; if you merge one without running it, nothing will tell
+you.
+
+After running a migration, open **Advisors → Security Advisor** in the
+dashboard and clear anything it reports. It is the check that catches a table
+left without row level security, and it is not optional.
+
 ## Naming
 
 ```
@@ -41,6 +61,7 @@ merge renumbers.
     everyone. Prefer `security invoker`.
   - Never put authorization data in `raw_user_meta_data` — users can edit it.
     Use `raw_app_meta_data`.
-  - Run `supabase db advisors` before committing a migration.
+  - Check **Advisors → Security Advisor** in the dashboard after applying a
+    migration, and before merging it.
 - **One concern per file.** A migration that touches three unrelated tables
   should have been three migrations.

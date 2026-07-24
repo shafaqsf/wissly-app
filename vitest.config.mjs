@@ -9,6 +9,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // `import 'server-only'` is a build-time guard: under the `react-server`
+      // condition it resolves to an empty module, everywhere else it throws on
+      // import. Vitest is neither environment, so point it at the empty module
+      // by hand — otherwise every server module under test explodes on line 1.
+      'server-only': fileURLToPath(
+        new URL('./node_modules/server-only/empty.js', import.meta.url),
+      ),
     },
   },
   test: {

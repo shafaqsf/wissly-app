@@ -9,7 +9,14 @@ import { requireEnv } from '@/lib/supabase/env.js'
 /** Everything under these prefixes needs a signed-in learner. Every route in
     the `(dashboard)` group belongs here: the group shares one frame, but the
     proxy matches on the URL, which the group name never reaches. */
-const PROTECTED = ['/dashboard', '/review', '/progress', '/library']
+const PROTECTED = [
+  '/dashboard',
+  '/courses',
+  '/review',
+  '/library',
+  '/progress',
+  '/settings',
+]
 
 /** A signed-in learner has no business on these. */
 const AUTH_ONLY = ['/sign-in', '/sign-up']

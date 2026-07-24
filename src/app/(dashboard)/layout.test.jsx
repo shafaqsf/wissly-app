@@ -31,12 +31,22 @@ describe('the dashboard frame', () => {
     )
   })
 
-  it('shows the learner their page and a way out', async () => {
+  it('shows the learner their page and a way to every other one', async () => {
     getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null })
 
     render(await DashboardLayout({ children: <p>Your subjects</p> }))
 
     expect(screen.getByText('Your subjects')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  // Signing out is an account action and lives on the settings page. Under
+  // every page's content it would appear twice on that one.
+  it('does not carry a sign-out button under every page', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null })
+
+    render(await DashboardLayout({ children: <p>Your subjects</p> }))
+
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument()
   })
 })

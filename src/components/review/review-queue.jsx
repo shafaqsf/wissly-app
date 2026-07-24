@@ -29,7 +29,7 @@ export default function ReviewQueue({ artefacts = [], onRate, onGrade }) {
   if (artefacts.length === 0) {
     return (
       <div
-        className="grain grain-field flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center"
+        className="grain grain-field field-unresolved flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center"
         style={{ '--grain': 'var(--grain-3)' }}
       >
         <p className="max-w-measure text-body">
@@ -43,7 +43,10 @@ export default function ReviewQueue({ artefacts = [], onRate, onGrade }) {
   if (!artefact) {
     return (
       <div
-        className="grain grain-field flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center"
+        // The one place the product says well done. `--grain-0` alone renders
+        // nothing, so the arrival used to look like a blank div; the settled
+        // field gives it a surface to land on.
+        className="grain grain-field field-settled flex min-h-64 flex-col items-center justify-center gap-3 px-6 text-center"
         style={{ '--grain': 'var(--grain-0)' }}
       >
         <p className="max-w-measure text-body">

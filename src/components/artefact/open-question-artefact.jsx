@@ -69,10 +69,10 @@ export default function OpenQuestionArtefact({ artefact, onGrade, onAnswered }) 
 
       {status === 'marking' ? (
         <div
-          className="grain grain-field grain-working flex min-h-32 items-center justify-center"
+          className="grain grain-field grain-working field-unresolved flex min-h-32 items-center justify-center"
           style={{ '--grain': 'var(--grain-3)' }}
         >
-          <p className="font-mono text-label uppercase text-ink-muted">
+          <p className="font-mono text-label uppercase text-ink">
             Marking your answer
           </p>
         </div>

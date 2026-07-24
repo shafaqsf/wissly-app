@@ -78,6 +78,9 @@ async function RecentLessonsPanel() {
     <Panel
       title="Recent lessons"
       wide
+      // The one grain field on this page. If a second panel ever needs one,
+      // this is the one that gives it up.
+      grain
       empty={
         lessons.length === 0
           ? 'Finish a lesson and it will show up here.'

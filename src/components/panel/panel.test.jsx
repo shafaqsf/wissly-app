@@ -88,6 +88,34 @@ describe('Panel', () => {
 
     expect(container.querySelector('.grain')).toBeNull()
   })
+
+  it('grains an empty state when asked, at an intensity text survives', () => {
+    const { container } = render(
+      <Panel title="Recent lessons" empty="Nothing yet." grain />,
+    )
+
+    const field = container.querySelector('.grain')
+    expect(field).toHaveClass('grain-field')
+    expect(field).toHaveStyle({ '--grain': 'var(--grain-2)' })
+  })
+
+  it('never grains a panel that has content, however it was asked', () => {
+    const { container } = render(
+      <Panel title="Courses" grain>
+        <p>content</p>
+      </Panel>,
+    )
+
+    expect(container.querySelector('.grain')).toBeNull()
+  })
+
+  it('never grains a failure — the ink rule carries that alone', () => {
+    const { container } = render(
+      <Panel title="Courses" empty="Nothing yet." error="It broke." grain />,
+    )
+
+    expect(container.querySelector('.grain')).toBeNull()
+  })
 })
 
 describe('PanelSkeleton', () => {

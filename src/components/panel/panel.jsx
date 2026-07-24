@@ -7,9 +7,16 @@ export default function Panel({
   empty,
   error,
   wide = false,
+  grain = false,
   children,
 }) {
   const state = error ? 'error' : empty ? 'empty' : 'content';
+
+  // A surface with nothing on it yet is, definitionally, unresolved — one of
+  // the three places DESIGN.md allows a grainy gradient. It is opt-in because
+  // only one such field may appear per viewport, and a panel cannot know what
+  // the panels beside it are doing. Reviewing the page is what enforces it.
+  const field = grain && state === 'empty';
 
   return (
     <section
@@ -28,7 +35,13 @@ export default function Panel({
         {action}
       </header>
 
-      <div className="flex-1 px-5 py-5">
+      <div
+        className={[
+          'flex-1 px-5 py-5',
+          field ? 'grain grain-field min-h-40' : '',
+        ].join(' ')}
+        style={field ? { '--grain': 'var(--grain-2)' } : undefined}
+      >
         {error ? (
           <p role="alert" className="text-body-s text-ink">
             {error}

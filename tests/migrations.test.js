@@ -33,11 +33,15 @@ describe('migration files', () => {
   })
 })
 
-describe('the stage 1 schema', () => {
+describe('the schema', () => {
   it('creates every table the feature set needs', () => {
     expect(tables.sort()).toEqual([
+      'agent_actions',
+      'agent_runs',
       'artefacts',
       'concepts',
+      'conversations',
+      'messages',
       'reviews',
       'sections',
       'sources',

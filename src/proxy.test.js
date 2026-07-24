@@ -55,7 +55,7 @@ describe('the proxy', () => {
     expect(response.headers.get('location')).toBeNull()
   })
 
-  it.each(['/review', '/progress', '/library'])(
+  it.each(['/review', '/progress', '/library', '/courses', '/settings'])(
     'guards %s, which sits in the dashboard frame and holds a learner\'s work',
     async (path) => {
       signedOut()

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import ReviewQueue from './review-queue'
+import { FORMAT_NAMES } from '@/components/artefact/artefact'
 import { flashcardFixture, clozeFixture } from '@/lib/artefact-fixtures'
 
 const two = [flashcardFixture, clozeFixture]
@@ -28,9 +29,9 @@ describe('ReviewQueue', () => {
     render(<ReviewQueue artefacts={two} />)
 
     expect(screen.getByText('1 of 2 due')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: flashcardFixture.title })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: FORMAT_NAMES.flashcard })).toBeInTheDocument()
     expect(
-      screen.queryByRole('region', { name: clozeFixture.title }),
+      screen.queryByRole('region', { name: FORMAT_NAMES.cloze }),
     ).not.toBeInTheDocument()
   })
 
@@ -75,7 +76,7 @@ describe('ReviewQueue', () => {
     await user.click(screen.getByRole('button', { name: 'Comfortably' }))
 
     expect(screen.getByText('2 of 2 due')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: clozeFixture.title })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: FORMAT_NAMES.cloze })).toBeInTheDocument()
   })
 
   it('closes the queue when the last artefact has been rated', async () => {

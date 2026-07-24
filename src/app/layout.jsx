@@ -1,4 +1,7 @@
 import { Bricolage_Grotesque, JetBrains_Mono, Newsreader } from "next/font/google";
+// KaTeX ships its own stylesheet; formulae are routine in a learning tool,
+// not an edge case, so it loads with the document.
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({

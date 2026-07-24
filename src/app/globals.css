@@ -39,6 +39,9 @@
 
   /* Shape — controls only; structural surfaces stay square. */
   --radius-control: 4px;
+
+  /* The reading measure. Running prose never exceeds it; tables may. */
+  --container-measure: 66ch;
 }
 
 :root {
@@ -111,6 +114,19 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
+}
+
+/* A 44px tap target around a mark that must stay small — a citation numeral
+   inside a line of prose. The target grows; the glyph and the line box do
+   not. Requires `position: relative` on the control. */
+.tap-44::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 @media (prefers-reduced-motion: reduce) {

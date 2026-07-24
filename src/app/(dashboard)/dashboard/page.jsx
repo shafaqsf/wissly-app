@@ -7,7 +7,7 @@ import { listConceptMastery } from '@/lib/data/concepts';
 import { dueArtefacts } from '@/lib/data/review';
 import { listSources } from '@/lib/data/sources';
 import { listSubjects } from '@/lib/data/subjects';
-import { MASTERED_AT } from '@/lib/mastery';
+import { averageMastery, MASTERED_AT, masteryState } from '@/lib/mastery';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = {
@@ -71,6 +71,37 @@ async function DuePanel() {
   );
 }
 
+/* The page's one field, and the only thing on the dashboard that reads the
+   learner's whole position at once: the average across every concept they
+   have. It is a header, so it says where you are before it says anything
+   about what is due. */
+async function DashboardHeader() {
+  const supabase = await createClient();
+  const concepts = await listConceptMastery(supabase);
+  const state = masteryState(averageMastery(concepts));
+
+  return (
+    <header
+      className={`grain grain-field ${state.field} flex flex-col gap-2 px-6 py-10 md:px-10 md:py-14`}
+      style={{ '--grain': state.grain }}
+    >
+      <p className="font-mono text-label uppercase text-ink">Your work</p>
+      <h1 className="font-display text-display-l font-bold">Dashboard</h1>
+    </header>
+  );
+}
+
+/* The header before its concepts arrive. Same box, no field — an empty field
+   would claim a state the page has not read yet. */
+function DashboardHeaderSkeleton() {
+  return (
+    <header className="flex flex-col gap-2 px-6 py-10 md:px-10 md:py-14">
+      <p className="font-mono text-label uppercase text-ink-muted">Your work</p>
+      <h1 className="font-display text-display-l font-bold">Dashboard</h1>
+    </header>
+  );
+}
+
 async function MaterialPanel() {
   const supabase = await createClient();
   const sources = await listSources(supabase);
@@ -79,9 +110,8 @@ async function MaterialPanel() {
     <Panel
       title="Recent material"
       wide
-      // The one grain field on this page. If a second panel ever needs one,
-      // this is the one that gives it up.
-      grain
+      // No field here. The header took the page's one field, and two would
+      // read as a texture pack rather than as a signal.
       empty={
         sources.length === 0
           ? 'Nothing yet. Add a page of notes in the library and wissly will read it.'
@@ -102,12 +132,9 @@ async function MaterialPanel() {
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <p className="font-mono text-label uppercase text-ink-muted">
-          Your work
-        </p>
-        <h1 className="font-display text-display-l font-bold">Dashboard</h1>
-      </header>
+      <Suspense fallback={<DashboardHeaderSkeleton />}>
+        <DashboardHeader />
+      </Suspense>
 
       <PanelGrid>
         <Suspense fallback={<PanelSkeleton title="Subjects" />}>

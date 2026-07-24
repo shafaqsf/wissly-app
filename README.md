@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# wissly
 
-## Getting Started
+An open source agentic learning platform.
 
-First, run the development server:
+> Early days. The foundation is in place; the platform itself is not built yet.
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| Application | Next.js 16, App Router, JavaScript |
+| Styling | Tailwind CSS v4 |
+| Persistence | Supabase (Postgres, Auth, row level security) |
+| Language models | OpenRouter |
+| Tests | Vitest, Testing Library |
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in Supabase and OpenRouter credentials
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app runs on http://localhost:3000.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Does |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm test` | Run the test suite once |
+| `npm run test:watch` | Re-run tests on change |
+| `npm run test:coverage` | Coverage report |
+| `npm run lint` | ESLint |
 
-## Learn More
+## Layout
 
-To learn more about Next.js, take a look at the following resources:
+```
+wissly-app/
+├── src/app/       Routes, layouts and pages (App Router)
+├── migrations/    Numbered SQL migrations
+├── docs/          Conventions and design documents
+└── public/        Static assets
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Read [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) first — it covers branch
+naming, versioning, worktrees, commit format and the test-driven workflow.
+Every behaviour change starts with a failing test.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[MIT](LICENSE)

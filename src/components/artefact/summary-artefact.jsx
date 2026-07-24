@@ -2,15 +2,25 @@
 
 import { useState } from 'react';
 import Prose from './prose';
+import CitationAnchor from './citation-anchor';
 
-/* A summary is the same material at three depths. The learner chooses how far
-   in to go; the choice is a radio set, because the depths are exclusive and a
-   learner should see all three at once rather than discover them one click at
-   a time. */
+/* A summary is the same material at three depths — the payload has exactly
+   three keys and they are these. The learner chooses how far in to go; the
+   choice is a radio set, because the depths are exclusive and all three
+   should be visible at once rather than discovered one click at a time. */
+const LAYERS = [
+  { key: 'three_sentences', label: 'Three sentences' },
+  { key: 'paragraph', label: 'A paragraph' },
+  { key: 'full', label: 'Full depth' },
+];
+
+function layerText(payload, key) {
+  const value = payload[key];
+  return Array.isArray(value) ? value.join(' ') : value;
+}
+
 export default function SummaryArtefact({ artefact }) {
-  const { layers } = artefact.payload;
-  const [layerId, setLayerId] = useState(layers[0].id);
-  const layer = layers.find((item) => item.id === layerId) ?? layers[0];
+  const [layerKey, setLayerKey] = useState(LAYERS[0].key);
 
   return (
     <div className="flex flex-col gap-6">
@@ -19,12 +29,12 @@ export default function SummaryArtefact({ artefact }) {
           Depth
         </legend>
         <div className="flex flex-wrap gap-2">
-          {layers.map((item) => (
+          {LAYERS.map((layer) => (
             <label
-              key={item.id}
+              key={layer.key}
               className={[
                 'inline-flex min-h-11 cursor-pointer items-center rounded-control border px-4 font-mono text-label uppercase',
-                item.id === layer.id
+                layer.key === layerKey
                   ? 'border-ink text-ink'
                   : 'border-rule text-ink-muted hover:text-ink',
               ].join(' ')}
@@ -32,18 +42,28 @@ export default function SummaryArtefact({ artefact }) {
               <input
                 type="radio"
                 name={`${artefact.id}-depth`}
-                value={item.id}
-                checked={item.id === layer.id}
-                onChange={() => setLayerId(item.id)}
+                value={layer.key}
+                checked={layer.key === layerKey}
+                onChange={() => setLayerKey(layer.key)}
                 className="sr-only"
               />
-              {item.label}
+              {layer.label}
             </label>
           ))}
         </div>
       </fieldset>
 
-      <Prose blocks={layer.blocks} sources={artefact.sources} />
+      <div className="flex flex-col gap-2">
+        <Prose text={layerText(artefact.payload, layerKey)} />
+        <p className="max-w-measure text-body-s text-ink-muted">
+          Summarised from
+          <CitationAnchor
+            ordinal={artefact.section_ordinal}
+            anchor={artefact.anchor}
+            passage={artefact.passage}
+          />
+        </p>
+      </div>
     </div>
   );
 }

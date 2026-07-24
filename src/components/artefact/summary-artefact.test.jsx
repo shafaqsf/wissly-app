@@ -9,19 +9,26 @@ describe('SummaryArtefact', () => {
     render(<SummaryArtefact artefact={summaryFixture} />)
 
     expect(screen.getByText(/keeps its direction/)).toBeInTheDocument()
-    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Rearranging gives/)).not.toBeInTheDocument()
   })
 
-  it('offers every layer, and says which one you are reading', () => {
+  it('reads the three sentences as one run of prose', () => {
+    const { container } = render(<SummaryArtefact artefact={summaryFixture} />)
+
+    expect(container.querySelector('p')).toBeInTheDocument()
+    expect(container.textContent).toContain(
+      summaryFixture.payload.three_sentences[1],
+    )
+  })
+
+  it('offers the three depths the payload has, and says which one you read', () => {
     render(<SummaryArtefact artefact={summaryFixture} />)
 
-    const group = screen.getByRole('group', { name: 'Depth' })
-    expect(group).toBeInTheDocument()
-    expect(
-      screen.getByRole('radio', { name: 'Three sentences' }),
-    ).toBeChecked()
+    expect(screen.getByRole('group', { name: 'Depth' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Three sentences' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'A paragraph' })).not.toBeChecked()
     expect(screen.getByRole('radio', { name: 'Full depth' })).toBeInTheDocument()
+    expect(screen.getAllByRole('radio')).toHaveLength(3)
   })
 
   it('switches to the depth the learner picks', async () => {
@@ -30,17 +37,15 @@ describe('SummaryArtefact', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Full depth' }))
 
-    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText(/Rearranging gives/)).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Full depth' })).toBeChecked()
   })
 
-  it('carries its citation anchors into the summary', () => {
+  it('carries the anchor of the section it summarised', () => {
     render(<SummaryArtefact artefact={summaryFixture} />)
 
     expect(
-      screen.getByRole('button', {
-        name: 'Source 1, Lecture notes, Linear maps',
-      }),
+      screen.getByRole('button', { name: 'Source 1, page 12' }),
     ).toBeInTheDocument()
   })
 })

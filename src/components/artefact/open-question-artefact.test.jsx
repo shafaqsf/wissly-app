@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import OpenQuestionArtefact from './open-question-artefact'
-import { openQuestionFixture } from '@/lib/artefact-fixtures'
+import { openQuestionFixture, sampleGrade } from '@/lib/artefact-fixtures'
 
-const grade = async () => openQuestionFixture.payload.sampleFeedback
+const grade = async () => sampleGrade
 
 describe('OpenQuestionArtefact', () => {
   it('asks the question and gives the answer field a real label', () => {
@@ -25,7 +25,7 @@ describe('OpenQuestionArtefact', () => {
     let release
     const slow = () =>
       new Promise((resolve) => {
-        release = () => resolve(openQuestionFixture.payload.sampleFeedback)
+        release = () => resolve(sampleGrade)
       })
 
     const { container } = render(
@@ -41,22 +41,57 @@ describe('OpenQuestionArtefact', () => {
     expect(screen.getByText('Marking your answer')).toBeInTheDocument()
 
     await release()
-    expect(await screen.findByText(/The non-zero condition is missing/)).toBeInTheDocument()
+    expect(await screen.findByText(sampleGrade.feedback)).toBeInTheDocument()
     expect(container.querySelector('.grain-working')).toBeNull()
   })
 
-  it('reports what the answer covered and what it missed', async () => {
+  it('names the verdict in words and lists what the answer left out', async () => {
     const user = userEvent.setup()
     render(<OpenQuestionArtefact artefact={openQuestionFixture} onGrade={grade} />)
 
     await user.type(screen.getByLabelText('Your answer'), 'It keeps its direction.')
     await user.click(screen.getByRole('button', { name: 'Send your answer' }))
 
-    expect(
-      await screen.findByText('The eigenvalue is the factor it is scaled by'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('The vector must be non-zero')).toBeInTheDocument()
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Part of it is there.',
+    )
     expect(screen.getByRole('heading', { name: 'Still missing' })).toBeInTheDocument()
+    expect(screen.getByText(sampleGrade.missing[0])).toBeInTheDocument()
+  })
+
+  it('holds the model answer back until the learner asks for it', async () => {
+    const user = userEvent.setup()
+    render(<OpenQuestionArtefact artefact={openQuestionFixture} onGrade={grade} />)
+
+    await user.type(screen.getByLabelText('Your answer'), 'It keeps its direction.')
+    await user.click(screen.getByRole('button', { name: 'Send your answer' }))
+
+    const reveal = await screen.findByRole('button', { name: 'Show a full answer' })
+    expect(screen.queryByText(/points along v/)).not.toBeInTheDocument()
+
+    await user.click(reveal)
+    expect(screen.getByText(/points along v/)).toBeInTheDocument()
+  })
+
+  it('marks a wrong answer with the one ink rule the design allows', async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <OpenQuestionArtefact
+        artefact={openQuestionFixture}
+        onGrade={async () => ({
+          verdict: 'incorrect',
+          score: 0,
+          missing: openQuestionFixture.payload.criteria,
+          feedback: 'None of the three points is in the answer.',
+        })}
+      />,
+    )
+
+    await user.type(screen.getByLabelText('Your answer'), 'No idea.')
+    await user.click(screen.getByRole('button', { name: 'Send your answer' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('That is not it yet.')
+    expect(container.querySelector('.border-l-2')).not.toBeNull()
   })
 
   it('says what happened when the marking fails, and what to do next', async () => {

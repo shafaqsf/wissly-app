@@ -15,18 +15,19 @@ describe('FlashcardArtefact', () => {
   it('says what the button does', () => {
     render(<FlashcardArtefact artefact={flashcardFixture} />)
 
-    expect(
-      screen.getByRole('button', { name: 'Show the answer' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show the answer' })).toBeInTheDocument()
   })
 
-  it('reveals the back when asked', async () => {
+  it('reveals the back, with the anchor it came from', async () => {
     const user = userEvent.setup()
     render(<FlashcardArtefact artefact={flashcardFixture} />)
 
     await user.click(screen.getByRole('button', { name: 'Show the answer' }))
 
     expect(screen.getByText(/leaving the direction alone/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Source 1, page 12' }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Show the answer' }),
     ).not.toBeInTheDocument()

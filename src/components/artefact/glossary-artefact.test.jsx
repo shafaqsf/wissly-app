@@ -5,7 +5,7 @@ import GlossaryArtefact from './glossary-artefact'
 import { glossaryFixture } from '@/lib/artefact-fixtures'
 
 describe('GlossaryArtefact', () => {
-  it('pairs every term with its definition in a description list', () => {
+  it('pairs the term with its definition in a description list', () => {
     const { container } = render(<GlossaryArtefact artefact={glossaryFixture} />)
 
     expect(container.querySelector('dl')).not.toBeNull()
@@ -13,16 +13,12 @@ describe('GlossaryArtefact', () => {
     expect(screen.getByText(/direction a matrix leaves alone/)).toBeInTheDocument()
   })
 
-  it('gives every entry the anchor its definition came from', async () => {
+  it('opens the passage the definition was drawn from', async () => {
     const user = userEvent.setup()
     render(<GlossaryArtefact artefact={glossaryFixture} />)
 
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Source 2, Lecture notes, The characteristic polynomial',
-      }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Source 1, page 12' }))
 
-    expect(screen.getByText(/roots of det/)).toBeInTheDocument()
+    expect(screen.getByText(/scalar multiple of v/)).toBeInTheDocument()
   })
 })

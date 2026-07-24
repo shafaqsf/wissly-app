@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Prose from './prose';
+import CitationAnchor from './citation-anchor';
 import { buttonClass } from './control';
 
 /* Front, reveal, back. The reveal is the whole mechanism: recall has to be
@@ -20,12 +21,20 @@ export default function FlashcardArtefact({ artefact, onAnswered }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Prose blocks={front} sources={artefact.sources} />
+      <Prose text={front} />
 
       {revealed ? (
         <div className="flex flex-col gap-2 border-t border-rule pt-6">
           <p className="font-mono text-label uppercase text-ink-muted">Answer</p>
-          <Prose blocks={back} sources={artefact.sources} />
+          <Prose text={back} />
+          <p className="max-w-measure text-body-s text-ink-muted">
+            From
+            <CitationAnchor
+              ordinal={artefact.section_ordinal}
+              anchor={artefact.anchor}
+              passage={artefact.passage}
+            />
+          </p>
         </div>
       ) : (
         <div>

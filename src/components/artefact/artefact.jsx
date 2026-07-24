@@ -33,21 +33,17 @@ export const FORMAT_NAMES = {
 
 export default function Artefact({ artefact, onAnswered, onGrade }) {
   const Renderer = RENDERERS[artefact.format];
+  const name = FORMAT_NAMES[artefact.format] ?? 'Artefact';
 
   return (
     <section
-      aria-label={artefact.title}
+      // The format is what the region is; the payload carries no title and
+      // inventing one would put words in the source's mouth.
+      aria-label={name}
       data-format={artefact.format}
       className="flex flex-col gap-4"
     >
-      <header className="flex flex-col gap-1">
-        <p className="font-mono text-label uppercase text-ink-muted">
-          {FORMAT_NAMES[artefact.format] ?? 'Artefact'}
-        </p>
-        <h2 className="font-display text-heading font-semibold">
-          {artefact.title}
-        </h2>
-      </header>
+      <p className="font-mono text-label uppercase text-ink-muted">{name}</p>
 
       {Renderer ? (
         <Renderer artefact={artefact} onAnswered={onAnswered} onGrade={onGrade} />

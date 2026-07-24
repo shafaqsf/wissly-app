@@ -2,56 +2,52 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import ClozeArtefact from './cloze-artefact'
+import { CLOZE_BLANK } from '@/lib/agent/formats'
 import { clozeFixture } from '@/lib/artefact-fixtures'
 
 describe('ClozeArtefact', () => {
-  it('gives every blank a real label rather than a placeholder', () => {
+  it('gives the blank a real label rather than a placeholder', () => {
     render(<ClozeArtefact artefact={clozeFixture} />)
 
-    expect(screen.getByLabelText('Missing word 1')).toBeInTheDocument()
-    expect(screen.getByLabelText('Missing word 2')).toBeInTheDocument()
+    expect(screen.getByLabelText('The missing word')).toBeInTheDocument()
   })
 
-  it('says what the button does', () => {
+  it('puts the field where the marker was, and prints no underscores', () => {
+    const { container } = render(<ClozeArtefact artefact={clozeFixture} />)
+
+    expect(container.textContent).not.toContain(CLOZE_BLANK)
+    expect(screen.getByText(/is called an/)).toBeInTheDocument()
+  })
+
+  it('will not check an empty blank', () => {
     render(<ClozeArtefact artefact={clozeFixture} />)
 
+    expect(screen.getByRole('button', { name: 'Check your answer' })).toBeDisabled()
+  })
+
+  it('marks a right answer in words, not in colour, ignoring case', async () => {
+    const user = userEvent.setup()
+    render(<ClozeArtefact artefact={clozeFixture} />)
+
+    await user.type(screen.getByLabelText('The missing word'), 'Eigenvector ')
+    await user.click(screen.getByRole('button', { name: 'Check your answer' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Right.')
+  })
+
+  it('gives the word back when the learner missed it', async () => {
+    const user = userEvent.setup()
+    render(<ClozeArtefact artefact={clozeFixture} />)
+
+    await user.type(screen.getByLabelText('The missing word'), 'determinant')
+    await user.click(screen.getByRole('button', { name: 'Check your answer' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Not right. The word is "eigenvector".',
+    )
     expect(
-      screen.getByRole('button', { name: 'Check your answers' }),
+      screen.getByRole('button', { name: 'Source 1, page 12' }),
     ).toBeInTheDocument()
-  })
-
-  it('marks a right answer in words, not in colour', async () => {
-    const user = userEvent.setup()
-    render(<ClozeArtefact artefact={clozeFixture} />)
-
-    await user.type(screen.getByLabelText('Missing word 1'), 'Eigenvector')
-    await user.type(screen.getByLabelText('Missing word 2'), 'eigenvalue')
-    await user.click(screen.getByRole('button', { name: 'Check your answers' }))
-
-    expect(screen.getByRole('status')).toHaveTextContent('Both blanks right')
-  })
-
-  it('shows the answer the learner missed, and where', async () => {
-    const user = userEvent.setup()
-    render(<ClozeArtefact artefact={clozeFixture} />)
-
-    await user.type(screen.getByLabelText('Missing word 1'), 'eigenvector')
-    await user.type(screen.getByLabelText('Missing word 2'), 'determinant')
-    await user.click(screen.getByRole('button', { name: 'Check your answers' }))
-
-    expect(screen.getByRole('status')).toHaveTextContent('1 of 2 right')
-    expect(screen.getByText('eigenvalue')).toBeInTheDocument()
-  })
-
-  it('accepts a spelling the payload allows', async () => {
-    const user = userEvent.setup()
-    render(<ClozeArtefact artefact={clozeFixture} />)
-
-    await user.type(screen.getByLabelText('Missing word 1'), 'eigen vector')
-    await user.type(screen.getByLabelText('Missing word 2'), ' Eigen Value ')
-    await user.click(screen.getByRole('button', { name: 'Check your answers' }))
-
-    expect(screen.getByRole('status')).toHaveTextContent('Both blanks right')
   })
 
   it('tells the queue how the learner did', async () => {
@@ -64,9 +60,8 @@ describe('ClozeArtefact', () => {
       />,
     )
 
-    await user.type(screen.getByLabelText('Missing word 1'), 'eigenvector')
-    await user.type(screen.getByLabelText('Missing word 2'), 'eigenvalue')
-    await user.click(screen.getByRole('button', { name: 'Check your answers' }))
+    await user.type(screen.getByLabelText('The missing word'), 'eigenvector')
+    await user.click(screen.getByRole('button', { name: 'Check your answer' }))
 
     expect(answered[0]).toMatchObject({
       artefactId: clozeFixture.id,

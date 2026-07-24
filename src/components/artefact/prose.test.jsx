@@ -2,13 +2,9 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import Prose from './prose'
 
-const sources = [
-  { number: 1, id: 'section-12', label: 'Linear maps, page 12', passage: 'p' },
-]
-
 describe('Prose', () => {
   it('renders a paragraph of running text', () => {
-    render(<Prose blocks={[{ type: 'paragraph', text: 'Eigenvectors keep their direction.' }]} />)
+    render(<Prose text="Eigenvectors keep their direction." />)
 
     expect(
       screen.getByText('Eigenvectors keep their direction.'),
@@ -16,43 +12,32 @@ describe('Prose', () => {
   })
 
   it('holds running prose to the 66-character measure', () => {
-    const { container } = render(
-      <Prose blocks={[{ type: 'paragraph', text: 'Running text.' }]} />,
-    )
+    const { container } = render(<Prose text="Running text." />)
 
     expect(container.querySelector('p')).toHaveClass('max-w-measure')
   })
 
-  it('renders an inline citation marker as an anchor to its source', () => {
-    render(
-      <Prose
-        blocks={[{ type: 'paragraph', text: 'A scalar multiple. [[1]]' }]}
-        sources={sources}
-      />,
-    )
+  it('breaks a payload into paragraphs on a blank line', () => {
+    const { container } = render(<Prose text={'First point.\n\nSecond point.'} />)
 
-    expect(
-      screen.getByRole('button', { name: 'Source 1, Linear maps, page 12' }),
-    ).toBeInTheDocument()
+    expect(container.querySelectorAll('p')).toHaveLength(2)
   })
 
   it('renders inline mathematics through KaTeX rather than as raw TeX', () => {
-    const { container } = render(
-      <Prose blocks={[{ type: 'paragraph', text: 'Take $Av = \\lambda v$ here.' }]} />,
-    )
+    const { container } = render(<Prose text="Take $Av = \lambda v$ here." />)
 
     expect(container.querySelector('.katex')).not.toBeNull()
     expect(container.textContent).not.toContain('\\lambda')
   })
 
-  it('renders a display formula with an accessible description', () => {
-    render(<Prose blocks={[{ type: 'math', tex: 'A v = \\lambda v', label: 'A v equals lambda v' }]} />)
+  it('renders a display formula, and names it for a screen reader', () => {
+    render(<Prose text={'Then:\n\n$$A v = \\lambda v$$'} />)
 
-    expect(screen.getByRole('math', { name: 'A v equals lambda v' })).toBeInTheDocument()
+    expect(screen.getByRole('math', { name: 'A v = \\lambda v' })).toBeInTheDocument()
   })
 
   it('says what happened when a formula cannot be rendered, without colour', () => {
-    render(<Prose blocks={[{ type: 'math', tex: '\\frac{' }]} />)
+    render(<Prose text={'$$\\frac{$$'} />)
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'This formula could not be rendered. The source text is shown instead.',
@@ -62,15 +47,7 @@ describe('Prose', () => {
 
   it('highlights code through weight and italics, never through hue', () => {
     const { container } = render(
-      <Prose
-        blocks={[
-          {
-            type: 'code',
-            language: 'python',
-            code: 'def norm(v):  # length\n    return v',
-          },
-        ]}
-      />,
+      <Prose text={'```python\ndef norm(v):  # length\n    return v\n```'} />,
     )
 
     const code = container.querySelector('code')
@@ -81,21 +58,9 @@ describe('Prose', () => {
     expect(code.innerHTML).not.toMatch(/color:|text-(red|green|blue|amber)/)
   })
 
-  it('lets a table break out of the measure, as the design allows', () => {
-    const { container } = render(
-      <Prose
-        blocks={[
-          {
-            type: 'table',
-            head: ['Term', 'Meaning'],
-            rows: [['Rank', 'Dimension of the image']],
-          },
-        ]}
-      />,
-    )
+  it('lets a code block scroll rather than break the page at 360px', () => {
+    const { container } = render(<Prose text={'```sql\nselect 1\n```'} />)
 
-    expect(screen.getByRole('table')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument()
-    expect(container.querySelector('table')).not.toHaveClass('max-w-measure')
+    expect(container.querySelector('pre')).toHaveClass('overflow-x-auto')
   })
 })

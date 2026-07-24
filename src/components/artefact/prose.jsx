@@ -1,14 +1,15 @@
 import katex from 'katex';
-import CitationAnchor from './citation-anchor';
 
-/* Generated content arrives as blocks. Four kinds cover Stage 1: a paragraph
-   of running text, a display formula, a code listing and a table.
+/* Generated content arrives as plain strings — every Stage 1 payload field is
+   one. Three things inside a string still need rendering, and all three are
+   routine in a learning tool rather than an edge case:
 
-   Inline, a paragraph may carry `$tex$` for mathematics and `[[1]]` for a
-   citation. Both are markers rather than markup, so a payload stays a plain
-   string in the database and in a prompt. */
+     $tex$          inline mathematics
+     $$tex$$        a display formula, alone on its own line
+     ```lang        a fenced code block
 
-const MEASURE = 'max-w-measure';
+   Blank lines separate paragraphs. Nothing else is markup, so a payload
+   survives a round trip through the database and a prompt unchanged. */
 
 // Keywords are the only thing weight distinguishes. Hue is not available and
 // would not be used if it were — see docs/DESIGN.md.
@@ -34,7 +35,7 @@ function renderTex(tex, displayMode) {
   }
 }
 
-function Formula({ tex, label, display = false }) {
+export function Formula({ tex, display = false }) {
   const html = renderTex(tex, display);
 
   if (html === null) {
@@ -52,7 +53,7 @@ function Formula({ tex, label, display = false }) {
   return (
     <span
       role="math"
-      aria-label={label ?? tex}
+      aria-label={tex}
       // KaTeX escapes its input and refuses `\href` and friends unless
       // `trust` is set, which it is not. The string is markup it built, not
       // markup the model wrote.
@@ -61,29 +62,22 @@ function Formula({ tex, label, display = false }) {
   );
 }
 
-/* Splits `text` into plain runs, `$tex$` formulae and `[[n]]` citations. */
-function inline(text, sources) {
+/* Splits a string into plain runs and `$tex$` formulae. Exported because a
+   glossary definition and a rationale are one line each and want no <p>. */
+export function renderInline(text) {
   const parts = [];
-  const pattern = /\$([^$]+)\$|\[\[(\d+)\]\]/g;
+  const pattern = /\$([^$]+)\$/g;
   let cursor = 0;
   let match;
   let key = 0;
 
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = pattern.exec(String(text ?? ''))) !== null) {
     if (match.index > cursor) parts.push(text.slice(cursor, match.index));
-
-    if (match[1] !== undefined) {
-      parts.push(<Formula key={`m${key++}`} tex={match[1]} />);
-    } else {
-      const number = Number(match[2]);
-      const source = sources.find((item) => item.number === number);
-      parts.push(<CitationAnchor key={`c${key++}`} source={source} />);
-    }
-
+    parts.push(<Formula key={`m${key++}`} tex={match[1]} />);
     cursor = match.index + match[0].length;
   }
 
-  if (cursor < text.length) parts.push(text.slice(cursor));
+  if (cursor < String(text ?? '').length) parts.push(text.slice(cursor));
   return parts;
 }
 
@@ -110,75 +104,66 @@ function CodeLine({ line, language }) {
   );
 }
 
-function Block({ block, sources }) {
-  if (block.type === 'paragraph') {
-    return <p className={`${MEASURE} text-body`}>{inline(block.text, sources)}</p>;
+/* Splits a payload string into blocks: fenced code, display formulae and
+   paragraphs, in the order they were written. */
+export function toBlocks(text) {
+  const blocks = [];
+
+  for (const chunk of String(text ?? '').split(/\n{2,}/)) {
+    const trimmed = chunk.trim();
+    if (trimmed === '') continue;
+
+    const fence = trimmed.match(/^```(\w*)\n([\s\S]*?)\n?```$/);
+    if (fence) {
+      blocks.push({ type: 'code', language: fence[1] || 'text', code: fence[2] });
+      continue;
+    }
+
+    const display = trimmed.match(/^\$\$([\s\S]+)\$\$$/);
+    if (display) {
+      blocks.push({ type: 'math', tex: display[1].trim() });
+      continue;
+    }
+
+    blocks.push({ type: 'paragraph', text: trimmed });
   }
 
-  if (block.type === 'math') {
-    return (
-      <span className={`${MEASURE} block overflow-x-auto py-2`}>
-        <Formula tex={block.tex} label={block.label} display />
-      </span>
-    );
-  }
-
-  if (block.type === 'code') {
-    return (
-      <pre className="overflow-x-auto border border-rule bg-paper-sunk p-4">
-        <code className="font-mono text-body-s text-ink">
-          {block.code.split('\n').map((line, index) => (
-            <CodeLine key={index} line={line} language={block.language} />
-          ))}
-        </code>
-      </pre>
-    );
-  }
-
-  if (block.type === 'table') {
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-body-s">
-          <thead>
-            <tr>
-              {block.head.map((cell) => (
-                <th
-                  key={cell}
-                  scope="col"
-                  className="border-b border-ink py-2 pr-4 text-left font-mono text-label uppercase"
-                >
-                  {cell}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, index) => (
-              <tr key={index}>
-                {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="border-b border-rule py-2 pr-4 align-top">
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  return null;
+  return blocks;
 }
 
-export default function Prose({ blocks = [], sources = [], className = '' }) {
+export default function Prose({ text, className = '' }) {
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
-      {blocks.map((block, index) => (
-        <Block key={index} block={block} sources={sources} />
-      ))}
+      {toBlocks(text).map((block, index) => {
+        if (block.type === 'code') {
+          return (
+            <pre
+              key={index}
+              className="overflow-x-auto border border-rule bg-paper-sunk p-4"
+            >
+              <code className="font-mono text-body-s text-ink">
+                {block.code.split('\n').map((line, lineIndex) => (
+                  <CodeLine key={lineIndex} line={line} language={block.language} />
+                ))}
+              </code>
+            </pre>
+          );
+        }
+
+        if (block.type === 'math') {
+          return (
+            <span key={index} className="block max-w-measure overflow-x-auto py-2">
+              <Formula tex={block.tex} display />
+            </span>
+          );
+        }
+
+        return (
+          <p key={index} className="max-w-measure text-body">
+            {renderInline(block.text)}
+          </p>
+        );
+      })}
     </div>
   );
 }
-
-export { inline as renderInline };

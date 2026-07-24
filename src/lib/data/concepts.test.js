@@ -80,24 +80,51 @@ describe('naming what a source covers', () => {
 describe('mastery per concept', () => {
   it('joins the score onto the name, because the view carries no term', async () => {
     const supabase = fakeSupabase({
-      concepts: { data: [{ id: 'c1', term: 'Refraction' }], error: null },
+      concepts: {
+        data: [{ id: 'c1', subject_id: 'sub-1', term: 'Refraction' }],
+        error: null,
+      },
       concept_mastery: { data: [{ concept_id: 'c1', mastery: '0.667' }], error: null },
     })
 
     const concepts = await listConceptMastery(supabase, { subjectId: 'sub-1' })
 
-    expect(concepts).toEqual([{ id: 'c1', name: 'Refraction', mastery: 0.667 }])
+    expect(concepts).toEqual([
+      { id: 'c1', subjectId: 'sub-1', name: 'Refraction', mastery: 0.667 },
+    ])
   })
 
   it('reads a concept the view has not scored as untouched, not as missing', async () => {
     const supabase = fakeSupabase({
-      concepts: { data: [{ id: 'c1', term: 'Refraction' }], error: null },
+      concepts: {
+        data: [{ id: 'c1', subject_id: 'sub-1', term: 'Refraction' }],
+        error: null,
+      },
       concept_mastery: { data: [], error: null },
     })
 
     const concepts = await listConceptMastery(supabase, { subjectId: 'sub-1' })
 
-    expect(concepts).toEqual([{ id: 'c1', name: 'Refraction', mastery: 0 }])
+    expect(concepts).toEqual([
+      { id: 'c1', subjectId: 'sub-1', name: 'Refraction', mastery: 0 },
+    ])
+  })
+
+  it('keeps the course each concept belongs to, so a caller can group by it', async () => {
+    const supabase = fakeSupabase({
+      concepts: {
+        data: [
+          { id: 'c1', subject_id: 'sub-1', term: 'Refraction' },
+          { id: 'c2', subject_id: 'sub-2', term: 'Factoring' },
+        ],
+        error: null,
+      },
+      concept_mastery: { data: [], error: null },
+    })
+
+    const concepts = await listConceptMastery(supabase)
+
+    expect(concepts.map((concept) => concept.subjectId)).toEqual(['sub-1', 'sub-2'])
   })
 
   it('does not ask for scores when there are no concepts', async () => {

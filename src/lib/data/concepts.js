@@ -67,6 +67,9 @@ export async function listConcepts(supabase, { subjectId } = {}) {
  * will not embed the concept row into it — so the two are read separately and
  * joined here. A concept the view has not scored yet is untouched, which is
  * mastery 0, not a missing row.
+ *
+ * The course each concept belongs to comes along, so a caller reading every
+ * concept at once can group them without a second query per course.
  */
 export async function listConceptMastery(supabase, { subjectId } = {}) {
   const concepts = await listConcepts(supabase, { subjectId })
@@ -82,6 +85,7 @@ export async function listConceptMastery(supabase, { subjectId } = {}) {
 
   return concepts.map((concept) => ({
     id: concept.id,
+    subjectId: concept.subject_id,
     name: concept.term,
     mastery: byConcept.get(concept.id) ?? 0,
   }))

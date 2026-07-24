@@ -3,13 +3,23 @@
 /* Tokens are defined in docs/DESIGN.md. Change them there first. */
 
 @theme {
-  /* Colour — ink on paper, no hue anywhere. */
+  /* Colour — ink on paper. The chrome has no hue anywhere. */
   --color-paper: #ffffff;
   --color-paper-sunk: #f4f4f4;
   --color-rule: #e4e4e4;
   --color-ink-faint: #9a9a9a;
   --color-ink-muted: #5c5c5c;
   --color-ink: #000000;
+
+  /* Field — the only colour in the product, and it lives inside a grain
+     field. A `--color-field-*` token may be named in a `.field-*` class in
+     this file and nowhere else: not in a component, not on text, not on a
+     border, not on an icon. `globals.css.test.js` enforces that. */
+  --color-field-hot: #ed625d;
+  --color-field-deep: #03232d;
+  --color-field-warm: #f79f88;
+  --color-field-mid: #42b6c6;
+  --color-field-cool: #b2dfe6;
 
   /* Type */
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
@@ -84,15 +94,89 @@ body {
   transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* A grainy gradient: sunk paper at the focus, clean paper at the edge,
-   grain on top. Reserved for hero fields, agent work states and empty
-   states — see docs/DESIGN.md. */
+/* --- The field ------------------------------------------------------
+   Three colour stops bleeding in from the edges of clean paper: heat near
+   the left, depth from the top corner, a cool floor rising from below. The
+   middle stays paper, which is where text sits.
+
+   The stops are custom properties rather than literals so that one class —
+   `.field-unresolved`, `.field-partial`, `.field-settled` — repaints the
+   whole field. Registering them makes the settle able to move colour, not
+   just grain. */
+
+@property --field-near {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --field-far {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --field-floor {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+/* Unattempted, unknown, or an agent still working. Hottest and deepest. */
+.field-unresolved {
+  --field-near: color-mix(in srgb, var(--color-field-hot) 55%, transparent);
+  --field-far: color-mix(in srgb, var(--color-field-deep) 36%, transparent);
+  --field-floor: color-mix(in srgb, var(--color-field-cool) 30%, transparent);
+}
+
+/* Under way. The heat softens, the depth turns to open water. */
+.field-partial {
+  --field-near: color-mix(in srgb, var(--color-field-warm) 42%, transparent);
+  --field-far: color-mix(in srgb, var(--color-field-mid) 30%, transparent);
+  --field-floor: color-mix(in srgb, var(--color-field-cool) 24%, transparent);
+}
+
+/* Settled. Nothing left to resolve — but still a surface, not an absence.
+   `--grain-0` alone renders nothing at all, which reads as a missing element
+   rather than as an arrival. This is what the learner earns. */
+.field-settled {
+  --field-near: color-mix(in srgb, var(--color-field-cool) 10%, transparent);
+  --field-far: color-mix(in srgb, var(--color-field-cool) 26%, transparent);
+  --field-floor: color-mix(in srgb, var(--color-field-cool) 16%, transparent);
+}
+
+/* A grainy gradient. Reserved for agent work states, empty states and the
+   mastery field — see docs/DESIGN.md. Always carries a `.field-*` class;
+   without one the stops are transparent and it renders as clean paper. */
 .grain-field {
-  background-image: radial-gradient(
-    ellipse 80% 60% at 50% 35%,
-    var(--color-paper-sunk) 0%,
-    var(--color-paper) 70%
-  );
+  background-color: var(--color-paper);
+  background-image:
+    radial-gradient(ellipse 65% 55% at 6% 42%, var(--field-near) 0%, transparent 62%),
+    radial-gradient(ellipse 85% 70% at 96% 4%, var(--field-far) 0%, transparent 66%),
+    radial-gradient(ellipse 130% 90% at 50% 108%, var(--field-floor) 0%, transparent 72%);
+  transition:
+    --field-near 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    --field-far 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    --field-floor 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Grain follows the colour. Masked to the same geometry as the stops, so the
+   texture is dense where the field is saturated and the paper core stays
+   clean — the way a print picks up ink unevenly, not the way a filter sits
+   on top of everything. */
+.grain-field::before {
+  mask-image:
+    radial-gradient(ellipse 65% 55% at 6% 42%, #000 0%, transparent 62%),
+    radial-gradient(ellipse 85% 70% at 96% 4%, #000 0%, transparent 66%),
+    radial-gradient(ellipse 130% 90% at 50% 108%, #000 0%, transparent 72%);
+}
+
+/* A flat wash, no geometry. For surfaces that appear several at a time —
+   panel skeletons — where several radial fields would read as texture
+   instead of as signal. */
+.grain-wash {
+  background-color: var(--color-paper-sunk);
+  background-image: linear-gradient(var(--field-far), var(--field-far));
 }
 
 /* The drift: an agent is still working. */
@@ -135,6 +219,12 @@ body {
   }
 
   .grain::before {
+    transition: none;
+  }
+
+  /* The settle survives as an instant state change — the field still lands
+     on its new colour, it just does not travel there. */
+  .grain-field {
     transition: none;
   }
 

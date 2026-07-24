@@ -19,6 +19,34 @@ describe('ConceptMastery', () => {
     expect(within(field).getByText('In progress')).toBeInTheDocument()
   })
 
+  it('carries the same state in its grain and in its colour', async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
+    )
+
+    const field = () => container.querySelector('.grain-field')
+
+    expect(field()).toHaveClass('field-partial')
+    expect(field()).toHaveStyle({ '--grain': 'var(--grain-2)' })
+
+    await user.click(screen.getByRole('button', { name: 'Vector spaces, mastered' }))
+    expect(field()).toHaveClass('field-settled')
+    expect(field()).toHaveStyle({ '--grain': 'var(--grain-0)' })
+
+    await user.click(screen.getByRole('button', { name: 'Diagonalisation, untouched' }))
+    expect(field()).toHaveClass('field-unresolved')
+    expect(field()).toHaveStyle({ '--grain': 'var(--grain-3)' })
+  })
+
+  it('reads its state label in full ink, since it sits on a field', () => {
+    const { container } = render(
+      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
+    )
+
+    expect(container.querySelector('.grain-field .text-ink-muted')).toBeNull()
+  })
+
   it('lists every concept with the state it is in, in words', () => {
     render(<ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />)
 

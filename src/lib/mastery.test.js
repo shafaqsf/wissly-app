@@ -7,6 +7,7 @@ describe('masteryState', () => {
       id: 'untouched',
       label: 'Untouched',
       grain: 'var(--grain-3)',
+      field: 'field-unresolved',
     })
   })
 
@@ -16,6 +17,7 @@ describe('masteryState', () => {
       id: 'in-progress',
       label: 'In progress',
       grain: 'var(--grain-2)',
+      field: 'field-partial',
     })
     expect(masteryState(0.89).grain).toBe('var(--grain-2)')
   })
@@ -25,8 +27,19 @@ describe('masteryState', () => {
       id: 'mastered',
       label: 'Mastered',
       grain: 'var(--grain-0)',
+      field: 'field-settled',
     })
     expect(masteryState(1).grain).toBe('var(--grain-0)')
+  })
+
+  /* Grain and colour are one axis, not two. A state that moved its grain
+     without moving its hue would say two different things at once. */
+  it('moves grain and colour together', () => {
+    const states = [0, 0.5, 1].map(masteryState)
+
+    expect(new Set(states.map((state) => state.grain)).size).toBe(3)
+    expect(new Set(states.map((state) => state.field)).size).toBe(3)
+    expect(states.every((state) => state.field?.startsWith('field-'))).toBe(true)
   })
 
   it('treats a missing or out of range value as untouched', () => {

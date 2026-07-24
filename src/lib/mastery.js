@@ -1,17 +1,38 @@
 /* Mastery is a value in [0,1] per concept, merged from every piece of
-   evidence a learner has produced. It is rendered as grain density and as
-   nothing else: no bar, no percentage, no second progress display.
+   evidence a learner has produced. It is rendered as a field — grain density
+   and hue, moving together — and as nothing else: no bar, no percentage, no
+   second progress display.
 
    Three states, because grain has three meaningful intensities. The 0.9
    threshold is where the scheduler stops asking often enough for the concept
-   to feel like work. */
+   to feel like work.
+
+   This is the only place the two are paired. A component reads `grain` and
+   `field` from here rather than deciding either for itself, so the interface
+   cannot end up saying one thing with its texture and another with its
+   colour. */
 
 export const MASTERED_AT = 0.9;
 
 const STATES = {
-  untouched: { id: 'untouched', label: 'Untouched', grain: 'var(--grain-3)' },
-  'in-progress': { id: 'in-progress', label: 'In progress', grain: 'var(--grain-2)' },
-  mastered: { id: 'mastered', label: 'Mastered', grain: 'var(--grain-0)' },
+  untouched: {
+    id: 'untouched',
+    label: 'Untouched',
+    grain: 'var(--grain-3)',
+    field: 'field-unresolved',
+  },
+  'in-progress': {
+    id: 'in-progress',
+    label: 'In progress',
+    grain: 'var(--grain-2)',
+    field: 'field-partial',
+  },
+  mastered: {
+    id: 'mastered',
+    label: 'Mastered',
+    grain: 'var(--grain-0)',
+    field: 'field-settled',
+  },
 };
 
 export function masteryState(mastery) {

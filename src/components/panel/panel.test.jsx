@@ -49,6 +49,41 @@ describe('Panel', () => {
     expect(screen.queryByText('content')).not.toBeInTheDocument()
   })
 
+  it('paints an empty field at the partial state', () => {
+    const { container } = render(
+      <Panel title="Courses" grain empty="Start your first course to see it here.">
+        <p>content</p>
+      </Panel>,
+    )
+
+    const field = container.querySelector('.grain-field')
+    expect(field).toHaveClass('field-partial')
+    expect(field).toHaveStyle({ '--grain': 'var(--grain-2)' })
+  })
+
+  it('reads its empty copy in full ink once a field is under it', () => {
+    // Muted ink clears 7:1 on paper and less than that on a tinted field.
+    const { container } = render(
+      <Panel title="Courses" grain empty="Start your first course to see it here.">
+        <p>content</p>
+      </Panel>,
+    )
+
+    const field = container.querySelector('.grain-field')
+    expect(field.querySelector('.text-ink-muted')).toBeNull()
+    expect(
+      screen.getByText('Start your first course to see it here.'),
+    ).toHaveClass('text-ink')
+  })
+
+  it('keeps its empty copy secondary when there is no field', () => {
+    render(<Panel title="Courses" empty="Start your first course to see it here." />)
+
+    expect(
+      screen.getByText('Start your first course to see it here.'),
+    ).toHaveClass('text-ink-muted')
+  })
+
   it('states what went wrong and what to do next, without colour', () => {
     const { container } = render(
       <Panel

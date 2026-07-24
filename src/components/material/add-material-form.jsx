@@ -97,7 +97,7 @@ export default function AddMaterialForm({ action, subjects = [], initialState = 
       {pending ? (
         <p
           aria-live="polite"
-          className="grain grain-field flex min-h-32 items-center justify-center px-6 text-center font-mono text-label uppercase text-ink-muted"
+          className="grain grain-field field-unresolved flex min-h-32 items-center justify-center px-6 text-center font-mono text-label uppercase text-ink"
           style={{ '--grain': 'var(--grain-3)' }}
         >
           Reading, then writing what to ask you

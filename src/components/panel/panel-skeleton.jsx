@@ -2,8 +2,9 @@
    that it says everywhere else: this is not resolved yet. When the real panel
    replaces it, the page settles to `--grain-1`.
 
-   Flat grain, no radial gradient — several panels can load at once, and
-   several gradient fields would read as texture instead of as signal. */
+   Flat grain and a flat wash, no radial gradient — several panels can load at
+   once, and several gradient fields would read as texture instead of as
+   signal. The colour is the unresolved one either way. */
 export default function PanelSkeleton({ title, wide = false }) {
   return (
     <section
@@ -21,7 +22,7 @@ export default function PanelSkeleton({ title, wide = false }) {
       </header>
 
       <div
-        className="grain grain-working flex-1 bg-paper-sunk px-5 py-5"
+        className="grain grain-wash grain-working field-unresolved flex-1 px-5 py-5"
         style={{ '--grain': 'var(--grain-3)' }}
       >
         <div className="flex flex-col gap-3" aria-hidden="true">

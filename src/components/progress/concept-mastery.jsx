@@ -4,13 +4,16 @@ import { useState } from 'react';
 import { averageMastery, masteryState } from '@/lib/mastery';
 import { quietButtonClass } from '@/components/artefact/control';
 
-/* Progress, as one grain field.
+/* Progress, as one field.
 
-   DESIGN.md allows exactly one grain field per viewport, and a list of
-   concepts wants one per row. The resolution: the field belongs to whatever
-   the learner is looking at — the subject to begin with, a single concept
-   once one is picked — and the list carries its states in words. The words
-   and the field say the same thing; only the field is a field. */
+   DESIGN.md allows exactly one field per viewport, and a list of concepts
+   wants one per row. The resolution: the field belongs to whatever the
+   learner is looking at — the subject to begin with, a single concept once
+   one is picked — and the list carries its states in words. The words and the
+   field say the same thing; only the field is a field.
+
+   Picking a concept is therefore the settle, in the open: grain and colour
+   travel together to the new state over 600ms. */
 export default function ConceptMastery({ subject, concepts = [] }) {
   const [selectedId, setSelectedId] = useState(null);
 
@@ -23,13 +26,11 @@ export default function ConceptMastery({ subject, concepts = [] }) {
     <div className="flex flex-col gap-8">
       <section
         aria-label="Mastery"
-        className="grain grain-field flex min-h-64 flex-col items-center justify-center gap-2 px-6 py-12 text-center"
+        className={`grain grain-field ${state.field} flex min-h-64 flex-col items-center justify-center gap-2 px-6 py-12 text-center`}
         style={{ '--grain': state.grain }}
       >
         <h2 className="font-display text-display-l font-bold">{heading}</h2>
-        <p className="font-mono text-label uppercase text-ink-muted">
-          {state.label}
-        </p>
+        <p className="font-mono text-label uppercase text-ink">{state.label}</p>
         {selected ? (
           <button
             type="button"

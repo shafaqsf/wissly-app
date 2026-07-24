@@ -38,7 +38,7 @@ export default function Panel({
       <div
         className={[
           'flex-1 px-5 py-5',
-          field ? 'grain grain-field min-h-40' : '',
+          field ? 'grain grain-field field-partial min-h-40' : '',
         ].join(' ')}
         style={field ? { '--grain': 'var(--grain-2)' } : undefined}
       >
@@ -47,7 +47,12 @@ export default function Panel({
             {error}
           </p>
         ) : empty ? (
-          <p className="text-body-s text-ink-muted">{empty}</p>
+          // Muted ink is a 7:1 contrast on paper and less than that on a
+          // tinted field. Inside a field the copy is full ink; outside it
+          // stays secondary, because there it is.
+          <p className={field ? 'text-body-s text-ink' : 'text-body-s text-ink-muted'}>
+            {empty}
+          </p>
         ) : (
           children
         )}

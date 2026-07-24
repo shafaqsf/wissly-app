@@ -53,8 +53,12 @@ output.
 docs do not get a branch or a worktree. Features do, in their own worktree
 named `<type>/v<version>-<description>`.
 
-**No colour.** Black ink, white paper, monochrome icons. State is carried by
-words, icons and grain — never by hue. There is no dark mode.
+**No colour in the chrome.** Black ink, white paper, monochrome icons. Every
+control, glyph, border and label is ink on paper. Hue exists in exactly one
+place — inside a grain field — where it encodes the same state the grain
+encodes and moves with it. A `--color-field-*` token outside a `.field-*`
+class in `globals.css` is a bug, and a test fails on it. No status colours: no
+red for errors, no green for success. There is no dark mode.
 
 **Commit small.** One reviewable thought per commit, Conventional Commits
 format, English.

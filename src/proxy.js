@@ -6,8 +6,10 @@ import { requireEnv } from '@/lib/supabase/env.js'
 /* Next.js 16 renamed Middleware to Proxy. The file must sit beside `app`,
    so `src/proxy.js` is the right place. */
 
-/** Everything under these prefixes needs a signed-in learner. */
-const PROTECTED = ['/dashboard']
+/** Everything under these prefixes needs a signed-in learner. Every route in
+    the `(dashboard)` group belongs here: the group shares one frame, but the
+    proxy matches on the URL, which the group name never reaches. */
+const PROTECTED = ['/dashboard', '/review', '/progress', '/library']
 
 /** A signed-in learner has no business on these. */
 const AUTH_ONLY = ['/sign-in', '/sign-up']

@@ -46,11 +46,24 @@ wissly-app/
 └── public/        Static assets
 ```
 
+## Design
+
+Black ink on white paper, monochrome icons, no colour and no dark mode. The
+only decorative device is grain — and it is not decorative: noise density
+encodes how much of a subject is still unresolved. The rules are binding and
+live in [`docs/DESIGN.md`](docs/DESIGN.md).
+
 ## Contributing
 
-Read [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) first — it covers branch
-naming, versioning, worktrees, commit format and the test-driven workflow.
-Every behaviour change starts with a failing test.
+Two documents, both binding:
+
+- [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) — branch naming, versioning,
+  worktrees, commit format, the test-driven workflow.
+- [`docs/DESIGN.md`](docs/DESIGN.md) — colour, type, space, icons, grain,
+  motion, interface copy.
+
+Every behaviour change starts with a failing test. Pull requests are opened
+and merged by the maintainer; contributors push branches.
 
 ## License
 

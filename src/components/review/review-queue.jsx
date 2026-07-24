@@ -65,7 +65,9 @@ export default function ReviewQueue({ artefacts = [], onRate, onGrade }) {
         // revealed state to the next one.
         key={artefact.id}
         artefact={artefact}
-        onGrade={onGrade}
+        // The renderer knows the answer but not which artefact it belongs to.
+        // Naming it here is what lets marking be a server action.
+        onGrade={(answer) => onGrade?.({ artefactId: artefact.id, answer })}
         onAnswered={setAnswered}
       />
 

@@ -33,7 +33,12 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${bricolage.variable} ${newsreader.variable} ${jetbrainsMono.variable} h-full`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      {/* Extensions write their own attributes onto `<body>` before React
+          hydrates, and React reports the difference as a mismatch we cannot
+          fix from here. Everything inside stays checked. */}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

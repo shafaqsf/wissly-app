@@ -1,22 +1,31 @@
 'use client';
 
+import { useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
 import ReviewQueue from './review-queue';
-import { sampleGrade } from '@/lib/artefact-fixtures';
 
 /* The queue with its two callbacks filled in.
 
-   Both are stand-ins. `onRate` will hand the grade to the scheduler and
-   `onGrade` will ask the agent to mark an open answer; until those layers
-   exist, the rating is dropped and the marking is answered from the fixture
-   after a beat, so the working grain field is actually visible. */
-export default function ReviewSession({ artefacts = [] }) {
-  async function grade() {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 600);
-    });
+   Both are server actions handed down from the page — a client component can
+   reach neither the database nor the model, and should not try. The rating is
+   recorded as it happens; the page is refreshed once the sitting is over
+   rather than after every artefact, so a round trip the learner has no use
+   for does not interrupt the rhythm. */
+export default function ReviewSession({ artefacts = [], onRateAction, onGradeAction }) {
+  const router = useRouter();
+  const rated = useRef(0);
 
-    return sampleGrade;
+  async function rate({ artefactId, rating }) {
+    rated.current += 1;
+    const wasLast = rated.current >= artefacts.length;
+
+    await onRateAction({ artefactId, rating });
+
+    if (wasLast) {
+      router.refresh();
+    }
   }
 
-  return <ReviewQueue artefacts={artefacts} onRate={() => {}} onGrade={grade} />;
+  return <ReviewQueue artefacts={artefacts} onRate={rate} onGrade={onGradeAction} />;
 }

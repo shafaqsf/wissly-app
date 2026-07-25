@@ -45,7 +45,12 @@ export default function MultipleChoiceArtefact({ artefact, onAnswered }) {
               checked={index === choice}
               disabled={checked}
               onChange={() => setChoice(index)}
-              className="accent-ink"
+              // Chrome keeps its own widget geometry at `appearance: auto`
+              // and drops an author radius with it, so the focus ring came
+              // out square around a round control. Drawn here instead: an
+              // empty ink ring that fills when chosen, which is the legend a
+              // field mark already uses.
+              className="size-4 shrink-0 appearance-none rounded-round border border-ink bg-paper checked:bg-ink"
             />
             <span className="flex-1">{option}</span>
             {checked ? (

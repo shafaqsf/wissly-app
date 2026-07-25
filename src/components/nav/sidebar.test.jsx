@@ -13,6 +13,17 @@ describe('the sidebar', () => {
     )
   })
 
+  /* A focus outline follows the element's own corner, so a control with no
+     radius draws a square ring in an interface that has none — see "Shape" in
+     docs/DESIGN.md. */
+  it('rounds the wordmark so its focus ring is not a square', () => {
+    render(<Sidebar />)
+
+    expect(screen.getByRole('link', { name: 'wissly' })).toHaveClass(
+      'rounded-control',
+    )
+  })
+
   /* The mark is the product's identity, so it sits in the frame rather than on
      any one page. It is decorative: the word "wissly" is right beside it. */
   it('wears the brand mark beside the wordmark', () => {

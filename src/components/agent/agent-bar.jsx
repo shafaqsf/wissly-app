@@ -19,11 +19,12 @@ import BrandMark from '@/components/brand/brand-mark';
    still working is queued and appears immediately, marked in words rather than
    by a tint, because a queue is a status and status carries no depth.
 
-   **The field is the working state and the only one.** While a run is in
-   flight the transcript is `.field-unresolved` with the drift; when the answer
-   lands it becomes `.field-settled`. Pages behind the bar carry a field of
-   their own, so the bar tells them to stand down while it works: only one
-   thing on a screen can be the unresolved thing. */
+   **The working state is a mark and a word, not a surface.** The transcript
+   used to be tinted while a run was in flight — a grey panel that the answer
+   then had to be read on top of. It is a mark beside the word "Working" now,
+   drifting until the answer lands. That also ends the arbitration the bar used
+   to need with the page behind it: nothing paints a background any more, so
+   there is nothing for two surfaces to compete over. */
 
 const MODES = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, hint: 'Reads your material and answers. Changes nothing.' },
@@ -56,15 +57,6 @@ export default function AgentBar({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open]);
-
-  // The page behind may hold a grain field of its own, and two competing
-  // fields read as a texture pack rather than a signal.
-  useEffect(() => {
-    document.body.dataset.agentWorking = working ? 'true' : 'false';
-    return () => {
-      delete document.body.dataset.agentWorking;
-    };
-  }, [working]);
 
   async function submit(event) {
     event.preventDefault();
@@ -103,29 +95,24 @@ export default function AgentBar({
           separates from the page with a fill and a hairline instead. */}
       <div className="pointer-events-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-surface border border-rule bg-paper">
         {open ? (
-          // The field goes here and not around the whole panel: DESIGN.md puts
-          // a field *beside* a form, never behind one, and the text field is a
-          // form. So the transcript carries the state and the controls below it
-          // stay on clean paper — which is also what lets their labels remain
-          // muted, since muted ink may not sit on a tinted field.
-          //
-          // The state class moves grain and depth together; there is no inline
-          // --grain to set, and setting one would let the surface say one thing
-          // with its texture and another with its fill.
-          <div
-            className={[
-              'flex flex-col',
-              `grain grain-field ${working ? 'field-unresolved' : 'field-settled'}`,
-              working ? 'grain-working' : '',
-            ].join(' ')}
-          >
+          <div className="flex flex-col">
             <header className="flex min-h-14 items-center justify-between gap-4 border-b border-rule px-4">
               {/* The mark says who is speaking, once. Repeating it on every
-                  turn would put a column of the same colour down the
+                  turn would put a column of the same image down the
                   transcript, which reads as texture rather than as identity. */}
               <p className="flex items-center gap-2 font-mono text-label uppercase">
                 <BrandMark size={20} />
                 {working ? 'Working' : 'Your material'}
+                {/* The state, on the thing that has it. It drifts while the
+                    run is in flight and settles when the answer lands — the
+                    word beside it is what carries the meaning. */}
+                {working ? (
+                  <span
+                    aria-hidden="true"
+                    className="grain grain-mark grain-working field-unresolved"
+                    style={{ '--grain': 'var(--grain-3)' }}
+                  />
+                ) : null}
               </p>
               <div className="flex items-center gap-1">
                 {/* Agent mode acts without asking at each step, so the way back
@@ -183,7 +170,10 @@ export default function AgentBar({
               placeholder={
                 mode === 'agent' ? 'Tell the agent what to do' : 'Ask about your material'
               }
-              className="min-h-11 flex-1 resize-none bg-transparent py-2 text-body outline-none placeholder:text-ink-muted"
+              // The radius is here for the focus ring. An outline follows the
+              // element's own corner, so a square control draws a square ring
+              // inside a rounded bar — see "Shape" in docs/DESIGN.md.
+              className="min-h-11 flex-1 resize-none rounded-control bg-transparent px-2 py-2 text-body placeholder:text-ink-muted"
             />
 
             {working ? (

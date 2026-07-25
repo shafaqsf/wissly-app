@@ -5,46 +5,41 @@ import ConceptMastery from './concept-mastery'
 import { conceptsFixture } from '@/lib/artefact-fixtures'
 
 describe('ConceptMastery', () => {
-  it('opens on the subject as a whole, grained at its average mastery', () => {
+  it('opens on the subject as a whole, marked at its average mastery', () => {
     const { container } = render(
       <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
     )
 
-    const fields = container.querySelectorAll('.grain-field')
-    // One field *surface* per viewport. This is it; the row marks are marks.
-    expect(fields).toHaveLength(1)
-    expect(fields[0]).toHaveStyle({ '--grain': 'var(--grain-2)' })
+    // The heading used to sit on a tinted band. It wears the same mark its
+    // concepts wear now — one mark for the subject, one per row.
+    expect(container.querySelector('.grain-field, .grain-wash')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Linear algebra' })).toBeInTheDocument()
-    const field = screen.getByRole('region', { name: 'Mastery' })
-    expect(within(field).getByText('In progress')).toBeInTheDocument()
+
+    const region = screen.getByRole('region', { name: 'Mastery' })
+    expect(within(region).getByText('In progress')).toBeInTheDocument()
+    expect(region.querySelector('.grain-mark')).toHaveClass('field-partial')
   })
 
-  it('carries the same state in its grain and in its colour', async () => {
+  it('carries the same state in its grain and in its fill', async () => {
     const user = userEvent.setup()
     const { container } = render(
       <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
     )
 
-    const field = () => container.querySelector('.grain-field')
+    const mark = () =>
+      screen.getByRole('region', { name: 'Mastery' }).querySelector('.grain-mark')
 
-    expect(field()).toHaveClass('field-partial')
-    expect(field()).toHaveStyle({ '--grain': 'var(--grain-2)' })
+    expect(mark()).toHaveClass('field-partial')
+    expect(mark()).toHaveStyle({ '--grain': 'var(--grain-2)' })
 
     await user.click(screen.getByRole('button', { name: 'Vector spaces, mastered' }))
-    expect(field()).toHaveClass('field-settled')
-    expect(field()).toHaveStyle({ '--grain': 'var(--grain-0)' })
+    expect(mark()).toHaveClass('field-settled')
+    expect(mark()).toHaveStyle({ '--grain': 'var(--grain-0)' })
 
     await user.click(screen.getByRole('button', { name: 'Diagonalisation, untouched' }))
-    expect(field()).toHaveClass('field-unresolved')
-    expect(field()).toHaveStyle({ '--grain': 'var(--grain-3)' })
-  })
-
-  it('reads its state label in full ink, since it sits on a field', () => {
-    const { container } = render(
-      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
-    )
-
-    expect(container.querySelector('.grain-field .text-ink-muted')).toBeNull()
+    expect(mark()).toHaveClass('field-unresolved')
+    expect(mark()).toHaveStyle({ '--grain': 'var(--grain-3)' })
+    expect(container.querySelector('.grain-field')).toBeNull()
   })
 
   it('lists every concept with the state it is in, in words', () => {
@@ -71,19 +66,18 @@ describe('ConceptMastery', () => {
     expect(container.querySelector('[role="progressbar"]')).toBeNull()
   })
 
-  it('moves the one field onto the concept the learner picks', async () => {
+  it('moves the heading onto the concept the learner picks', async () => {
     const user = userEvent.setup()
-    const { container } = render(
-      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
-    )
+    render(<ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />)
 
     await user.click(
       screen.getByRole('button', { name: 'Diagonalisation, untouched' }),
     )
 
-    const fields = container.querySelectorAll('.grain-field')
-    expect(fields).toHaveLength(1)
-    expect(fields[0]).toHaveStyle({ '--grain': 'var(--grain-3)' })
+    const region = screen.getByRole('region', { name: 'Mastery' })
+    expect(region.querySelector('.grain-mark')).toHaveStyle({
+      '--grain': 'var(--grain-3)',
+    })
     expect(
       screen.getByRole('heading', { name: 'Diagonalisation' }),
     ).toBeInTheDocument()
@@ -96,8 +90,9 @@ describe('ConceptMastery', () => {
       <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
     )
 
+    // One per row, plus the one the heading wears.
     const marks = container.querySelectorAll('.grain-mark')
-    expect(marks).toHaveLength(conceptsFixture.length)
+    expect(marks).toHaveLength(conceptsFixture.length + 1)
     expect([...marks].map((mark) => mark.className)).toEqual(
       expect.arrayContaining([
         expect.stringContaining('field-settled'),
@@ -105,6 +100,16 @@ describe('ConceptMastery', () => {
         expect.stringContaining('field-partial'),
       ]),
     )
+  })
+
+  /* Every row is a button, and a button with no radius draws a square focus
+     ring. See "Shape" in docs/DESIGN.md. */
+  it('rounds every concept row, so no focus ring is a square', () => {
+    render(<ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />)
+
+    for (const row of screen.getAllByRole('button')) {
+      expect(row).toHaveClass('rounded-control')
+    }
   })
 
   /* Marks are decoration to a screen reader — the row already names its state
@@ -119,14 +124,16 @@ describe('ConceptMastery', () => {
     }
   })
 
-  it('rounds the field surface rather than banding the page', () => {
+  /* The band across the top of the page is what made progress read as
+     furniture rather than as the subject. Nothing here paints one. */
+  it('bands nothing across the page', () => {
     const { container } = render(
       <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
     )
 
-    const field = container.querySelector('.grain-field')
-    expect(field).toHaveClass('rounded-surface')
-    expect(field).not.toHaveClass('min-h-64')
+    const region = screen.getByRole('region', { name: 'Mastery' })
+    expect(region.className).not.toMatch(/grain-field|grain-wash|min-h-64/)
+    expect(container.querySelector('.grain-field, .grain-wash')).toBeNull()
   })
 
   it('lets the learner step back out to the subject', async () => {

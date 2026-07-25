@@ -25,7 +25,12 @@ export default async function SignInPage({ searchParams }) {
 
       <p className="border-rule border-t pt-6 text-body-s text-ink-muted">
         No account yet?{' '}
-        <Link href="/sign-up" className="text-ink underline underline-offset-4">
+        {/* Rounded for the focus ring: an outline follows the element's own
+            corner, and nothing in this interface is square. */}
+        <Link
+          href="/sign-up"
+          className="rounded-control text-ink underline underline-offset-4"
+        >
           Create one
         </Link>
         .

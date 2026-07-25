@@ -186,6 +186,15 @@ body {
   background-image: linear-gradient(var(--field-far), var(--field-far));
 }
 
+/* One grain field per viewport. The agent bar floats over pages that carry a
+   field of their own — the empty course list, the progress page — and two
+   competing fields read as a texture pack rather than as a signal. While the
+   agent works, its field is the one that means something and the page's falls
+   back to ambient. `AgentBar` sets the attribute. */
+body[data-agent-working='true'] main .grain-field {
+  --grain: var(--grain-1);
+}
+
 /* The drift: an agent is still working. */
 .grain-working::before {
   animation: grain-drift 8s ease-in-out infinite alternate;

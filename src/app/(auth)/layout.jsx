@@ -5,7 +5,7 @@
    field to the object whose state it carries. Here that object is the account,
    so the field is the width of the column the account is created in.
 
-   Above the form, never behind or below it: colour and grain stay off any
+   Above the form, never behind or below it: depth and grain stay off any
    surface a learner has to read and type on.
 
    What it encodes: signed out is the one state in which the platform knows
@@ -26,9 +26,9 @@ export default function AuthLayout({ children }) {
           className="grain grain-field field-unresolved flex h-32 items-center justify-center rounded-surface"
           style={{ '--grain': 'var(--grain-3)' }}
         >
-          {/* The mark is painted from the same palette the field is, so it
-              stands in the field rather than on top of it. There is no
-              sidebar out here to say which product this is. */}
+          {/* The one coloured thing in the product, standing in the one
+              field on this screen. There is no sidebar out here to say
+              which product this is. */}
           <BrandMark size={64} />
         </div>
 

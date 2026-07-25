@@ -27,9 +27,6 @@ export default function Panel({
         // `overflow-hidden` so a wash or a field inside the panel is clipped
         // to the same corner the border draws.
         'flex flex-col overflow-hidden rounded-surface border border-rule bg-paper',
-        // No colour carries the failure. A 2px ink rule on the left does, and
-        // nothing else in the interface has one.
-        error ? 'border-l-2 border-l-ink' : '',
         wide ? 'md:col-span-2' : '',
       ].join(' ')}
     >
@@ -60,7 +57,11 @@ export default function Panel({
         style={field ? { '--grain': 'var(--grain-2)' } : undefined}
       >
         {error ? (
-          <p role="alert" className="text-body-s text-ink">
+          // No colour carries the failure. A 2px ink rule does, and nothing
+          // else in the interface has one. It rules the message rather than
+          // the frame: a 2px side on a 14px corner mitres into the 1px
+          // hairline and the panel stops looking round at both ends of it.
+          <p role="alert" className="border-l-2 border-l-ink pl-4 text-body-s text-ink">
             {error}
           </p>
         ) : empty ? (

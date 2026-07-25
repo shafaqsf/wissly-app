@@ -1,6 +1,6 @@
 /* Mastery is a value in [0,1] per concept, merged from every piece of
    evidence a learner has produced. It is rendered as a field — grain density
-   and hue, moving together — and as nothing else: no bar, no percentage, no
+   and depth of ink, moving together — and as nothing else: no bar, no percentage, no
    second progress display.
 
    Three states, because grain has three meaningful intensities. The 0.9
@@ -10,7 +10,7 @@
    This is the only place the two are paired. A component reads `grain` and
    `field` from here rather than deciding either for itself, so the interface
    cannot end up saying one thing with its texture and another with its
-   colour. */
+   depth. */
 
 export const MASTERED_AT = 0.9;
 

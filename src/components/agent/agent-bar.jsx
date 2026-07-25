@@ -17,7 +17,7 @@ import BrandMark from '@/components/brand/brand-mark';
 
    **Sending never takes the field away.** A message sent while the agent is
    still working is queued and appears immediately, marked in words rather than
-   by a tint, because a queue is a status and status carries no hue.
+   by a tint, because a queue is a status and status carries no depth.
 
    **The field is the working state and the only one.** While a run is in
    flight the transcript is `.field-unresolved` with the drift; when the answer
@@ -109,9 +109,9 @@ export default function AgentBar({
           // stay on clean paper — which is also what lets their labels remain
           // muted, since muted ink may not sit on a tinted field.
           //
-          // The state class moves grain and colour together; there is no inline
+          // The state class moves grain and depth together; there is no inline
           // --grain to set, and setting one would let the surface say one thing
-          // with its texture and another with its hue.
+          // with its texture and another with its fill.
           <div
             className={[
               'flex flex-col',
@@ -219,7 +219,7 @@ export default function AgentBar({
                   onClick={() => chooseMode(id)}
                   className={[
                     'flex min-h-11 items-center gap-2 rounded-control px-3 font-mono text-label uppercase',
-                    // Selection is weight and a rule, never a fill of colour.
+                    // Selection is weight and a rule, never a fill.
                     mode === id
                       ? 'border border-ink text-ink'
                       : 'border border-transparent text-ink-muted hover:text-ink',

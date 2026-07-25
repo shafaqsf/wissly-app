@@ -76,14 +76,15 @@ function contrast(a, b) {
   return (light + 0.05) / (dark + 0.05)
 }
 
-/* Every `.field-*` class in the stylesheet, as the three stops it paints. */
+/* Every `.field-*` class in the stylesheet, as the three stops it paints.
+   Every stop is a dilution of ink now — the field has no hue of its own. */
 function fieldStates() {
   const states = new Map()
 
   for (const [, name, body] of css.matchAll(/\.field-([a-z]+)\s*\{([^}]*)\}/g)) {
     const stops = [
       ...body.matchAll(
-        /--field-(?:near|far|floor):\s*color-mix\(in srgb, var\((--color-field-[a-z]+)\) (\d+)%/g,
+        /--field-(?:near|far|floor):\s*color-mix\(in srgb, var\((--color-ink)\) (\d+)%/g,
       ),
     ].map(([, colourToken, percent]) => ({
       hex: token(colourToken),
@@ -181,10 +182,20 @@ describe('the field mark', () => {
 })
 
 describe('the field palette', () => {
-  it('defines all five field tokens', () => {
-    for (const name of ['hot', 'deep', 'warm', 'mid', 'cool']) {
-      expect(() => token(`--color-field-${name}`)).not.toThrow()
-    }
+  /* There is no palette. The field is ink at four dilutions, the same ink
+     everything else on the page is drawn in — see "Colour" in docs/DESIGN.md.
+     A hue token anywhere in the stylesheet is the whole thing coming back. */
+  it('names no hue anywhere in the stylesheet', () => {
+    expect(css).not.toMatch(/--color-field-/)
+
+    const hexes = [...css.matchAll(/#([0-9a-fA-F]{6})\b/g)].map(([, hex]) =>
+      hex.toLowerCase(),
+    )
+    const coloured = hexes.filter(
+      (hex) => new Set([hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)]).size > 1,
+    )
+
+    expect(coloured).toEqual([])
   })
 
   it('defines the three field states', () => {
@@ -242,12 +253,19 @@ describe('text on a field', () => {
 })
 
 describe('colour containment', () => {
-  /* Atmosphere only: the field tokens exist so that colour cannot leak into
-     the chrome. globals.css is the only file allowed to name one. */
-  it('keeps every field token inside globals.css', () => {
-    const offenders = sourceFiles()
-      .filter((file) => !file.replace(/\\/g, '/').endsWith('src/app/globals.css'))
-      .filter((file) => readFileSync(file, 'utf8').includes('--color-field-'))
+  /* The product is ink on paper, and the mark is the single exception. No
+     source file names a hue — not a token, not a hex, not a Tailwind colour
+     that is not one of the ink and paper steps. */
+  it('names no hue in any source file', () => {
+    const offenders = sourceFiles().filter((file) => {
+      const source = readFileSync(file, 'utf8')
+      if (source.includes('--color-field-')) return true
+      return [...source.matchAll(/#([0-9a-fA-F]{6})\b/g)].some(
+        ([, hex]) =>
+          new Set([hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)].map((p) => p.toLowerCase()))
+            .size > 1,
+      )
+    })
 
     expect(offenders).toEqual([])
   })

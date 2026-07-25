@@ -14,7 +14,7 @@ import { quietButtonClass } from '@/components/artefact/control';
 
    The surface belongs to whatever the learner is looking at — the subject to
    begin with, a single concept once one is picked. Picking a concept is the
-   settle, in the open: grain and colour travel together over 600ms. */
+   settle, in the open: grain and depth travel together over 600ms. */
 export default function ConceptMastery({ subject, concepts = [] }) {
   const [selectedId, setSelectedId] = useState(null);
 

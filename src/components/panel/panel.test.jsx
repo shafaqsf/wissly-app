@@ -49,34 +49,21 @@ describe('Panel', () => {
     expect(screen.queryByText('content')).not.toBeInTheDocument()
   })
 
-  it('paints an empty field at the partial state', () => {
+  /* An empty panel used to take a tinted surface, on the grounds that a
+     surface with nothing on it is unresolved. It was a grey rectangle under a
+     sentence — see "The field" in docs/DESIGN.md. A panel whose emptiness is a
+     state worth showing wears a `mark` in its header, like every other state. */
+  it('paints nothing behind an empty panel', () => {
     const { container } = render(
-      <Panel title="Courses" grain empty="Start your first course to see it here.">
+      <Panel title="Courses" empty="Start your first course to see it here.">
         <p>content</p>
       </Panel>,
     )
 
-    const field = container.querySelector('.grain-field')
-    expect(field).toHaveClass('field-partial')
-    expect(field).toHaveStyle({ '--grain': 'var(--grain-2)' })
+    expect(container.querySelector('.grain, .grain-field, .grain-wash')).toBeNull()
   })
 
-  it('reads its empty copy in full ink once a field is under it', () => {
-    // Muted ink clears 7:1 on paper and less than that on a tinted field.
-    const { container } = render(
-      <Panel title="Courses" grain empty="Start your first course to see it here.">
-        <p>content</p>
-      </Panel>,
-    )
-
-    const field = container.querySelector('.grain-field')
-    expect(field.querySelector('.text-ink-muted')).toBeNull()
-    expect(
-      screen.getByText('Start your first course to see it here.'),
-    ).toHaveClass('text-ink')
-  })
-
-  it('keeps its empty copy secondary when there is no field', () => {
+  it('keeps its empty copy secondary, because that is what it is', () => {
     render(<Panel title="Courses" empty="Start your first course to see it here." />)
 
     expect(
@@ -132,36 +119,14 @@ describe('Panel', () => {
     expect(container.firstChild).toHaveClass('md:col-span-2')
   })
 
-  it('carries no grain, so noise stays reserved for unresolved state', () => {
-    const { container } = render(<Panel title="Courses">content</Panel>)
-
-    expect(container.querySelector('.grain')).toBeNull()
-  })
-
-  it('grains an empty state when asked, at an intensity text survives', () => {
-    const { container } = render(
-      <Panel title="Recent lessons" empty="Nothing yet." grain />,
-    )
-
-    const field = container.querySelector('.grain')
-    expect(field).toHaveClass('grain-field')
-    expect(field).toHaveStyle({ '--grain': 'var(--grain-2)' })
-  })
-
-  it('never grains a panel that has content, however it was asked', () => {
-    const { container } = render(
-      <Panel title="Courses" grain>
-        <p>content</p>
-      </Panel>,
-    )
-
-    expect(container.querySelector('.grain')).toBeNull()
-  })
-
-  it('never grains a failure — the ink rule carries that alone', () => {
-    const { container } = render(
-      <Panel title="Courses" empty="Nothing yet." error="It broke." grain />,
-    )
+  /* The only grain a panel carries is the mark in its header. Nothing behind
+     the content, in any of its three states. */
+  it.each([
+    ['content', { children: 'content' }],
+    ['empty', { empty: 'Nothing yet.' }],
+    ['failed', { empty: 'Nothing yet.', error: 'It broke.' }],
+  ])('paints no background when it is %s', (_state, props) => {
+    const { container } = render(<Panel title="Courses" {...props} />)
 
     expect(container.querySelector('.grain')).toBeNull()
   })
@@ -215,12 +180,14 @@ describe('PanelSkeleton', () => {
     expect(region).toHaveAttribute('aria-busy', 'true')
   })
 
-  it('grains at the unresolved intensity', () => {
+  /* The body used to be a grey wash. Several panels load at once, so several
+     grey slabs appeared at once — the loudest thing a screen can do to say
+     "not yet". The bars say it, and `aria-busy` says it to everyone else. */
+  it('paints no wash behind its bars', () => {
     const { container } = render(<PanelSkeleton title="Courses" />)
 
-    const grained = container.querySelector('.grain')
-    expect(grained).not.toBeNull()
-    expect(grained).toHaveStyle({ '--grain': 'var(--grain-3)' })
+    expect(container.querySelector('.grain, .grain-wash, .grain-field')).toBeNull()
+    expect(container.querySelectorAll('.rounded-round.bg-rule')).toHaveLength(3)
   })
 
   it('takes the same rounded surface as the panel it stands in for', () => {

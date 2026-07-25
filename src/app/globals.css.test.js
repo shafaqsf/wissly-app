@@ -76,22 +76,20 @@ function contrast(a, b) {
   return (light + 0.05) / (dark + 0.05)
 }
 
-/* Every `.field-*` class in the stylesheet, as the three stops it paints.
-   Every stop is a dilution of ink now — the field has no hue of its own. */
+/* Every `.field-*` class in the stylesheet, as the fill it paints. A field is
+   a mark now, and a mark is one flat dilution of ink. */
 function fieldStates() {
   const states = new Map()
 
   for (const [, name, body] of css.matchAll(/\.field-([a-z]+)\s*\{([^}]*)\}/g)) {
-    const stops = [
-      ...body.matchAll(
-        /--field-(?:near|far|floor):\s*color-mix\(in srgb, var\((--color-ink)\) (\d+)%/g,
-      ),
+    const fills = [
+      ...body.matchAll(/--field-mark:\s*color-mix\(in srgb, var\((--color-ink)\) (\d+)%/g),
     ].map(([, colourToken, percent]) => ({
       hex: token(colourToken),
       alpha: Number(percent) / 100,
     }))
 
-    states.set(name, stops)
+    states.set(name, fills)
   }
 
   return states
@@ -137,22 +135,28 @@ function geometry(selector) {
   )
 }
 
-describe('field geometry', () => {
-  /* The light has to come from the same direction on every surface, or the
-     same class reads as three different things depending on how the box
-     happens to be cut. Corners, not arbitrary interior points. */
-  it('anchors every stop to an edge or a corner', () => {
-    expect(geometry('.grain-field').map((shape) => shape.split(' at ')[1])).toEqual([
-      '0% 100%',
-      '100% 0%',
-      '50% 100%',
-    ])
+describe('no field surface', () => {
+  /* A field used to be a surface as well as a mark: three stops of ink bleeding
+     in from the edges of a card, a whole panel or a whole heading tinted by how
+     resolved the thing under it was. Grey behind a paragraph is a background —
+     read as chrome whatever it was meant to encode — and it spent its whole
+     life competing with the text sitting on top of it. See "The field" in
+     docs/DESIGN.md. The state is worn as a mark, and only as a mark. */
+  it('defines no surface class to paint one with', () => {
+    expect(css).not.toMatch(/\.grain-field|\.grain-wash/)
   })
 
-  /* The mask exists so grain is dense where colour is saturated. The moment
-     it drifts from the background it stops tracking anything. */
-  it('masks the grain with exactly the gradients it paints', () => {
-    expect(geometry('.grain-field::before')).toEqual(geometry('.grain-field'))
+  it('paints no state as a gradient anywhere in the stylesheet', () => {
+    expect(css).not.toMatch(/radial-gradient/)
+    expect(css).not.toMatch(/--field-(near|far|floor)/)
+  })
+
+  it('is named by no component', () => {
+    const offenders = sourceFiles().filter((file) =>
+      /grain-field|grain-wash/.test(readFileSync(file, 'utf8')),
+    )
+
+    expect(offenders).toEqual([])
   })
 })
 
@@ -206,49 +210,45 @@ describe('the field palette', () => {
     ])
   })
 
-  it('paints every state with three stops', () => {
-    for (const [name, stops] of fieldStates()) {
-      expect(stops, `.field-${name}`).toHaveLength(3)
+  it('paints every state with exactly one fill', () => {
+    for (const [name, fills] of fieldStates()) {
+      expect(fills, `.field-${name}`).toHaveLength(1)
     }
+  })
+
+  /* Three dilutions two points apart are three shades of nothing at 12px.
+     Filled, half and empty are a legend anyone can read down a column. */
+  it('separates the three fills far enough to tell apart', () => {
+    const alphas = [...fieldStates().values()].map(([fill]) => fill.alpha).sort()
+
+    expect(alphas).toEqual([0, 0.45, 1])
   })
 })
 
-describe('text on a field', () => {
-  /* The worst case is every stop overlapping at once, then the darkest point
-     of the grain multiplied on top. No real pixel is this dark; if ink clears
-     4.5:1 here it clears it everywhere. */
-  it.each(Object.keys(GRAIN_FOR_STATE))(
-    'keeps ink readable on .field-%s at its darkest point',
-    (state) => {
-      const stops = fieldStates().get(state)
-      const grainOpacity = grain(GRAIN_FOR_STATE[state])
-
-      // Painted floor first, near last — the order the stylesheet stacks them.
-      const composited = [...stops]
-        .reverse()
-        .reduce((base, stop) => over(base, rgb(stop.hex), stop.alpha), rgb(token('--color-paper')))
-
-      // Grain is `mix-blend-mode: multiply` over greyscale noise. Its darkest
-      // sample is black, so the floor is the field scaled by the opacity.
-      const darkest = composited.map((channel) => channel * (1 - grainOpacity))
-
-      expect(contrast(darkest, rgb(token('--color-ink')))).toBeGreaterThanOrEqual(4.5)
-    },
-  )
-
-  /* Catches the common shape: both classes on one element. Text nested one
-     level down inside a field is checked where it is rendered — see
-     panel.test.jsx and concept-mastery.test.jsx. */
-  it('never lets muted ink sit on a field', () => {
+describe('no text on a field', () => {
+  /* This used to compute contrast: every stop overlapping at once, the darkest
+     sample of the grain multiplied on top, and ink checked against that floor.
+     Every rule about the field surface was a rule about contrast, which is a
+     good sign the surface was in the wrong place. It is gone, so the question
+     is not "is the ink readable on it" but "is there anything under the ink at
+     all". There is not. */
+  it('paints nothing under any text in any component', () => {
     const offenders = sourceFiles()
       .filter((file) => file.endsWith('.jsx'))
-      .filter((file) =>
-        /grain-field[^"'`]*text-ink-muted|text-ink-muted[^"'`]*grain-field/.test(
-          readFileSync(file, 'utf8'),
-        ),
-      )
+      .filter((file) => /grain-field|grain-wash/.test(readFileSync(file, 'utf8')))
 
     expect(offenders).toEqual([])
+  })
+
+  /* A mark never holds text, so muted ink can never land on a fill. The rule
+     that muted ink may not sit on a field survives as this: paper is the only
+     thing text is ever set on, so `--ink-muted` keeps its 7:1 everywhere. */
+  it('leaves paper as the only surface text is set on', () => {
+    expect(css).not.toMatch(/\.grain-field|\.grain-wash/)
+
+    const mark = css.match(/\.grain-mark\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(mark).toMatch(/width:\s*0\.75rem/)
+    expect(mark).toMatch(/height:\s*0\.75rem/)
   })
 })
 

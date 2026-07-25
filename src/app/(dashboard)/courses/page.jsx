@@ -30,14 +30,11 @@ export default async function CoursesPage() {
       </header>
 
       {courses.length === 0 ? (
-        // Nothing here yet is the one unresolved surface on this page, so it
-        // is the one that gets the field. `--grain-2` rather than the state's
-        // own `--grain-3`, because body text sits on this one and grain never
-        // goes above `--grain-2` under body text — see docs/DESIGN.md.
-        <div
-          className="grain grain-field field-unresolved flex flex-col items-start justify-center gap-6 rounded-surface border border-rule px-6 py-10"
-          style={{ '--grain': 'var(--grain-2)' }}
-        >
+        // A card, and nothing behind the words. The tint this used to carry
+        // said "unresolved" in grey across the full width of the page, which
+        // is a background wherever you put it — see "The field" in
+        // docs/DESIGN.md. The copy already says there is nothing here.
+        <div className="flex flex-col items-start justify-center gap-6 rounded-surface border border-rule px-6 py-10">
           <p className="max-w-measure text-body">
             No courses yet. Add a page of your notes and wissly will read it,
             name what it covers and file it under a course.

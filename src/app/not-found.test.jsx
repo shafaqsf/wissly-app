@@ -12,34 +12,29 @@ describe('a URL that is not a page', () => {
     )
   })
 
-  /* The whole viewport used to be the field, and it carried no --grain at all
-     — so it rendered at the ambient intensity while its own comment claimed
-     otherwise. It is now a card around the heading, at the intensity its state
-     class calls for, with the body copy on clean paper beside it. */
-  it('states the state it paints, and paints only the heading', () => {
+  /* The card used to be tinted, on the grounds that a page that is not there
+     is an empty state. It was a grey box behind a heading that already says
+     the whole thing. It is a bordered card now, and nothing else. */
+  it('paints no background behind the heading', () => {
     const { container } = render(<NotFound />)
 
-    const field = container.querySelector('.grain-field')
-    expect(field).toHaveClass('field-unresolved')
-    expect(field).toHaveStyle({ '--grain': 'var(--grain-3)' })
-    expect(field).toHaveClass('rounded-surface')
-    expect(field).not.toBe(container.firstChild)
+    expect(container.querySelector('.grain-field, .grain-wash, .grain')).toBeNull()
+
+    const card = screen.getByRole('heading', { level: 1 }).parentElement
+    expect(card).toHaveClass('rounded-surface', 'border', 'border-rule')
+    expect(card).not.toBe(container.firstChild)
   })
 
   /* There is no sidebar out here, so nothing else on the page says which
      product this is. */
-  it('stands the brand mark in the field, where no frame carries it', () => {
+  it('stands the brand mark in the card, where no frame carries it', () => {
     const { container } = render(<NotFound />)
 
     const marks = container.querySelectorAll('[data-brand-mark]')
     expect(marks).toHaveLength(1)
-    expect(container.querySelector('.grain-field').contains(marks[0])).toBe(true)
-  })
 
-  it('keeps muted ink off the field', () => {
-    const { container } = render(<NotFound />)
-
-    expect(container.querySelector('.grain-field .text-ink-muted')).toBeNull()
+    const card = screen.getByRole('heading', { level: 1 }).parentElement
+    expect(card.contains(marks[0])).toBe(true)
   })
 
   it('offers the way back that a learner actually wants', () => {

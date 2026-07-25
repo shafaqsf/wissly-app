@@ -9,14 +9,15 @@ wissly is a learning platform. Learning is the movement from noise to signal —
 from a subject you cannot yet resolve to one you can.
 
 **So the field is not decoration here. The field is the measure of what is not
-yet known.** A topic you have never touched is heavily grained and sits deepest
-in the paper. A topic you have mastered is near-clean paper with a breath of
-ink left on it. An agent that is still thinking sits in a drifting field; when
-it answers, the field settles — the noise clears and the depth drains out of it
-together.
+yet known.** A topic you have never touched wears a filled mark. A topic you
+have mastered wears an empty ring. An agent that is still thinking wears a mark
+that drifts; when it answers, the mark settles — the noise clears and the fill
+drains out of it together.
 
 Everything else on the page is quiet so that this one device can carry
-meaning. If a field on a screen does not encode state, remove it.
+meaning. **The page itself is always clean paper.** If a field on a screen does
+not encode state, remove it — and if it is bigger than a mark, it is already
+wrong.
 
 ## Colour
 
@@ -28,13 +29,18 @@ from three edges. It was meant to be the one place colour meant something, and
 on real screens it did the opposite — a pink and teal wash behind a heading is
 a mood, three of them on one page are a texture pack, and the reading it was
 supposed to give (how resolved is this?) was the thing hardest to read out of
-it. Depth was always carrying the signal on its own.
+it.
 
-So a field is ink, diluted, and nothing else. Every control, every glyph, every
-icon, every border, every field is drawn in the same ink. There is no
-`--color-field-*` token, and `src/app/globals.css.test.js` fails on any hue in
-any source file: a hex whose three channels are not equal, anywhere, is the
-rule coming back one component at a time.
+Then it was ink at a dilution instead of a hue, which was better and still
+wrong: grey behind a paragraph is a background, and a background reads as
+chrome no matter what it was meant to encode. So a field is not a surface at
+all now. See [The field](#the-field).
+
+Every control, every glyph, every icon, every border, every mark is drawn in
+the same ink. There is no `--color-field-*` token, and
+`src/app/globals.css.test.js` fails on any hue in any source file: a hex whose
+three channels are not equal, anywhere, is the rule coming back one component
+at a time.
 
 ### Ink and paper
 
@@ -52,18 +58,14 @@ Contrast against `--paper`: `--ink` 21:1, `--ink-muted` 7.0:1, `--ink-faint`
 
 ### The field, in ink
 
-| Stop | Unresolved | Under way | Settled |
+| | Unresolved | Under way | Settled |
 | --- | --- | --- | --- |
-| `--field-near` | ink 12% | ink 6% | ink 3% |
-| `--field-far` | ink 9% | ink 5% | ink 2% |
-| `--field-floor` | ink 6% | ink 3% | ink 2% |
 | `--field-mark` | ink 100% | ink 45% | ink 0% |
 
-A field *surface* reads by depth: the less resolved the thing under it is, the
-further into the paper it sits. A [field mark](#two-forms) reads by fill
-instead — filled, half, empty — because three dilutions two points apart are
-three shades of nothing at 12px, while a filled dot beside a half one beside
-an empty ring is a legend anyone can read down a column.
+One fill, three values, far enough apart to tell at 12px: filled, half, empty.
+That is the whole palette of the product. `globals.css.test.js` asserts the
+three values stay separated, because dilutions two points apart are three
+shades of nothing.
 
 ### No dark mode
 
@@ -141,7 +143,7 @@ Soft, but calm. Three steps and no fourth.
 | Token | Value | Use |
 | --- | --- | --- |
 | `--radius-control` | `8px` | Buttons, inputs, chips, nav items, citation marks |
-| `--radius-surface` | `14px` | Panels, field surfaces, the agent bar, popovers, cards |
+| `--radius-surface` | `14px` | Panels, the agent bar, popovers, cards |
 | `--radius-round` | `9999px` | Avatars, count badges, field marks |
 
 Reach for them as `rounded-control`, `rounded-surface`, `rounded-round`.
@@ -153,12 +155,22 @@ not surfaces. The sidebar rail runs to the viewport edge, and so does the
 mobile top bar. A rounded corner there opens a gap onto nothing.
 
 Anything carrying `.grain` inherits its parent's radius, so the texture follows
-the corner rather than cutting across it. A square grain layer on a rounded
-panel is visible immediately, so the rule is enforced in the stylesheet rather
-than left to each caller.
+the corner rather than cutting across it. The rule is enforced in the
+stylesheet rather than left to each caller.
+
+**A focus outline follows the element's own corner.** So a control with no
+radius draws a square ring in an interface that has none — which is how a
+square kept appearing around the agent's text field, the concept rows, the
+wordmark, the file picker and every radio. Every focusable element carries a
+radius, including the ones whose radius is invisible until they are focused. A
+native radio is the awkward case: Chrome keeps its own widget geometry at
+`appearance: auto` and drops an author radius with it, so the control is drawn
+by hand — an empty ink ring that fills when chosen, which is the legend a field
+mark already uses. Where the real control is `sr-only`, the label it sits in
+wears the ring instead.
 
 Hairlines are `1px solid var(--rule)`. There are no shadows anywhere. Depth
-is expressed by `--paper-sunk` and by grain, never by a blur.
+is expressed by `--paper-sunk`, never by a blur.
 
 ## Icons
 
@@ -200,7 +212,7 @@ What the exception does not license:
   that is exactly what [Grain](#grain) forbids. Two marks in two different
   roles are not repetition: the frame may carry one as the product's identity,
   and a panel that speaks may carry one as its face. Where it goes today:
-  the sidebar brand row, the agent panel header, the signed-out field and the
+  the sidebar brand row, the agent panel header, the sign-in column and the
   404 card — the last two because neither renders inside the frame, so nothing
   else on those screens says which product this is.
 - **Nothing else follows it.** No coloured illustration, no coloured
@@ -253,118 +265,98 @@ Applied on a `::before` pseudo-element with `mix-blend-mode: multiply` and
 
 ### The field
 
-A **field** is clean paper with three stops of ink bleeding in from its edges
-— from the bottom-left corner, from the top-right, and a floor rising along the
-bottom edge — and a grain layer masked to the same geometry, so the texture is
-dense where the ink is deepest and the paper core stays clean. The core is
-where text sits.
+A **field** is a state, and it is worn as a mark. Nothing else.
 
-Every stop is anchored to a corner or an edge, never to a point inside the box.
-An interior anchor makes the same class read as three different things
-depending on how the surface happens to be cut — a wide header and a tall
-column would light from different directions. `globals.css.test.js` asserts the
-anchors, and asserts that the grain mask names the same three gradients the
-background paints; the moment those drift apart the texture stops tracking the
-depth.
+It used to be a surface too — a whole card, a whole heading, a whole panel body
+tinted by how resolved the thing under it was. That is gone, and this is the
+single most important line in this document, because every screen that read as
+decorated read that way for the same reason:
 
-Depth and grain are **one axis, not two**. A field is painted by one state
-class, and that class moves both:
+> **Grey behind a paragraph is a background.** A background is read as a
+> background — as chrome, as decoration, as something the page is sitting on —
+> however carefully it was chosen and whatever it was meant to encode.
 
-| Class | Grain | Depth | Means |
+The surface also spent its whole life competing with the text on top of it,
+which is why every rule about it was really a rule about contrast. That is what
+a device in the wrong place looks like. The mark says the same thing in a
+twelfth of the area, on the object that has the state, with the state named in
+words beside it.
+
+**A field mark — `.grain-mark`.** 12px, fully round, one flat fill, no
+geometry, no text. As many per screen as there are objects with a state: a
+concept row, a subject heading, a panel, an agent thinking beside a line of
+status text. Identical to each other, so a column of them reads as a legend.
+
+Fill and grain are **one axis, not two**. A mark is painted by one state class,
+and that class moves both:
+
+| Class | Grain | Fill | Means |
 | --- | --- | --- | --- |
-| `.field-unresolved` | `--grain-3` | deepest | Unattempted, unknown, or an agent still working |
+| `.field-unresolved` | `--grain-3` | filled | Unattempted, unknown, or an agent still working |
 | `.field-partial` | `--grain-2` | half | Under way |
-| `.field-settled` | `--grain-0` | a breath | Mastered. Settled. |
+| `.field-settled` | `--grain-0` | empty ring | Mastered. Settled. |
 
-`src/lib/mastery.js` is the only place the pairing is written down. A
-component reads `grain` and `field` from `masteryState()` rather than choosing
-either itself, so the interface cannot say one thing with its texture and
-another with its depth.
+`src/lib/mastery.js` is the only place the pairing is written down. A component
+reads `grain` and `field` from `masteryState()` rather than choosing either
+itself, so the interface cannot say one thing with its texture and another with
+its fill.
 
-`.field-settled` is why the stops go down to 2% rather than to nothing.
-`--grain-0` alone renders nothing at all, so an arrival used to look like a
-missing element. A settled field is still a surface — quiet, faint,
-unmistakably *finished*.
+`.field-settled` empties out rather than fading. An arrival is the *absence* of
+the fill, and the ring is what keeps it from looking like a missing element.
 
-### Two forms
+### Where a mark goes
 
-The state is one idea. It comes in two sizes, and choosing the wrong one is
-what made the earlier screens read as decoration.
+1. On the object whose state it is — a concept, a queue item, a panel, an
+   agent.
+2. Beside a word that names the same state. **A mark is never the only carrier
+   of meaning**: 12px of grey says nothing to a screen reader, nothing at a
+   glance across a room, and nothing to anyone who is not already looking for
+   it. The words do the work; the mark makes the column scannable.
+3. Nowhere else. There is no second form to reach for.
 
-**A field surface — `.grain-field`.** Radial geometry, a paper core, holds
-text. One per viewport. It belongs to a whole screen or a whole panel, and it
-is sized to the object whose state it carries — not to the page it happens to
-sit on. A field that fills half a viewport is describing the viewport, and the
-viewport does not have a mastery.
+**Never as a background.** Not behind a heading, not behind a paragraph, not
+behind a table, not under a form, not as a panel body, not as a page-wide band,
+not as a button fill. `globals.css.test.js` fails if `.grain-field` or
+`.grain-wash` is defined in the stylesheet or named in any component, which is
+the only way a rule like this survives contact with a deadline.
 
-**A field mark — `.grain-mark`.** A small round mark: one flat fill, no
-geometry, no text. Filled, half, empty — `--field-mark` moves further than the
-surface stops do, because 12px of 2% ink is nothing at all. As many per screen as there are objects with a state. A
-concept row, a queued item, an agent thinking beside a line of status text.
-This is the form to reach for first — the state sits on the thing that has it.
+Some screens carry no mark at all. Settings has no state worth encoding, an
+empty course list says it is empty in words, and a 404 page says so in a
+heading. Inventing a state for those is exactly the decoration this document
+exists to prevent.
 
-**A flat wash — `.grain-wash`.** For several surfaces appearing at once, such
-as panel skeletons: the same state depth as a flat tint, because several
-radial gradients at once read as a texture pack rather than as a signal.
+### Text and marks
 
-### Where a field goes
+Text sits on paper. That is the whole rule now, and it is the one good thing to
+come out of removing the surface: `--ink-muted` keeps its 7:1 everywhere,
+`--ink` keeps its 21:1 everywhere, and no component has to reason about what it
+is being read on top of. `--ink-faint` still never carries text of any size.
 
-1. On the object whose state it is — a concept, a queue item, an agent. Prefer
-   a mark.
-2. The agent's working state.
-3. Empty states — a surface with nothing on it yet is, definitionally,
-   unresolved.
-4. The signed-out frame — the one field carrying an account state rather than
-   a knowledge state, and the one to challenge first if the rule ever needs
-   tightening.
-
-**Not on a page header.** A header is a position on the page, not a state. A
-page-wide band was how the field ended up describing the furniture instead of
-the subject.
-
-**Beside a form, never behind or below one.** Never behind a table. Never as a
-button fill. Never as a page-wide wallpaper. A form that reports its own
-progress uses a mark beside the text, not a surface under the button.
-
-Some screens carry no field at all. Settings has no state worth encoding, and
-inventing one there is exactly the decoration this document exists to prevent.
-
-### Text on a field
-
-**Inside a field, text is `--ink`.** `--ink-muted` clears 7:1 on paper and
-less than that on an inked field, so it never sits on one; `--ink-faint` never
-carries text anywhere. Outside a field, secondary text stays muted, because
-there it genuinely is secondary.
-
-The stops are chosen so that `--ink` clears 4.5:1 against the darkest point
-any field can reach — every stop overlapping, with the darkest sample of the
-grain multiplied on top. `src/app/globals.css.test.js` computes that from the
-stylesheet itself and fails if a stop is ever pushed past it.
+A mark holds no text, so nothing is ever set on a fill. `globals.css.test.js`
+fails on a `.grain-mark` element with a text child.
 
 ### Rules
 
-- **Grain never sits under body text above `--grain-2`.** Contrast is not
-  negotiable against atmosphere.
-- **One field *surface* per viewport.** Two competing radial fields read as a
-  texture pack, not as a signal. Marks are exempt: they are identical to each
-  other, so a column of them reads as a legend. When a page wants a second
-  surface, one of the two becomes a mark.
-- **Grain and depth are state, never mood.** If you cannot name the state
-  they encode, delete them.
-- **Never both.** A field's depth and its grain always come from the same
-  state. Setting `--grain` by hand next to a mismatched `.field-*` class is
-  the one way to make the signature lie.
+- **A field is a mark.** If what you are reaching for is bigger than 12px, it
+  is a background, and the answer is a word instead.
+- **Never alone.** A mark always sits beside the word that names its state.
+- **Grain and fill are state, never mood.** If you cannot name the state they
+  encode, delete them.
+- **Never both by hand.** A mark's fill and its grain always come from
+  `masteryState()`. Setting `--grain` next to a mismatched `.field-*` class is
+  the one way left to make the signature lie.
+
 
 ## Motion
 
 Motion is rare and it is functional.
 
 - **The settle.** When an agent finishes, or a learner picks a concept they
-  have already mastered, its field travels to the new state over 600ms,
-  `cubic-bezier(0.16, 1, 0.3, 1)` — grain and depth together, the ink draining
+  have already mastered, its mark travels to the new state over 600ms,
+  `cubic-bezier(0.16, 1, 0.3, 1)` — grain and fill together, the ink draining
   out of it as the noise clears. This is the only animation anyone should
-  remember. The stops are registered with `@property` so the fill can actually
-  interpolate; without that the field would jump.
+  remember. `--field-mark` is registered with `@property` so the fill can
+  actually interpolate; without that the mark would jump.
 - **The drift.** While an agent works, the grain layer translates by a few
   pixels on a 8s loop. Slow enough to be felt, not watched.
 - Everything else — hover, focus, disclosure — is 120ms `ease-out` on opacity
@@ -379,7 +371,8 @@ movement goes.
 Not optional, not announced:
 
 - Focus is a `2px solid var(--ink)` outline at `2px` offset, visible on every
-  focusable element. Never `outline: none` without a replacement.
+  focusable element, and **round**, because the outline takes the element's own
+  corner — see [Shape](#shape). Never `outline: none` without a replacement.
 - Tap targets are at least 44×44px.
 - Every screen works at 360px wide.
 - Every form control has a real `<label>`. Placeholder text is not a label.
@@ -401,12 +394,14 @@ Copy is design material. See also the voice rules in
 
 ## Before you ship a screen
 
-- Is there at most one field *surface*, and does it encode a real state?
-- Could a mark have carried that state instead, on the object that has it?
-- Does it carry a `.field-*` class? A field without one paints nothing.
+- Does anything paint a background? Anything at all behind text — a tint, a
+  wash, a gradient — is wrong before you finish reading this line.
+- Does every mark encode a real state, on the object that has it, beside a word
+  that names it?
+- Does it carry a `.field-*` class? A mark without one paints nothing.
 - Does anything use colour at all, other than the one mark? Remove it.
 - Is any text on a field muted rather than ink?
 - Is the reading column at or under 66 characters?
-- Does every focusable element show its focus ring?
+- Does every focusable element show its focus ring, and is that ring round?
 - Does it hold together at 360px?
 - Chanel's rule: take one thing off.

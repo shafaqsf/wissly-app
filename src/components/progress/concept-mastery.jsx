@@ -4,17 +4,14 @@ import { useState } from 'react';
 import { averageMastery, masteryState } from '@/lib/mastery';
 import { quietButtonClass } from '@/components/artefact/control';
 
-/* Progress, as one surface and a column of marks.
+/* Progress, as a column of marks and one heading that wears the same mark.
 
-   DESIGN.md allows one field *surface* per viewport, and a list of concepts
-   wants a state per row. Marks are what resolve that: identical to each other,
-   so the column reads as a legend rather than as texture, and small enough
-   that the state sits on the concept that has it instead of on a band across
-   the page.
-
-   The surface belongs to whatever the learner is looking at — the subject to
-   begin with, a single concept once one is picked. Picking a concept is the
-   settle, in the open: grain and depth travel together over 600ms. */
+   The heading used to sit on a tinted surface — a full-width band that got
+   greyer the less the learner knew. It was the page's background, and it said
+   what the two words under it already said. Now the subject wears a mark, the
+   same one its concepts wear, at the size a heading can carry. Picking a
+   concept is still the settle, in the open: the mark travels to its new fill
+   over 600ms while the grain clears with it. */
 export default function ConceptMastery({ subject, concepts = [] }) {
   const [selectedId, setSelectedId] = useState(null);
 
@@ -27,11 +24,19 @@ export default function ConceptMastery({ subject, concepts = [] }) {
     <div className="flex flex-col gap-8">
       <section
         aria-label="Mastery"
-        className={`grain grain-field ${state.field} flex flex-col items-center justify-center gap-2 rounded-surface px-6 py-10 text-center`}
-        style={{ '--grain': state.grain }}
+        className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center"
       >
         <h2 className="font-display text-display-l font-bold">{heading}</h2>
-        <p className="font-mono text-label uppercase text-ink">{state.label}</p>
+        {/* The same mark the rows below wear, so the heading and the list are
+            one legend rather than two ways of saying the state. */}
+        <p className="flex items-center gap-3 font-mono text-label uppercase text-ink">
+          <span
+            aria-hidden="true"
+            className={`grain grain-mark ${state.field}`}
+            style={{ '--grain': state.grain }}
+          />
+          {state.label}
+        </p>
         {selected ? (
           <button
             type="button"

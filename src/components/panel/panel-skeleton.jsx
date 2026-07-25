@@ -1,10 +1,9 @@
-/* The loading state of a panel. Grain at `--grain-3` says the same thing here
-   that it says everywhere else: this is not resolved yet. When the real panel
-   replaces it, the page settles to `--grain-1`.
+/* The loading state of a panel. Three bars where the content will be, and
+   `aria-busy` for anyone who is not looking at them.
 
-   Flat grain and a flat wash, no radial gradient — several panels can load at
-   once, and several gradient fields would read as texture instead of as
-   signal. The depth is the unresolved one either way. */
+   The body used to be a grey wash at `--grain-3`. Several panels load at once,
+   so several grey slabs appeared at once, and a wall of grey is the loudest
+   thing a screen can do to say "not yet". The bars already say it. */
 export default function PanelSkeleton({ title, wide = false }) {
   return (
     <section
@@ -21,10 +20,7 @@ export default function PanelSkeleton({ title, wide = false }) {
         </h2>
       </header>
 
-      <div
-        className="grain grain-wash grain-working field-unresolved flex-1 px-5 py-5"
-        style={{ '--grain': 'var(--grain-3)' }}
-      >
+      <div className="flex-1 px-5 py-5">
         {/* Rounded like everything else that is a surface rather than a page
             edge. Square bars were the one place the shape system broke. */}
         <div className="flex flex-col gap-3" aria-hidden="true">

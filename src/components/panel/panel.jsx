@@ -1,31 +1,16 @@
 /* A panel is a frame, not a feature. It knows a title, an optional action and
    three ways its content can turn out — present, empty, or failed. It knows
    nothing about what it holds, which is what lets a new panel be one line. */
-export default function Panel({
-  title,
-  action,
-  empty,
-  error,
-  wide = false,
-  grain = false,
-  mark,
-  children,
-}) {
+export default function Panel({ title, action, empty, error, wide = false, mark, children }) {
   const state = error ? 'error' : empty ? 'empty' : 'content';
-
-  // A surface with nothing on it yet is, definitionally, unresolved — one of
-  // the three places DESIGN.md allows a grainy gradient. It is opt-in because
-  // only one such field may appear per viewport, and a panel cannot know what
-  // the panels beside it are doing. Reviewing the page is what enforces it.
-  const field = grain && state === 'empty';
 
   return (
     <section
       aria-label={title}
       data-state={state}
       className={[
-        // `overflow-hidden` so a wash or a field inside the panel is clipped
-        // to the same corner the border draws.
+        // `overflow-hidden` so anything the panel holds is clipped to the same
+        // corner the border draws.
         'flex flex-col overflow-hidden rounded-surface border border-rule bg-paper',
         wide ? 'md:col-span-2' : '',
       ].join(' ')}
@@ -49,13 +34,11 @@ export default function Panel({
         {action}
       </header>
 
-      <div
-        className={[
-          'flex-1 px-5 py-5',
-          field ? 'grain grain-field field-partial min-h-40' : '',
-        ].join(' ')}
-        style={field ? { '--grain': 'var(--grain-2)' } : undefined}
-      >
+      {/* An empty panel used to take a tinted field here, on the grounds that
+          a surface with nothing on it is unresolved. It was a grey rectangle
+          under a sentence. If a panel's emptiness is a state worth showing, it
+          wears a `mark` in its header like every other state does. */}
+      <div className="flex-1 px-5 py-5">
         {error ? (
           // No colour carries the failure. A 2px ink rule does, and nothing
           // else in the interface has one. It rules the message rather than
@@ -65,12 +48,7 @@ export default function Panel({
             {error}
           </p>
         ) : empty ? (
-          // Muted ink is a 7:1 contrast on paper and less than that on a
-          // tinted field. Inside a field the copy is full ink; outside it
-          // stays secondary, because there it is.
-          <p className={field ? 'text-body-s text-ink' : 'text-body-s text-ink-muted'}>
-            {empty}
-          </p>
+          <p className="text-body-s text-ink-muted">{empty}</p>
         ) : (
           children
         )}

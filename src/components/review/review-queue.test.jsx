@@ -21,11 +21,10 @@ describe('ReviewQueue', () => {
       ),
     ).toBeInTheDocument()
 
-    const field = container.querySelector('.grain')
-    expect(field).toHaveClass('grain-field')
-    // A card sized to its message, not a full-width band across the page.
-    expect(field).toHaveClass('rounded-surface')
-    expect(field).not.toHaveClass('min-h-64')
+    // A card sized to its message, not a tinted band across the page.
+    expect(container.querySelector('.grain, .grain-field')).toBeNull()
+    expect(container.firstChild).toHaveClass('rounded-surface', 'border', 'border-rule')
+    expect(container.firstChild).not.toHaveClass('min-h-64')
   })
 
   it('shows one artefact at a time, and says where you are', () => {

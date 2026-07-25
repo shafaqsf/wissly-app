@@ -28,10 +28,7 @@ export default function ReviewQueue({ artefacts = [], onRate, onGrade }) {
 
   if (artefacts.length === 0) {
     return (
-      <div
-        className="grain grain-field field-unresolved flex flex-col items-center justify-center gap-3 rounded-surface px-6 py-12 text-center"
-        style={{ '--grain': 'var(--grain-3)' }}
-      >
+      <div className="flex flex-col items-center justify-center gap-3 rounded-surface border border-rule px-6 py-12 text-center">
         <p className="max-w-measure text-body">
           Nothing is due right now. Add material and the first review will
           appear here.
@@ -43,11 +40,9 @@ export default function ReviewQueue({ artefacts = [], onRate, onGrade }) {
   if (!artefact) {
     return (
       <div
-        // The one place the product says well done. `--grain-0` alone renders
-        // nothing, so the arrival used to look like a blank div; the settled
-        // field gives it a surface to land on.
-        className="grain grain-field field-settled flex flex-col items-center justify-center gap-3 rounded-surface px-6 py-12 text-center"
-        style={{ '--grain': 'var(--grain-0)' }}
+        // The one place the product says well done. A card and a sentence: an
+        // arrival is quiet, and a tint under it would only make it grey.
+        className="flex flex-col items-center justify-center gap-3 rounded-surface border border-rule px-6 py-12 text-center"
       >
         <p className="max-w-measure text-body">
           That is today done. You reviewed {artefacts.length}{' '}

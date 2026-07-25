@@ -133,35 +133,19 @@ describe('the agent bar', () => {
     expect(container.querySelector('.grain')).toHaveClass('grain-working');
 
     rerender(<AgentBar working={false} />);
-    expect(container.querySelector('.grain')).not.toHaveClass('grain-working');
+    expect(container.querySelector('.grain')).toBeNull();
   });
 
-  it('sets no inline grain, because the state class carries both axes', async () => {
+  /* The transcript used to be a tinted surface while a run was in flight, and
+     the answer then had to be read on top of it. Nothing in the bar paints a
+     background any more — see "The field" in docs/DESIGN.md. */
+  it('paints no background, however long the run takes', async () => {
     const user = userEvent.setup();
     const { container } = render(<AgentBar working />);
 
     await user.click(screen.getByLabelText(/ask about your material/i));
 
-    // A surface that names its grain separately from its colour can say one
-    // thing with its texture and another with its hue.
-    expect(container.querySelector('.grain').style.getPropertyValue('--grain')).toBe('');
-  });
-
-  it('keeps the field off the form, because a field sits beside one, never behind', async () => {
-    const user = userEvent.setup();
-    const { container } = render(<AgentBar working />);
-
-    await user.click(screen.getByLabelText(/ask about your material/i));
-
-    expect(container.querySelector('form').closest('.grain-field')).toBeNull();
-  });
-
-  it('tells the page behind it to stand down, so only one field carries state', () => {
-    const { rerender } = render(<AgentBar working />);
-    expect(document.body.dataset.agentWorking).toBe('true');
-
-    rerender(<AgentBar working={false} />);
-    expect(document.body.dataset.agentWorking).toBe('false');
+    expect(container.querySelector('.grain-field, .grain-wash')).toBeNull();
   });
 
   it('closes on Escape', async () => {
@@ -176,16 +160,22 @@ describe('the agent bar', () => {
   });
 });
 
-describe('the field the bar paints', () => {
-  it('names the state it encodes, so it is never colour for its own sake', async () => {
+describe('the mark the bar wears', () => {
+  /* The state sits on the thing that has it, beside the word that names it.
+     A mark with no word next to it would be a dot nobody can read. */
+  it('marks the run beside the word that names it', async () => {
     const user = userEvent.setup();
     const { container, rerender } = render(<AgentBar working />);
 
     await user.click(screen.getByLabelText(/ask about your material/i));
-    expect(container.querySelector('.grain-field')).toHaveClass('field-unresolved');
+
+    const mark = container.querySelector('.grain-mark');
+    expect(mark).toHaveClass('field-unresolved');
+    expect(mark.parentElement).toHaveTextContent('Working');
 
     rerender(<AgentBar working={false} />);
-    expect(container.querySelector('.grain-field')).toHaveClass('field-settled');
+    expect(container.querySelector('.grain-mark')).toBeNull();
+    expect(screen.getByText('Your material')).toBeInTheDocument();
   });
 });
 

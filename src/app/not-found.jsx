@@ -10,18 +10,13 @@ export const metadata = {
    outside the dashboard frame — there is no sidebar here to lean on, which is
    why it says where it is and offers exactly one way on.
 
-   A page that is not there is an empty state, which is one of the places a
-   grainy gradient is allowed. The field is the card the heading sits in, not
-   the viewport: a viewport-wide field describes the browser window, and the
-   browser window has no state. Body copy stays on clean paper beside it, which
-   is what lets the card run at the full unresolved intensity. */
+   The card used to be tinted, on the grounds that a page that is not there is
+   an empty state. It was a grey box behind a heading, which is a background —
+   and the heading already says the whole thing. */
 export default function NotFound() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24 text-center">
-      <div
-        className="grain grain-field field-unresolved flex flex-col items-center gap-3 rounded-surface px-8 py-10"
-        style={{ '--grain': 'var(--grain-3)' }}
-      >
+      <div className="flex flex-col items-center gap-3 rounded-surface border border-rule px-8 py-10">
         {/* This page renders outside the dashboard frame, so there is no
             sidebar here to say which product the learner is lost in. */}
         <BrandMark size={40} />

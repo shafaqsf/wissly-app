@@ -22,7 +22,7 @@ describe('the auth frame', () => {
     }
   })
 
-  it('shows the field beside the form, as its own element', () => {
+  it('shows the field above the form, as its own element', () => {
     const { container } = render(
       <AuthLayout>
         <p>Sign in</p>
@@ -34,6 +34,23 @@ describe('the auth frame', () => {
     expect(field).not.toBeNull()
     expect(field.className).toMatch(/field-unresolved/)
     expect(field).toBeEmptyDOMElement()
+    expect(field).toHaveStyle({ '--grain': 'var(--grain-3)' })
+  })
+
+  /* It used to take half the viewport. A field that fills half a screen is
+     describing the screen, and the screen does not have a state — see
+     "Where a field goes" in docs/DESIGN.md. */
+  it('sizes the field to the reading column, not to the viewport', () => {
+    const { container } = render(
+      <AuthLayout>
+        <p>Sign in</p>
+      </AuthLayout>,
+    )
+
+    const field = container.querySelector('.grain-field')
+
+    expect(field).toHaveClass('rounded-surface')
+    expect(field.className).not.toMatch(/flex-1|min-h-full|md:order-last/)
   })
 
   it('hides the field from assistive technology', () => {

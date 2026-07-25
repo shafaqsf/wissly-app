@@ -263,6 +263,22 @@ describe('colour containment', () => {
     expect(offenders).toEqual([])
   })
 
+  /* Beside a form, never behind or below one. A form that reports its own
+     progress wears a mark next to the words; a surface under the submit button
+     is still a surface a learner is reading on. */
+  it('never puts a field surface inside a form', () => {
+    const offenders = sourceFiles()
+      .filter((file) => file.endsWith('.jsx'))
+      .filter((file) =>
+        readFileSync(file, 'utf8')
+          .split('<form')
+          .slice(1)
+          .some((rest) => rest.split('</form>')[0].includes('grain-field')),
+      )
+
+    expect(offenders).toEqual([])
+  })
+
   /* Every field carries a state class. A `.grain-field` or `.grain-mark`
      without one paints transparent stops and silently loses the signal it was
      there to give. */

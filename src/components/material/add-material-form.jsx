@@ -95,11 +95,19 @@ export default function AddMaterialForm({ action, subjects = [], initialState = 
       </div>
 
       {pending ? (
+        /* A mark, not a surface. A field under the submit button is still a
+           field on a surface the learner is reading — docs/DESIGN.md: beside a
+           form, never behind or below one. The mark drifts while the work is
+           unresolved and says the same thing at a fraction of the area. */
         <p
           aria-live="polite"
-          className="grain grain-field field-unresolved flex min-h-32 items-center justify-center px-6 text-center font-mono text-label uppercase text-ink"
-          style={{ '--grain': 'var(--grain-3)' }}
+          className="flex items-center gap-3 font-mono text-label uppercase text-ink"
         >
+          <span
+            aria-hidden="true"
+            className="grain grain-mark grain-working field-unresolved"
+            style={{ '--grain': 'var(--grain-3)' }}
+          />
           Reading, then writing what to ask you
         </p>
       ) : null}

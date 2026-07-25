@@ -1,6 +1,18 @@
 # wissly
 
-An open source agentic learning platform.
+An open source agentic learning platform. It takes the work of *organising*
+study off you, so the only thing left is the studying.
+
+Learning from your own material is mostly admin. Someone has to decide what a
+chapter is really about, turn it into questions worth answering, work out when
+to ask each one again, and keep track of what you have actually got. That is
+hours of work before any learning happens, which is why most people skip it and
+just reread the text.
+
+**wissly puts an AI agent in that seat.** You hand it a script, a paper or your
+notes; it reads the material, works out what it covers, writes the questions,
+schedules them and keeps score. You answer them. Nothing about the studying is
+automated — that part is yours and has to be — but everything around it is.
 
 > Early days. The pipeline below runs end to end — material in, artefacts out,
 > reviews scheduled, mastery derived — but half the format catalogue is still
@@ -8,11 +20,14 @@ An open source agentic learning platform.
 
 ## What wissly does
 
-You bring your own material. wissly reads it, works out what it covers, writes
-things for you to answer, schedules them, and keeps a running measure of what
-you can actually do. It is not a general chatbot with a study skin on it: every
-answer it gives is grounded in a passage of *your* material, and it says which
-one.
+The agent is not a chatbot with a study skin on it. It reads *your* material and
+nothing else, it says which passage every answer came from, and in the mode
+where it can change things, every change can be taken back. Those three
+constraints are the product: an assistant that is confidently wrong about your
+exam material is worse than no assistant, because you would memorise it.
+
+What follows is what happens between handing over a file and knowing the
+subject.
 
 ### 1. Material comes in
 

@@ -19,13 +19,25 @@ describe('the mode picker', () => {
     expect(screen.getByLabelText(/what the agent may do/i)).toHaveValue('agent');
   });
 
-  /* The choice is about consequence, so the consequence is on the screen
-     before the choice is made rather than in a tooltip after it. */
-  it('says what each mode does in the options themselves', () => {
+  /* The consequence used to ride inside the option text, which made the
+     closed control forty characters wide and pushed the model picker onto a
+     line of its own. It reads as a line under the pair instead: still on the
+     screen, still ink, and no longer deciding the layout. */
+  it('keeps the option itself short enough to sit beside the model picker', () => {
     render(<ModePicker mode="chat" />);
 
-    expect(screen.getByRole('option', { name: /chat/i })).toHaveTextContent(/changes nothing/i);
-    expect(screen.getByRole('option', { name: /agent/i })).toHaveTextContent(/undone/i);
+    expect(screen.getByRole('option', { name: 'Chat' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Agent' })).toBeInTheDocument();
+  });
+
+  it('says what the mode in force will do, under the control', () => {
+    const { rerender } = render(<ModePicker mode="chat" />);
+
+    expect(screen.getByText(/changes nothing/i)).toBeInTheDocument();
+
+    rerender(<ModePicker mode="agent" />);
+
+    expect(screen.getByText(/undone/i)).toBeInTheDocument();
   });
 
   it('reports the mode the learner picked', async () => {

@@ -26,11 +26,14 @@ import ConversationList from '@/components/conversation/conversation-list';
  * to be tinted while a run was in flight — a grey box the answer then had to
  * be read on top of. It is a `.grain-mark field-unresolved` beside the word
  * "Working" now, drifting while the run is in flight and settling to
- * `.field-settled` over 600ms when the answer lands. That is also what ends the arbitration this bar used
- * to need with the page behind it: nothing paints a background any more, so
- * there is nothing for two surfaces to compete over. The bar still says it is
- * working on the element the frame can read, so a page with a state of its own
- * can stand down while the agent has something to say.
+ * `.field-settled` over 600ms when the answer lands. That is also what ends the
+ * arbitration this bar used to need with the page behind it: nothing paints a
+ * background any more, so there is nothing for two surfaces to compete over.
+ *
+ * **Closing wins.** The panel lifts itself when a run is in flight, and the
+ * learner can still shut it — it floats over what they were reading, and an
+ * interface that lifts itself over the page and then refuses to leave is
+ * arguing with the person using it.
  *
  * **The mark, once.** The sidebar gave its `BrandMark` up, so this is the one
  * place per viewport where the product names itself. One per bar, in the
@@ -80,8 +83,20 @@ export default function AgentBar({
   const [open, setOpen] = useState(false);
   /* The panel lifts itself when there is something to watch — a run in flight,
      or a thread the dock has just rejoined. A bar answering behind a closed
-     line would be reporting to nobody. */
-  const shown = open || working || lifted;
+     line would be reporting to nobody.
+
+     `dismissed` is what makes that a suggestion rather than a decision. The
+     panel floats over whatever the learner was reading, so a self-lift that
+     could not be closed would be an interface arguing with the person using
+     it. Closing wins for as long as the learner leaves it closed; sending the
+     next line withdraws the dismissal, because that is them asking again. */
+  const [dismissed, setDismissed] = useState(false);
+  const shown = !dismissed && (open || working || lifted);
+
+  function close() {
+    setOpen(false);
+    setDismissed(true);
+  }
   const [view, setView] = useState(VIEWS.transcript);
   const [mode, setMode] = useState(initialMode);
   const [modeGiven, setModeGiven] = useState(initialMode);
@@ -101,7 +116,7 @@ export default function AgentBar({
     if (!shown) return undefined;
 
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') close();
     };
 
     document.addEventListener('keydown', onKeyDown);
@@ -116,6 +131,7 @@ export default function AgentBar({
 
     setDraft('');
     setOpen(true);
+    setDismissed(false);
     setView(VIEWS.transcript);
 
     // Straight through, working or not. The dock decides whether this becomes
@@ -198,7 +214,7 @@ export default function AgentBar({
 
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={close}
                   aria-label="Close the agent"
                   className="flex size-11 items-center justify-center rounded-control"
                 >
@@ -299,14 +315,17 @@ export default function AgentBar({
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Mode and model share one row and split it. They are independent
+              choices made about the same line, so putting one under the other
+              read as two steps rather than two settings. */}
+          <div data-testid="agent-choices" className="flex items-start gap-2">
             <ModePicker mode={mode} onChange={chooseMode} />
             <ModelPicker model={model} onChange={chooseModel} />
-
-            {waiting > 0 ? (
-              <p className="font-mono text-caption text-ink-muted">{waiting} waiting</p>
-            ) : null}
           </div>
+
+          {waiting > 0 ? (
+            <p className="font-mono text-caption text-ink-muted">{waiting} waiting</p>
+          ) : null}
         </form>
       </div>
     </div>

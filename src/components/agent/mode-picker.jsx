@@ -17,9 +17,14 @@ export const MODES = [
   { id: 'agent', label: 'Agent', consequence: 'acts for you, and every act can be undone' },
 ];
 
+/** What the mode in force will do, for the line under the control. */
+export function consequenceOf(mode) {
+  return MODES.find(({ id }) => id === mode)?.consequence ?? '';
+}
+
 export default function ModePicker({ mode = 'chat', onChange, disabled = false, id = 'agent-mode' }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-1 flex-col gap-1">
       <label htmlFor={id} className="sr-only">
         What the agent may do
       </label>
@@ -31,14 +36,20 @@ export default function ModePicker({ mode = 'chat', onChange, disabled = false, 
         // The radius is here for the focus ring: an outline takes the
         // element's own corner, so a square control draws a square ring in an
         // interface that has none — see "Shape" in docs/DESIGN.md.
-        className="min-h-11 rounded-control border border-rule bg-paper px-3 font-mono text-label uppercase text-ink"
+        className="min-h-11 w-full rounded-control border border-rule bg-paper px-3 font-mono text-label uppercase text-ink"
       >
-        {MODES.map(({ id: value, label, consequence }) => (
+        {MODES.map(({ id: value, label }) => (
           <option key={value} value={value}>
-            {label} — {consequence}
+            {label}
           </option>
         ))}
       </select>
+
+      {/* The consequence rode inside the option text until it made the closed
+          control forty characters wide and pushed the model picker onto its
+          own line. It says the same thing here, about the mode actually in
+          force, and no longer decides the layout. */}
+      <p className="font-mono text-caption text-ink-muted">{consequenceOf(mode)}</p>
     </div>
   );
 }

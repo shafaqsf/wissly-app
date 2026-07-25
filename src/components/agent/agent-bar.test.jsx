@@ -65,7 +65,44 @@ describe('the agent bar', () => {
     expect(container.querySelectorAll('[data-brand-mark]')).toHaveLength(1);
   });
 
+  /* The panel floats over whatever the learner was reading, so closing it has
+     to work even while it has something to say. It used to lift itself for a
+     run in flight and then refuse to go away, which turned a helpful reflex
+     into a thing sitting on top of the page. Closing is the learner's call;
+     the next message they send brings it back. */
+  it('closes even while a run is in flight, and the next send brings it back', async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn().mockResolvedValue({});
+    render(<AgentBar working onSend={onSend} />);
+
+    expect(screen.getByTestId('agent-state')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /close the agent/i }));
+
+    expect(screen.queryByTestId('agent-state')).toBeNull();
+
+    await user.type(screen.getByLabelText(FIELD), 'carry on then');
+    await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+    expect(screen.getByTestId('agent-state')).toBeInTheDocument();
+  });
+
   describe('mode and model', () => {
+    /* Two controls on one line. They used to stack, because the mode option
+       carried its whole consequence as text and made the closed control wide
+       enough to push the model picker onto a line of its own. */
+    it('stands the two pickers side by side on one row', () => {
+      render(<AgentBar />);
+
+      const mode = screen.getByLabelText(/what the agent may do/i);
+      const model = screen.getByLabelText(/which model answers/i);
+
+      const row = mode.closest('[data-testid="agent-choices"]');
+      expect(row).not.toBeNull();
+      expect(row).toBe(model.closest('[data-testid="agent-choices"]'));
+      expect(row.className).not.toMatch(/flex-wrap/);
+    });
+
     it('offers both as dropdowns rather than as toggles', () => {
       render(<AgentBar />);
 

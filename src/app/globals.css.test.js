@@ -263,6 +263,18 @@ describe('colour containment', () => {
     expect(offenders).toEqual([])
   })
 
+  /* The brand mark is the one coloured asset in the product, and it is a named
+     exception rather than a loophole — see "The mark" in docs/DESIGN.md. One
+     component owns the file; everything else composes that component, so the
+     exception cannot quietly become a habit. */
+  it('keeps the brand mark to the one component that owns it', () => {
+    const offenders = sourceFiles()
+      .filter((file) => !file.replace(/\\/g, '/').endsWith('components/brand/brand-mark.jsx'))
+      .filter((file) => readFileSync(file, 'utf8').includes('/brand/icon'))
+
+    expect(offenders).toEqual([])
+  })
+
   /* Beside a form, never behind or below one. A form that reports its own
      progress wears a mark next to the words; a surface under the submit button
      is still a surface a learner is reading on. */

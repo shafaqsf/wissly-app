@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, MessageSquare, Square, Undo2, Wand2, X } from 'lucide-react';
 
 import Transcript from '@/components/agent/transcript';
+import BrandMark from '@/components/brand/brand-mark';
 
 /* The agent, as the learner meets it: one line floating at the centre of the
    screen, lifting into a panel when it has something to say.
@@ -119,7 +120,11 @@ export default function AgentBar({
             ].join(' ')}
           >
             <header className="flex min-h-14 items-center justify-between gap-4 border-b border-rule px-4">
-              <p className="font-mono text-label uppercase">
+              {/* The mark says who is speaking, once. Repeating it on every
+                  turn would put a column of the same colour down the
+                  transcript, which reads as texture rather than as identity. */}
+              <p className="flex items-center gap-2 font-mono text-label uppercase">
+                <BrandMark size={20} />
                 {working ? 'Working' : 'Your material'}
               </p>
               <div className="flex items-center gap-1">

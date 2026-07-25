@@ -1,15 +1,18 @@
 # brand
 
-Drop the wissly mark here. One source file serves both the favicon and the
-agent avatar.
+`icon.png` is the wissly mark: 500×500, RGBA, transparent background. One file
+serves the browser tab and the agent.
 
-| File | Purpose | Notes |
-| --- | --- | --- |
-| `icon.svg` | Preferred source. Favicon and agent avatar. | Monochrome, `currentColor` where possible, square viewBox, no padding baked in. |
-| `icon.png` | Fallback if SVG is not available. | 512×512, transparent background. |
+Nothing else may reach it directly. `src/components/brand/brand-mark.jsx` owns
+the path and exports `MARK`; the root layout points `metadata.icons` at that
+export, and the agent panel composes the component. A test in
+`src/app/globals.css.test.js` fails if any other file names the asset.
 
-Nothing here is wired up yet — once a file lands, the layout picks it up as
-the favicon and the agent uses it as its avatar.
+The mark is the one coloured thing in the product — a named exception to the
+no-colour-in-the-chrome rule, not a loophole. See "The mark" in
+[`docs/DESIGN.md`](../../docs/DESIGN.md) for why it earns that, and for what
+must not follow it.
 
-Per [`docs/DESIGN.md`](../../docs/DESIGN.md) the mark is ink on paper: no
-colour, no gradient. Colour lives only inside a grain field.
+Replacing the mark means replacing this file. Keep it square, keep the
+background transparent, and keep it drawn from the field palette — a mark in
+some other hue would make the exception arbitrary.

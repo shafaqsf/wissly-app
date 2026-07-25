@@ -25,8 +25,9 @@ does not encode state, remove it.
 **The chrome has no colour. Colour exists only inside a field.**
 
 Every control, every glyph, every icon, every border is ink on paper. Hue
-appears in exactly one place — the grainy gradient described under
-[Grain](#grain) — where it encodes the same thing the grain encodes.
+appears in two places and no others: the grainy gradient described under
+[Grain](#grain), where it encodes the same thing the grain encodes, and
+[the mark](#the-mark), which is that gradient standing still.
 
 ### Ink and paper
 
@@ -159,6 +160,37 @@ is expressed by `--paper-sunk` and by grain, never by a blur.
 - Never the only carrier of meaning. Every icon-only control has an
   `aria-label`, and any icon that conveys state sits beside text.
 - Do not mix in another icon set, do not recolour, do not add a gradient.
+
+The mark below is not an icon and none of this applies to it.
+
+## The mark
+
+`public/brand/icon.png` — a flame, drawn in the field palette and grained:
+heat at its edges, depth behind it, a cool core. It is the browser tab icon and
+it is the agent's face, and it is **the one coloured thing in the product**.
+
+This is a named exception, and it earns that on the same grounds the colour
+rule exists. Hue is contained so it stays a signal rather than becoming
+decoration. The mark does not spend that signal — it *is* the signal, held
+still: the same three tints, the same texture, the same one idea the whole
+interface is built on. A mark in some other palette would make the exception
+arbitrary, and then it would be a loophole.
+
+What the exception does not license:
+
+- **One file, one owner.** `src/components/brand/brand-mark.jsx` names the
+  asset; everything else composes that component or reads its `MARK` export.
+  `src/app/globals.css.test.js` fails if a second file names the path.
+- **It is never given a state.** No `.field-*` class, no grain intensity, no
+  settle. It does not brighten when the agent works. It is identity, not state,
+  and the two must not be confused.
+- **It is never the only carrier of meaning.** It is decorative — `alt=""` —
+  and the words it sits beside do the work.
+- **It appears once per screen.** Repeating it down a transcript would put a
+  column of the same colour on the page, which reads as texture and is exactly
+  what [Grain](#grain) forbids.
+- **Nothing else follows it.** No coloured illustration, no coloured
+  spot art, no second brand asset. This is the exception, in the singular.
 
 ## Grain
 
@@ -356,7 +388,8 @@ Copy is design material. See also the voice rules in
 - Is there at most one field *surface*, and does it encode a real state?
 - Could a mark have carried that state instead, on the object that has it?
 - Does it carry a `.field-*` class? A field without one paints nothing.
-- Does anything use colour **outside** a field? Remove it.
+- Does anything use colour **outside** a field, other than the one mark?
+  Remove it.
 - Is any text on a field muted rather than ink?
 - Is the reading column at or under 66 characters?
 - Does every focusable element show its focus ring?

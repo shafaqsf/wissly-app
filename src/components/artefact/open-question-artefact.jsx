@@ -68,14 +68,17 @@ export default function OpenQuestionArtefact({ artefact, onGrade, onAnswered }) 
       </div>
 
       {status === 'marking' ? (
-        <div
-          className="grain grain-field grain-working field-unresolved flex min-h-32 items-center justify-center"
-          style={{ '--grain': 'var(--grain-3)' }}
-        >
-          <p className="font-mono text-label uppercase text-ink">
-            Marking your answer
-          </p>
-        </div>
+        /* A mark beside the words. The answer box above is a form, and a field
+           never sits below one — the mark carries the same unresolved state at
+           a size that does not push the answer off the screen. */
+        <p className="flex items-center gap-3 font-mono text-label uppercase text-ink">
+          <span
+            aria-hidden="true"
+            className="grain grain-mark grain-working field-unresolved"
+            style={{ '--grain': 'var(--grain-3)' }}
+          />
+          Marking your answer
+        </p>
       ) : null}
 
       {status === 'failed' ? (
@@ -89,13 +92,14 @@ export default function OpenQuestionArtefact({ artefact, onGrade, onAnswered }) 
 
       {status === 'marked' && grade ? (
         <div
+          // Clean paper. Grain with no field is texture with no state behind
+          // it, and the two are one axis.
           className={[
-            'grain flex flex-col gap-4 pt-6',
+            'flex flex-col gap-4 pt-6',
             grade.verdict === 'incorrect'
               ? 'border-l-2 border-ink pl-4'
               : 'border-t border-rule',
           ].join(' ')}
-          style={{ '--grain': 'var(--grain-1)' }}
         >
           <p role="status" className="flex max-w-measure items-baseline gap-2 text-body">
             <verdict.Icon size={18} strokeWidth={1.5} aria-hidden="true" />

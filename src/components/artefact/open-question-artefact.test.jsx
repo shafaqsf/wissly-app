@@ -35,14 +35,34 @@ describe('OpenQuestionArtefact', () => {
     await user.type(screen.getByLabelText('Your answer'), 'It keeps its direction.')
     await user.click(screen.getByRole('button', { name: 'Send your answer' }))
 
-    const field = container.querySelector('.grain')
-    expect(field).toHaveClass('grain-working')
-    expect(field).toHaveStyle({ '--grain': 'var(--grain-3)' })
+    // A mark beside the words, not a surface under the answer box. The answer
+    // box is a form, and a field never sits below one.
+    const mark = container.querySelector('.grain-mark')
+    expect(mark).toHaveClass('grain-working')
+    expect(mark).toHaveClass('field-unresolved')
+    expect(mark).toHaveStyle({ '--grain': 'var(--grain-3)' })
+    expect(container.querySelector('.grain-field')).toBeNull()
     expect(screen.getByText('Marking your answer')).toBeInTheDocument()
 
     await release()
     expect(await screen.findByText(sampleGrade.feedback)).toBeInTheDocument()
     expect(container.querySelector('.grain-working')).toBeNull()
+  })
+
+  /* Grain with no field is texture with nothing behind it — grain and colour
+     are one axis. The graded block carried `.grain` at the ambient intensity
+     and said nothing by it. */
+  it('leaves the marked answer on clean paper', async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <OpenQuestionArtefact artefact={openQuestionFixture} onGrade={() => sampleGrade} />,
+    )
+
+    await user.type(screen.getByLabelText('Your answer'), 'It keeps its direction.')
+    await user.click(screen.getByRole('button', { name: 'Send your answer' }))
+    await screen.findByText(sampleGrade.feedback)
+
+    expect(container.querySelector('.grain')).toBeNull()
   })
 
   it('names the verdict in words and lists what the answer left out', async () => {

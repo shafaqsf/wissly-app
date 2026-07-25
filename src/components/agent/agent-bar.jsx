@@ -100,7 +100,7 @@ export default function AgentBar({
     >
       {/* No shadow anywhere in this design language, so a floating surface
           separates from the page with a fill and a hairline instead. */}
-      <div className="pointer-events-auto flex w-full max-w-2xl flex-col border border-rule bg-paper">
+      <div className="pointer-events-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-surface border border-rule bg-paper">
         {open ? (
           // The field goes here and not around the whole panel: DESIGN.md puts
           // a field *beside* a form, never behind one, and the text field is a

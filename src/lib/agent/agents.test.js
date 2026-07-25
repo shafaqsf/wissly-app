@@ -1,15 +1,35 @@
+// @vitest-environment node
+
 import { describe, expect, it } from 'vitest'
 
 import { fakeSupabase } from '../data/fake-supabase.js'
+import { READ_ONLY_TOOLS } from './tools.js'
+import { WRITE_TOOLS } from './write-tools.js'
 import {
   LIBRARIAN_INSTRUCTIONS,
+  ROLES,
   STEWARD_INSTRUCTIONS,
+  TOOLS_BY_ROLE,
   agentForMode,
   anchorGuardrail,
   citedSections,
+  createExaminer,
   createLibrarian,
+  createMaker,
+  createRouter,
+  createSteward,
   missingAnchors,
 } from './agents.js'
+
+const context = () => ({
+  supabase: fakeSupabase(),
+  model: 'a/b',
+  userId: 'u1',
+  runId: 'r1',
+  client: {},
+})
+
+const named = (agent) => agent.tools.map((definition) => definition.name).sort()
 
 describe('missingAnchors', () => {
   it('rejects an answer that read the material and cited none of it', () => {
@@ -85,20 +105,17 @@ describe('anchorGuardrail', () => {
 })
 
 describe('the librarian', () => {
-  it('holds the three read-only tools and nothing that writes', () => {
-    const agent = createLibrarian({ supabase: fakeSupabase(), model: 'a/b' })
+  it('holds every reading tool and nothing that writes', () => {
+    const agent = createLibrarian(context())
 
-    expect(agent.tools.map((definition) => definition.name).sort()).toEqual([
-      'list_courses',
-      'read_section',
-      'search_sections',
-    ])
+    expect(named(agent)).toEqual(READ_ONLY_TOOLS.map((d) => d.name).sort())
+
+    const writes = WRITE_TOOLS.map((definition) => definition.name)
+    for (const name of named(agent)) expect(writes).not.toContain(name)
   })
 
   it('carries the guardrail that keeps the citation promise', () => {
-    const agent = createLibrarian({ supabase: fakeSupabase(), model: 'a/b' })
-
-    expect(agent.outputGuardrails).toHaveLength(1)
+    expect(createLibrarian(context()).outputGuardrails).toHaveLength(1)
   })
 
   it('is told to stop rather than improvise when the material is silent', () => {
@@ -110,48 +127,113 @@ describe('the librarian', () => {
   })
 })
 
-describe('the mode switch', () => {
-  it('gives chat mode an agent that holds nothing which writes', () => {
-    const agent = agentForMode({ mode: 'chat', supabase: fakeSupabase(), model: 'a/b' })
+describe('the specialists', () => {
+  it('gives the Maker what it needs to generate and nothing to grade with', () => {
+    const agent = createMaker(context())
 
-    expect(agent.name).toBe('Librarian')
-    expect(agent.tools.map((definition) => definition.name)).not.toContain('rename_course')
-    expect(agent.tools.map((definition) => definition.name)).not.toContain('make_artefacts')
+    expect(named(agent)).toContain('make_artefacts')
+    expect(named(agent)).toContain('write_artefact')
+    expect(named(agent)).not.toContain('record_review')
   })
 
-  it('gives agent mode the writing tools as well as the reading ones', () => {
-    const agent = agentForMode({
-      mode: 'agent',
-      supabase: fakeSupabase(),
-      model: 'a/b',
-      userId: 'u1',
-      runId: 'r1',
-      client: {},
-    })
+  it('gives the Examiner what it needs to grade and nothing to generate with', () => {
+    const agent = createExaminer(context())
 
-    expect(agent.name).toBe('Steward')
-    expect(agent.tools.map((definition) => definition.name).sort()).toEqual([
-      'list_courses',
-      'make_artefacts',
-      'read_section',
-      'rename_course',
-      'search_sections',
+    expect(named(agent)).toContain('due_tasks')
+    expect(named(agent)).toContain('grade_answer')
+    expect(named(agent)).toContain('record_review')
+    expect(named(agent)).not.toContain('make_artefacts')
+  })
+
+  it('gives the Steward the whole surface, because it acts for the learner', () => {
+    expect(named(createSteward(context()))).toEqual(
+      [...READ_ONLY_TOOLS, ...WRITE_TOOLS].map((definition) => definition.name).sort(),
+    )
+  })
+
+  it('refuses to build any writing agent with no run to attribute actions to', () => {
+    for (const create of [createMaker, createExaminer, createSteward, createRouter]) {
+      expect(() => create({ ...context(), runId: undefined }), create.name).toThrow(/run/i)
+    }
+  })
+
+  it('lets no specialist reach auth or export', () => {
+    for (const create of [createLibrarian, createMaker, createExaminer, createSteward]) {
+      for (const name of named(create(context()))) {
+        expect(name, `${create.name}: ${name}`).not.toMatch(
+          /email|password|account|auth|export|share|sign_?out/i,
+        )
+      }
+    }
+  })
+})
+
+describe('the router', () => {
+  it('holds no tools of its own and hands off to the four', () => {
+    const agent = createRouter(context())
+
+    expect(agent.tools ?? []).toHaveLength(0)
+    expect(agent.handoffs.map((handoff) => handoff.name ?? handoff.agentName).sort()).toEqual([
+      'Examiner',
+      'Librarian',
+      'Maker',
+      'Steward',
     ])
   })
+})
 
-  it('refuses to build a writing agent with no run to attribute actions to', () => {
-    expect(() =>
-      agentForMode({ mode: 'agent', supabase: fakeSupabase(), model: 'a/b', userId: 'u1' }),
-    ).toThrow(/run/i)
+describe('the mode switch', () => {
+  it('gives chat mode an agent that holds nothing which writes', () => {
+    const agent = agentForMode({ ...context(), mode: 'chat' })
+
+    expect(agent.name).toBe('Librarian')
+    for (const definition of WRITE_TOOLS) {
+      expect(named(agent)).not.toContain(definition.name)
+    }
+  })
+
+  it('gives agent mode the router, which can reach the writing tools', () => {
+    const agent = agentForMode({ ...context(), mode: 'agent' })
+
+    expect(agent.name).toBe('Router')
   })
 
   it('treats an unknown mode as chat, the one that cannot write', () => {
-    expect(agentForMode({ mode: 'root', supabase: fakeSupabase(), model: 'a/b' }).name).toBe(
-      'Librarian',
+    expect(agentForMode({ ...context(), mode: 'root' }).name).toBe('Librarian')
+  })
+
+  it('refuses to build a writing agent with no run to attribute actions to', () => {
+    expect(() => agentForMode({ ...context(), mode: 'agent', runId: undefined })).toThrow(/run/i)
+  })
+
+  it('takes the model it is handed, so mode and model stay independent', () => {
+    expect(agentForMode({ ...context(), mode: 'chat', model: 'anthropic/claude-sonnet-5' }).model).toBe(
+      'anthropic/claude-sonnet-5',
     )
+    expect(
+      agentForMode({ ...context(), mode: 'agent', model: 'deepseek/deepseek-v4-pro' }).model,
+    ).toBe('deepseek/deepseek-v4-pro')
   })
 
   it('tells the steward to read before it writes', () => {
     expect(STEWARD_INSTRUCTIONS).toMatch(/Read before you write/)
+  })
+})
+
+describe('TOOLS_BY_ROLE', () => {
+  it('documents what each role may do, which is what the bar explains to the learner', () => {
+    expect(Object.keys(TOOLS_BY_ROLE).sort()).toEqual([...ROLES].sort())
+
+    for (const [role, tools] of Object.entries(TOOLS_BY_ROLE)) {
+      expect(tools.length, role).toBeGreaterThan(0)
+    }
+  })
+
+  it('names only tools that exist', () => {
+    const all = [...READ_ONLY_TOOLS, ...WRITE_TOOLS].map((definition) => definition.name)
+
+    for (const [role, tools] of Object.entries(TOOLS_BY_ROLE)) {
+      for (const name of tools) expect(all, `${role}: ${name}`).toContain(name)
+    }
   })
 })

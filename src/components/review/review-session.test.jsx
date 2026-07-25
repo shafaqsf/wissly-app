@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ReviewSession from './review-session'
-import { FORMAT_NAMES } from '@/components/artefact/artefact'
+import { FORMAT_NAMES } from '@/components/task/task-types'
 import { flashcardFixture } from '@/lib/artefact-fixtures'
 
 const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }))

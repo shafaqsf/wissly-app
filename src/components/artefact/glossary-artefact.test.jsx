@@ -21,4 +21,16 @@ describe('GlossaryArtefact', () => {
 
     expect(screen.getByText(/scalar multiple of v/)).toBeInTheDocument()
   })
+
+  it('points the anchor back at the section on its course shelf', async () => {
+    const user = userEvent.setup()
+    render(<GlossaryArtefact artefact={glossaryFixture} />)
+
+    await user.click(screen.getByRole('button', { name: 'Source 1, page 12' }))
+
+    expect(screen.getByRole('link', { name: 'Open the section' })).toHaveAttribute(
+      'href',
+      '/courses/subject-linear-algebra#section-section-eigenvectors',
+    )
+  })
 })

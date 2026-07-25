@@ -12,8 +12,12 @@ import { quietButtonClass } from '@/components/artefact/control';
    same one its concepts wear, at the size a heading can carry. Picking a
    concept is still the settle, in the open: the mark travels to its new fill
    over 600ms while the grain clears with it. */
-export default function ConceptMastery({ subject, concepts = [] }) {
-  const [selectedId, setSelectedId] = useState(null);
+export default function ConceptMastery({ subject, concepts = [], initialConceptId = null }) {
+  /* `initialConceptId` is how `/analytics?concept=…` opens on one concept.
+     A deep link is a starting state, not a controlled one — the learner can
+     still pick another row or go back to the whole course, and the URL is not
+     rewritten under them while they do it. */
+  const [selectedId, setSelectedId] = useState(initialConceptId);
 
   const selected = concepts.find((concept) => concept.id === selectedId);
   const mastery = selected ? selected.mastery : averageMastery(concepts);

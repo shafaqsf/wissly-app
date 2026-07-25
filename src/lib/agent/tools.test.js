@@ -1,10 +1,23 @@
-import { readFileSync } from 'node:fs'
+// @vitest-environment node
+
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
 import { argsOf, fakeSupabase } from '../data/fake-supabase.js'
-import { READ_ONLY_TOOLS, listCourses, readSection, searchSections } from './tools.js'
+import {
+  READ_ONLY_TOOLS,
+  dueTasks,
+  listCourses,
+  listReading,
+  listSources,
+  listStandingOrders,
+  listTasks,
+  readSection,
+  searchEverything,
+  searchSections,
+} from './tools.js'
 
 describe('searchSections', () => {
   it('carries the anchor back with every hit', async () => {
@@ -101,11 +114,138 @@ describe('listCourses', () => {
   })
 })
 
+describe('listSources', () => {
+  it('returns the shelf with each section’s anchor, and no whole documents', async () => {
+    const supabase = fakeSupabase({
+      sources: { data: [{ id: 'src1', subject_id: 'sub1', kind: 'pdf', title: 'Probability' }], error: null },
+      sections: {
+        data: [
+          {
+            id: 's1',
+            source_id: 'src1',
+            ordinal: 1,
+            content: 'x'.repeat(5000),
+            anchor: { page: 1 },
+          },
+        ],
+        error: null,
+      },
+    })
+
+    const [source] = await listSources(supabase, { subjectId: 'sub1' })
+
+    expect(source).toMatchObject({ source_id: 'src1', title: 'Probability' })
+    expect(source.sections[0]).toMatchObject({ section_id: 's1', anchor: { page: 1 } })
+    // A shelf listing that inlined every page would be the whole library in
+    // the context window, which is the one thing a listing must not be.
+    expect(source.sections[0].preview.length).toBeLessThan(400)
+  })
+})
+
+describe('listTasks', () => {
+  it('reads only the four answered formats', async () => {
+    const supabase = fakeSupabase({ artefacts: { data: [], error: null } })
+
+    await listTasks(supabase, { subjectId: 'sub1' })
+
+    expect(argsOf(supabase.query('artefacts'), 'in')[1].sort()).toEqual([
+      'cloze',
+      'flashcard',
+      'multiple_choice',
+      'open_question',
+    ])
+  })
+
+  it('narrows to one type when asked', async () => {
+    const supabase = fakeSupabase({ artefacts: { data: [], error: null } })
+
+    await listTasks(supabase, { subjectId: 'sub1', format: 'cloze' })
+
+    expect(argsOf(supabase.query('artefacts'), 'in')[1]).toEqual(['cloze'])
+  })
+
+  it('refuses to list reading as though it were a task', async () => {
+    await expect(
+      listTasks(fakeSupabase(), { subjectId: 'sub1', format: 'summary' }),
+    ).rejects.toThrow(/task/i)
+  })
+})
+
+describe('listReading', () => {
+  it('reads only what is read rather than answered', async () => {
+    const supabase = fakeSupabase({ artefacts: { data: [], error: null } })
+
+    await listReading(supabase, { subjectId: 'sub1' })
+
+    expect(argsOf(supabase.query('artefacts'), 'in')[1].sort()).toEqual([
+      'glossary',
+      'summary',
+    ])
+  })
+})
+
+describe('dueTasks', () => {
+  it('reads the queue, bounded', async () => {
+    const supabase = fakeSupabase({
+      artefact_schedule: { data: [], error: null },
+    })
+
+    await dueTasks(supabase, { limit: 500 })
+
+    expect(argsOf(supabase.query('artefact_schedule'), 'limit')[0]).toBeLessThanOrEqual(30)
+  })
+})
+
+describe('searchEverything', () => {
+  it('searches without a model call, over everything at once', async () => {
+    const supabase = fakeSupabase({
+      search_index: {
+        data: [
+          {
+            kind: 'section',
+            id: 's1',
+            subject_id: 'sub1',
+            parent_id: 'src1',
+            title: 'Martingales',
+            snippet: 'a fair game',
+            created_at: '2026-07-01',
+          },
+        ],
+        error: null,
+      },
+    })
+
+    const hits = await searchEverything(supabase, { query: 'martingale' })
+
+    expect(hits[0]).toMatchObject({ kind: 'section', id: 's1' })
+    expect(supabase.query('search_index')).toBeTruthy()
+  })
+})
+
+describe('listStandingOrders', () => {
+  it('lets the agent read the orders it acts under', async () => {
+    const supabase = fakeSupabase({
+      standing_orders: {
+        data: [{ id: 'o1', instruction: 'top up weak concepts', schedule: 'weekly', enabled: true }],
+        error: null,
+      },
+    })
+
+    expect(await listStandingOrders(supabase)).toMatchObject([{ id: 'o1' }])
+  })
+})
+
 describe('READ_ONLY_TOOLS', () => {
   it('is what chat mode holds, and none of it writes', () => {
     expect(READ_ONLY_TOOLS.map((definition) => definition.name).sort()).toEqual([
+      'due_tasks',
       'list_courses',
+      'list_reading',
+      'list_sources',
+      'list_standing_orders',
+      'list_tasks',
       'read_section',
+      'search_everything',
       'search_sections',
     ])
   })
@@ -113,6 +253,19 @@ describe('READ_ONLY_TOOLS', () => {
   it('describes every tool, because the description is the model’s only manual', () => {
     for (const definition of READ_ONLY_TOOLS) {
       expect(definition.description.length, definition.name).toBeGreaterThan(20)
+    }
+  })
+
+  it('refuses the wrong identity before it reads a single row', async () => {
+    const privileged = { supabaseKey: 'sb_secret_abc', from: () => {
+      throw new Error('the query was built, which is already too late')
+    } }
+
+    for (const definition of READ_ONLY_TOOLS) {
+      await expect(
+        definition.run(privileged, { query: 'x', sectionId: 's1', subjectId: 'sub1' }),
+        definition.name,
+      ).rejects.toThrow(/as the learner/i)
     }
   })
 })
@@ -124,13 +277,29 @@ describe('the agent and the secret key', () => {
    * level security bounds the damage a prompt injection can do to that
    * learner's own account. The secret key bypasses RLS entirely and would
    * turn a poisoned lecture handout into everyone's data. */
-  it('is never mentioned anywhere under src/lib/agent', () => {
-    const dir = join(process.cwd(), 'src', 'lib', 'agent')
-    const files = ['tools.js', 'runtime.js', 'agents.js']
+  const dir = join(process.cwd(), 'src', 'lib', 'agent')
+  const sources = readdirSync(dir).filter(
+    (name) => name.endsWith('.js') && !name.endsWith('.test.js'),
+  )
 
-    for (const name of files) {
+  it('is never mentioned anywhere under src/lib/agent', () => {
+    for (const name of sources) {
       const body = readFileSync(join(dir, name), 'utf8')
       expect(body, name).not.toMatch(/SUPABASE_SECRET_KEY|service_role/)
+    }
+  })
+
+  /* Auth and export are the two acts no undo restores: one changes who the
+   * learner is, the other carries their data out of the account. Export exists
+   * as a learner feature precisely because it leaves; a tool that could
+   * trigger it would hand that decision to a poisoned PDF. */
+  it('reaches neither auth nor export from any module under src/lib/agent', () => {
+    for (const name of sources) {
+      const body = readFileSync(join(dir, name), 'utf8')
+      expect(body, name).not.toMatch(
+        /supabase\.auth|\.auth\.(signOut|updateUser|admin|resetPasswordForEmail|signInWith)/,
+      )
+      expect(body, name).not.toMatch(/deleteAccount|exportCourse|exportDeck|createShareLink/)
     }
   })
 })

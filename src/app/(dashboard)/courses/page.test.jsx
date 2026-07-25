@@ -5,6 +5,7 @@ const { listCourses } = vi.hoisted(() => ({ listCourses: vi.fn() }))
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({})) }))
 vi.mock('@/lib/data/courses', () => ({ listCourses }))
+vi.mock('@/lib/actions/course', () => ({ createCourseAction: vi.fn() }))
 
 import CoursesPage from './page'
 
@@ -26,7 +27,7 @@ describe('the courses page', () => {
     expect(screen.getByRole('link', { name: /Algebra/ })).toBeInTheDocument()
   })
 
-  it('sends a course through to its own grain field on the progress page', async () => {
+  it('sends a course through to its own shelf', async () => {
     listCourses.mockResolvedValue([
       { id: 'sub-1', title: 'Optics', sources: 2, concepts: 12, settled: 3 },
     ])
@@ -35,7 +36,7 @@ describe('the courses page', () => {
 
     expect(screen.getByRole('link', { name: /Optics/ })).toHaveAttribute(
       'href',
-      '/progress?subject=sub-1',
+      '/courses/sub-1',
     )
   })
 
@@ -59,15 +60,41 @@ describe('the courses page', () => {
     expect(screen.getByText('1 source · 0 of 1 concept settled')).toBeInTheDocument()
   })
 
-  it('invites the learner to add material when there is no course yet', async () => {
+  /* Creating a course used to be impossible: a course appeared as a side
+     effect of adding material and could not be started empty. */
+  it('lets the learner start a course by naming one', async () => {
     listCourses.mockResolvedValue([])
 
     render(await CoursesPage())
 
-    expect(screen.getByRole('link', { name: 'Add your first material' })).toHaveAttribute(
-      'href',
-      '/library',
-    )
+    expect(screen.getByLabelText('Name the course')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create course' })).toBeInTheDocument()
+  })
+
+  it('offers the same creation form when there are already courses', async () => {
+    listCourses.mockResolvedValue([
+      { id: 'sub-1', title: 'Optics', sources: 1, concepts: 1, settled: 0 },
+    ])
+
+    render(await CoursesPage())
+
+    expect(screen.getByRole('button', { name: 'Create course' })).toBeInTheDocument()
+  })
+
+  it('says what to do next when there is no course yet', async () => {
+    listCourses.mockResolvedValue([])
+
+    render(await CoursesPage())
+
+    expect(screen.getByText(/Name your first course/)).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
+  })
+
+  it('sends no learner to the dissolved library', async () => {
+    listCourses.mockResolvedValue([])
+
+    const { container } = render(await CoursesPage())
+
+    expect(container.querySelector('a[href="/library"]')).toBeNull()
   })
 })

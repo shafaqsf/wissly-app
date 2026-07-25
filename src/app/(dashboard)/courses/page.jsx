@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+import CreateCourseForm from '@/components/course/create-course-form';
+import Panel from '@/components/panel/panel';
+import { createCourseAction } from '@/lib/actions/course';
 import { listCourses } from '@/lib/data/courses';
 import { createClient } from '@/lib/supabase/server';
 
@@ -7,10 +10,11 @@ export const metadata = {
   title: 'Courses — wissly',
 };
 
-/* One line per course, and the line says the two things a learner asks first:
-   how much is in here, and how much of it has settled. Neither is a bar or a
-   percentage — mastery is grain and depth, and both live on the progress page,
-   which is where each course here leads. */
+/* Two things: start a course, and open one.
+
+   The line says what a learner asks first — how much is in here, and how much
+   of it has settled. Neither is a bar or a percentage; mastery is grain, and
+   it is on the shelf each of these leads to. */
 
 function count(amount, singular, plural = `${singular}s`) {
   return `${amount} ${amount === 1 ? singular : plural}`;
@@ -29,30 +33,32 @@ export default async function CoursesPage() {
         <h1 className="font-display text-display-l font-bold">Courses</h1>
       </header>
 
-      {courses.length === 0 ? (
-        // A card, and nothing behind the words. The tint this used to carry
-        // said "unresolved" in grey across the full width of the page, which
-        // is a background wherever you put it — see "The field" in
-        // docs/DESIGN.md. The copy already says there is nothing here.
-        <div className="flex flex-col items-start justify-center gap-6 rounded-surface border border-rule px-6 py-10">
-          <p className="max-w-measure text-body">
-            No courses yet. Add a page of your notes and wissly will read it,
-            name what it covers and file it under a course.
+      <Panel title="Start a course">
+        <div className="flex flex-col gap-4">
+          <p className="max-w-measure text-body-s text-ink-muted">
+            A course is a shelf. Name it, then add the material it holds.
           </p>
-          <Link
-            href="/library"
-            className="inline-flex min-h-11 items-center rounded-control border border-rule px-4 font-mono text-label uppercase text-ink"
-          >
-            Add your first material
-          </Link>
+          <CreateCourseForm action={createCourseAction} />
         </div>
-      ) : (
-        <ul className="flex flex-col border-t border-rule">
+      </Panel>
+
+      <Panel
+        title="Your courses"
+        empty={
+          courses.length === 0
+            ? 'Name your first course above. Its shelf opens empty, and the material goes in there.'
+            : undefined
+        }
+      >
+        <ul className="motion-stagger flex flex-col gap-3">
           {courses.map((course) => (
-            <li key={course.id} className="border-b border-rule">
+            <li key={course.id}>
+              {/* The lift darkens a hairline, so the row has to have one —
+                  see "Motion" in docs/DESIGN.md. A row with a transparent
+                  border would rise and say nothing. */}
               <Link
-                href={`/progress?subject=${course.id}`}
-                className="flex min-h-11 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3"
+                href={`/courses/${course.id}`}
+                className="motion-lift flex min-h-11 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 rounded-control border border-rule px-4 py-3"
               >
                 <span className="text-body">{course.title}</span>
                 <span className="font-mono text-caption uppercase text-ink-muted">
@@ -63,7 +69,7 @@ export default async function CoursesPage() {
             </li>
           ))}
         </ul>
-      )}
+      </Panel>
     </div>
   );
 }

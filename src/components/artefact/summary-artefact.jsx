@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Prose from './prose';
-import CitationAnchor from './citation-anchor';
+import CitationAnchor, { sectionHref } from './citation-anchor';
 
 /* A summary is the same material at three depths — the payload has exactly
    three keys and they are these. The learner chooses how far in to go; the
@@ -65,6 +65,7 @@ export default function SummaryArtefact({ artefact }) {
             ordinal={artefact.section_ordinal}
             anchor={artefact.anchor}
             passage={artefact.passage}
+            href={sectionHref(artefact)}
           />
         </p>
       </div>

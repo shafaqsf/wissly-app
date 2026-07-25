@@ -2,23 +2,23 @@
 
 import { useState } from 'react';
 
+import { describeAnchor, sectionHref } from './anchor';
+
 /* Every generated claim points back at the passage it came from. The anchor is
    a superscript mono numeral — the smallest mark that can carry a number —
-   and activating it opens the source, in place, under the claim.
+   activating it opens the source in place under the claim, and the panel it
+   opens carries a link on to the section itself on the course shelf.
 
-   An anchor is `{ page }` when the source was a PDF and `{ start, end,
-   heading? }` when it was pasted text. Both have to read as a place a person
-   can find again, so both get words rather than a raw offset. */
+   Two things read the passage: the eye, here, and the shelf, over there. The
+   inline quotation answers "what did this come from"; the link answers "and
+   where does it live". A quotation with no way back to the shelf is still a
+   dead end. */
 
-export function describeAnchor(anchor) {
-  if (!anchor) return 'source unknown';
-  if (anchor.page != null) return `page ${anchor.page}`;
+// Re-exported so that everything already importing these from here keeps
+// working. They live in `anchor.js` because the server needs them too.
+export { describeAnchor, sectionHref };
 
-  const range = `characters ${anchor.start}–${anchor.end}`;
-  return anchor.heading ? `${anchor.heading}, ${range}` : range;
-}
-
-export default function CitationAnchor({ ordinal, anchor, passage }) {
+export default function CitationAnchor({ ordinal, anchor, passage, href }) {
   const [open, setOpen] = useState(false);
 
   if (ordinal == null) return null;
@@ -56,6 +56,17 @@ export default function CitationAnchor({ ordinal, anchor, passage }) {
               Open the section at {where} to read the passage.
             </span>
           )}
+          {href ? (
+            // The passage in place answers "what did this come from"; the link
+            // answers "and where does it live". Both are needed — a quotation
+            // with no way back to the shelf is still a dead end.
+            <a
+              href={href}
+              className="mt-3 inline-flex min-h-11 items-center rounded-control font-mono text-label uppercase text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+            >
+              Open the section
+            </a>
+          ) : null}
         </span>
       ) : null}
     </span>

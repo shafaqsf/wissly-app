@@ -4,20 +4,25 @@ import { useActionState } from 'react';
 
 import { buttonClass, inputClass } from '@/components/artefact/control';
 
-/* Where material comes in. Paste text or choose a PDF; the subject is what
-   files it.
+/* Where material comes in. Paste text or choose a PDF.
 
-   Generating from a source takes a model call per section, so the pending
-   state is not decorative — it is most of the wait. It is the grain field
-   DESIGN.md reserves for a working agent, drifting until the work settles. */
+   The subject picker is gone. This form used to live on `/library`, where it
+   had to ask which subject the material belonged to and a typo filed a lecture
+   under a course that did not exist yet. It lives on a course page now, so the
+   course is the page, and it travels as a hidden field rather than a question.
+
+   Reading is all this does. It ingests, cuts the source into sections and
+   names a concept per section — and makes no model call at all. Nothing is
+   generated on upload any more, so the wait is a read, not a spend. */
 
 const label = 'font-mono text-label uppercase text-ink';
 
-export default function AddMaterialForm({ action, subjects = [], initialState = {} }) {
+export default function AddMaterialForm({ action, courseId, initialState = {} }) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
   return (
     <form action={formAction} className="flex max-w-measure flex-col gap-6">
+      <input type="hidden" name="courseId" value={courseId ?? ''} />
       {state?.message ? (
         <p
           role="status"
@@ -31,29 +36,6 @@ export default function AddMaterialForm({ action, subjects = [], initialState = 
           {state.message}
         </p>
       ) : null}
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="subject" className={label}>
-          Subject
-        </label>
-        <input
-          id="subject"
-          name="subject"
-          required
-          list={subjects.length > 0 ? 'known-subjects' : undefined}
-          className={`${inputClass} w-full`}
-        />
-        {subjects.length > 0 ? (
-          <datalist id="known-subjects">
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.title} />
-            ))}
-          </datalist>
-        ) : null}
-        <p className="font-mono text-caption text-ink-muted">
-          An existing name files it there. A new one starts a subject.
-        </p>
-      </div>
 
       <div className="flex flex-col gap-2">
         <label htmlFor="title" className={label}>
@@ -88,10 +70,16 @@ export default function AddMaterialForm({ action, subjects = [], initialState = 
         <p className="font-mono text-caption text-ink-muted">Up to 10 MB.</p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button type="submit" disabled={pending} className={buttonClass}>
-          {pending ? 'Reading it…' : 'Add material'}
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <button type="submit" disabled={pending} className={buttonClass}>
+            {pending ? 'Reading it…' : 'Add material'}
+          </button>
+        </div>
+        <p className="font-mono text-caption text-ink-muted">
+          Nothing is generated from it. wissly reads it, cuts it into sections
+          and names what it covers — no model call, no cost.
+        </p>
       </div>
 
       {pending ? (
@@ -108,7 +96,7 @@ export default function AddMaterialForm({ action, subjects = [], initialState = 
             className="grain grain-mark grain-working field-unresolved"
             style={{ '--grain': 'var(--grain-3)' }}
           />
-          Reading, then writing what to ask you
+          Reading it and naming what it covers
         </p>
       ) : null}
     </form>

@@ -1,134 +1,71 @@
 import { Suspense } from 'react';
 
-import Panel from '@/components/panel/panel';
 import PanelGrid from '@/components/panel/panel-grid';
 import PanelSkeleton from '@/components/panel/panel-skeleton';
-import { listConceptMastery } from '@/lib/data/concepts';
-import { dueArtefacts } from '@/lib/data/review';
-import { listSources } from '@/lib/data/sources';
-import { listSubjects } from '@/lib/data/subjects';
-import { averageMastery, MASTERED_AT, masteryState } from '@/lib/mastery';
-import { createClient } from '@/lib/supabase/server';
+
+import {
+  ActionPanel,
+  AwayPanel,
+  CoursesPanel,
+  EffortPanel,
+  RecentlyPanel,
+  WeakestPanel,
+  WeekPanel,
+} from './panels';
 
 export const metadata = {
   title: 'Dashboard — wissly',
 };
 
-/* Each panel awaits its own data. A slow one holds up nothing but itself:
-   Suspense shows its skeleton, and the settle happens per panel.
+/* One page answering "what now".
 
-   No panel here shows a percentage or a bar. Mastery is grain, on the
-   progress page, and there is no second progress display. */
+   Every surface here is an entrance and nothing is decoration: each panel
+   leads somewhere, and the ones that cannot lead anywhere yet say what the
+   next step is and offer it. Nothing is generated on upload any more, so a
+   new account meets seven empty panels — and each of them has to be worth
+   meeting.
 
-async function SubjectsPanel() {
-  const supabase = await createClient();
-  const subjects = await listSubjects(supabase);
+   Reading order is the order of the day: what to do, what happened without
+   you, what is weak, what you have, what just moved, how often you turned up,
+   what it cost.
 
-  return (
-    <Panel
-      title="Subjects"
-      empty={
-        subjects.length === 0
-          ? 'Add material and the subject it belongs to will appear here.'
-          : undefined
-      }
-    >
-      <ul className="flex flex-col gap-3">
-        {subjects.map((subject) => (
-          <li key={subject.id} className="text-body-s">
-            {subject.title}
-          </li>
-        ))}
-      </ul>
-    </Panel>
-  );
-}
-
-/* The page's state, on the panel that reports it. The average across every
-   concept the learner has is what "how am I doing" means, and Today is the
-   panel that answers that question — so the mark goes here rather than on the
-   page header, which is a position and not a state. */
-async function DuePanel() {
-  const supabase = await createClient();
-  const [due, concepts] = await Promise.all([
-    dueArtefacts(supabase),
-    listConceptMastery(supabase),
-  ]);
-
-  const mastered = concepts.filter((concept) => concept.mastery >= MASTERED_AT).length;
-  const state = masteryState(averageMastery(concepts));
-
-  return (
-    <Panel title="Today" mark={state}>
-      <dl className="flex flex-col gap-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <dt className="text-body-s text-ink-muted">Due now</dt>
-          <dd className="font-mono text-body-s">{due.length}</dd>
-        </div>
-        <div className="flex items-baseline justify-between gap-4">
-          <dt className="text-body-s text-ink-muted">Concepts settled</dt>
-          <dd className="font-mono text-body-s">
-            {mastered} / {concepts.length}
-          </dd>
-        </div>
-      </dl>
-    </Panel>
-  );
-}
-
-/* Ink on paper. The header used to be the page's field, which meant the one
-   coloured surface on the dashboard was describing a title block rather than
-   any state the learner has. The state moved to the Today panel. */
-function DashboardHeader() {
-  return (
-    <header className="flex flex-col gap-2">
-      <p className="font-mono text-label uppercase text-ink-muted">Your work</p>
-      <h1 className="font-display text-display-l font-bold">Dashboard</h1>
-    </header>
-  );
-}
-
-async function MaterialPanel() {
-  const supabase = await createClient();
-  const sources = await listSources(supabase);
-
-  return (
-    <Panel
-      title="Recent material"
-      wide
-      empty={
-        sources.length === 0
-          ? 'Nothing yet. Add a page of notes in the library and wissly will read it.'
-          : undefined
-      }
-    >
-      <ul className="flex flex-col gap-3">
-        {sources.slice(0, 5).map((source) => (
-          <li key={source.id} className="text-body-s">
-            {source.title}
-          </li>
-        ))}
-      </ul>
-    </Panel>
-  );
-}
-
+   Each panel awaits its own data inside its own boundary. A slow one shows
+   its own skeleton and holds up nothing else. */
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
-      <DashboardHeader />
+      <header className="flex flex-col gap-2">
+        <p className="font-mono text-label uppercase text-ink-muted">Today</p>
+        <h1 className="font-display text-display-l font-bold">Dashboard</h1>
+      </header>
 
       <PanelGrid>
-        <Suspense fallback={<PanelSkeleton title="Subjects" />}>
-          <SubjectsPanel />
+        <Suspense fallback={<PanelSkeleton title="The action" wide />}>
+          <ActionPanel />
         </Suspense>
 
-        <Suspense fallback={<PanelSkeleton title="Today" />}>
-          <DuePanel />
+        <Suspense fallback={<PanelSkeleton title="While you were away" wide />}>
+          <AwayPanel />
         </Suspense>
 
-        <Suspense fallback={<PanelSkeleton title="Recent material" wide />}>
-          <MaterialPanel />
+        <Suspense fallback={<PanelSkeleton title="Weakest" />}>
+          <WeakestPanel />
+        </Suspense>
+
+        <Suspense fallback={<PanelSkeleton title="Courses" />}>
+          <CoursesPanel />
+        </Suspense>
+
+        <Suspense fallback={<PanelSkeleton title="Recently" />}>
+          <RecentlyPanel />
+        </Suspense>
+
+        <Suspense fallback={<PanelSkeleton title="This week" />}>
+          <WeekPanel />
+        </Suspense>
+
+        <Suspense fallback={<PanelSkeleton title="Effort" wide />}>
+          <EffortPanel />
         </Suspense>
       </PanelGrid>
     </div>

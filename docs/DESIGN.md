@@ -126,9 +126,26 @@ component, 16 is the default gap.
 
 ## Shape
 
-- `--radius: 4px` on controls: buttons, inputs, chips.
-- `0` on structural surfaces: cards, panels, grain fields, dividers.
-- Fully round only on avatars and count badges.
+Soft, but calm. Three steps and no fourth.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--radius-control` | `8px` | Buttons, inputs, chips, nav items, citation marks |
+| `--radius-surface` | `14px` | Panels, field surfaces, the agent bar, popovers, cards |
+| `--radius-round` | `9999px` | Avatars, count badges, field marks |
+
+Reach for them as `rounded-control`, `rounded-surface`, `rounded-round`.
+**Never name a radius token inside a component.** Two spellings for one idea is
+how a shape system drifts, and `src/app/globals.css.test.js` fails on it.
+
+Two things stay square, and both for the same reason: they are page *edges*,
+not surfaces. The sidebar rail runs to the viewport edge, and so does the
+mobile top bar. A rounded corner there opens a gap onto nothing.
+
+Anything carrying `.grain` inherits its parent's radius, so the texture follows
+the corner rather than cutting across it. A square grain layer on a rounded
+panel is visible immediately, so the rule is enforced in the stylesheet rather
+than left to each caller.
 
 Hairlines are `1px solid var(--rule)`. There are no shadows anywhere. Depth
 is expressed by `--paper-sunk` and by grain, never by a blur.

@@ -702,6 +702,84 @@ describe('a stopped provider', () => {
   })
 })
 
+/* Undo is per run, and the only thing that can name the run is the turn that
+ * opened it. A terminal event without an id leaves the message that caused the
+ * run unable to point at it, and the bar falls back to "the newest run in the
+ * thread" — which, in a thread that ran twice, undoes the wrong one. */
+describe('which run the turn belongs to', () => {
+  async function* forever() {
+    for (let index = 0; index < 100; index += 1) {
+      yield { type: 'raw_model_stream_event', data: { type: 'output_text_delta', delta: 'x' } }
+    }
+  }
+
+  it('names the run on the done event', async () => {
+    const supabase = supabaseFor()
+    const seen = []
+
+    await runTurn({
+      supabase,
+      userId: 'u1',
+      conversation,
+      message,
+      runAgent: async () => ({ finalOutput: 'ok [s:a]' }),
+      createAgent,
+      configure,
+      onEvent: (event) => seen.push(event),
+    })
+
+    expect(seen.at(-1)).toMatchObject({ type: 'done', runId: 'r1' })
+  })
+
+  it('names the run on the failed event, where undo matters most', async () => {
+    const supabase = supabaseFor({
+      actions: [{ id: 'x1', tool: 'make_artefacts', result: {}, undo: {} }],
+    })
+    const seen = []
+
+    await runTurn({
+      supabase,
+      userId: 'u1',
+      conversation: { ...conversation, mode: 'agent' },
+      message,
+      runAgent: async () => {
+        throw new Error('boom')
+      },
+      createAgent,
+      configure,
+      createClient: () => ({}),
+      onEvent: (event) => seen.push(event),
+    })
+
+    expect(seen.at(-1)).toMatchObject({ type: 'failed', runId: 'r1' })
+  })
+
+  it('names the run on the stopped event', async () => {
+    const supabase = supabaseFor({
+      messageRows: [{ data: { id: 'answer' }, error: null }],
+    })
+    const seen = []
+
+    await runTurn({
+      supabase,
+      userId: 'u1',
+      conversation,
+      message,
+      runAgent: async () => {
+        const stream = forever()
+        return { [Symbol.asyncIterator]: () => stream }
+      },
+      createAgent,
+      configure,
+      shouldStop: async () => true,
+      persistEveryMs: 0,
+      onEvent: (event) => seen.push(event),
+    })
+
+    expect(seen.at(-1)).toMatchObject({ type: 'stopped', runId: 'r1' })
+  })
+})
+
 describe('the agent’s identity', () => {
   it('refuses to run at all with a client that bypasses row level security', async () => {
     await expect(

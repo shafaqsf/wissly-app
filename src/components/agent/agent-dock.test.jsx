@@ -241,6 +241,84 @@ describe('the agent dock', () => {
     expect(actions.undoRunAction).toHaveBeenCalledWith({ runId: 'r1' });
   });
 
+  /* The one that matters. Two runs in one thread, and Undo pressed on the
+     older message. An undo that reaches the newer run is worse than no undo:
+     it reverses writes the learner never asked to lose and leaves the ones
+     they did. */
+  it('undoes the run the message caused, not the newest run in the thread', async () => {
+    const user = userEvent.setup();
+    actions.runActionsAction.mockResolvedValue({ actions: [], outstanding: 2 });
+    actions.undoRunAction.mockResolvedValue({
+      message: 'Took back 2 changes.',
+      undone: ['a', 'b'],
+      failed: [],
+    });
+    const open = scripted([
+      { type: 'start', message: { id: 'm1', role: 'user', content: 'first', status: 'running' } },
+      { type: 'done', content: 'Made the first two.', runId: 'r1' },
+      { type: 'start', message: { id: 'm2', role: 'user', content: 'second', status: 'running' } },
+      { type: 'done', content: 'Made the second two.', runId: 'r2' },
+    ]);
+    render(<AgentDock conversation={{ ...conversation, mode: 'agent' }} stream={{ open }} />);
+
+    await user.type(screen.getByLabelText(FIELD), 'x');
+    await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: /take these changes back/i })).toHaveLength(2),
+    );
+
+    await user.click(screen.getAllByRole('button', { name: /take these changes back/i })[0]);
+
+    expect(actions.undoRunAction).toHaveBeenCalledWith({ runId: 'r1' });
+    expect(actions.undoLastChangeAction).not.toHaveBeenCalled();
+  });
+
+  /* A chat turn changes nothing, so naming its run must not put an undo
+     affordance under an answer that has nothing to take back. */
+  it('offers no undo for a chat turn, run id or not', async () => {
+    const user = userEvent.setup();
+    actions.runActionsAction.mockResolvedValue({ actions: [], outstanding: 0 });
+    const open = scripted([
+      { type: 'start', message: { id: 'm1', role: 'user', content: 'x', status: 'running' } },
+      { type: 'done', content: 'A fair game.', runId: 'r1' },
+    ]);
+    await send(user, 'x', { open });
+
+    expect(await screen.findByText('A fair game.')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /take these changes back/i }),
+    ).not.toBeInTheDocument();
+    expect(actions.runActionsAction).not.toHaveBeenCalled();
+  });
+
+  /* A reconnected stream that ends after the five-minute cap, or one whose
+     terminal frame carries no name, still knows the run it rejoined. */
+  it('remembers the run named on the resume frame when the end does not name it', async () => {
+    const user = userEvent.setup();
+    actions.runActionsAction.mockResolvedValue({ actions: [], outstanding: 4 });
+    actions.undoRunAction.mockResolvedValue({ message: 'Took back 4 changes.', undone: ['a'], failed: [] });
+    const reconnect = scripted([
+      {
+        type: 'resume',
+        runId: 'r5',
+        message: { id: 'a1', role: 'assistant', content: 'Hel', status: 'running' },
+        messages: [{ id: 'a1', role: 'assistant', content: 'Hel', status: 'running' }],
+      },
+      { type: 'done', content: 'Hello.' },
+    ]);
+    render(
+      <AgentDock
+        conversation={{ ...conversation, mode: 'agent' }}
+        stream={{ open: vi.fn(), reconnect }}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /take these changes back/i }));
+
+    expect(actions.undoRunAction).toHaveBeenCalledWith({ runId: 'r5' });
+  });
+
   it('rejoins a run already in flight when it mounts', async () => {
     const reconnect = scripted([]);
     render(<AgentDock conversation={conversation} stream={{ open: vi.fn(), reconnect }} />);

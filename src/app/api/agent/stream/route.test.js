@@ -19,6 +19,8 @@ vi.mock('@/lib/data/conversations.js', () => ({
 
 vi.mock('@/lib/agent/run.js', () => ({ runTurn: vi.fn() }))
 
+vi.mock('@/lib/data/agent-runs.js', () => ({ runsFor: vi.fn(async () => []) }))
+
 vi.mock('@/lib/actions/conversation.js', () => ({
   sendMessageAction: vi.fn(async () => ({
     message: { id: 'q1', status: 'queued' },
@@ -33,6 +35,7 @@ const { appendMessage, messagesFor, setConversationMode } = await import(
 )
 const { runTurn } = await import('@/lib/agent/run.js')
 const { resumeThreadAction, sendMessageAction } = await import('@/lib/actions/conversation.js')
+const { runsFor } = await import('@/lib/data/agent-runs.js')
 
 const { GET, POST, runtime } = await import('./route.js')
 
@@ -83,6 +86,7 @@ beforeEach(() => {
   runTurn.mockImplementation(ANSWERED)
   resumeThreadAction.mockResolvedValue({ messages: [], running: null, queued: [] })
   sendMessageAction.mockResolvedValue({ message: { id: 'q1', status: 'queued' }, queued: true })
+  runsFor.mockResolvedValue([])
 })
 
 describe('the turn', () => {
@@ -197,6 +201,21 @@ describe('the turn', () => {
     expect(sent.filter((frame) => frame.event === 'done')).toHaveLength(2)
   })
 
+  /* The route forwards runtime events verbatim. Undo depends on that being
+     true of the run id as much as of the text, so it is asserted rather than
+     assumed. */
+  it('forwards the run id the turn named on its terminal frame', async () => {
+    runTurn.mockImplementation(async ({ onEvent }) => {
+      onEvent({ type: 'delta', text: 'Hello' })
+      onEvent({ type: 'done', content: 'Hello', runId: 'r7' })
+      return { message: { id: 'a1' }, run: { id: 'r7' }, next: null, intents: [], completed: [] }
+    })
+
+    const sent = await frames(await POST(post({ conversationId: 'c1', content: 'hi' })))
+
+    expect(sent.at(-1)).toMatchObject({ event: 'done', data: { runId: 'r7' } })
+  })
+
   it('reports a turn that threw as a frame rather than a broken stream', async () => {
     runTurn.mockRejectedValue(new Error('the provider fell over'))
 
@@ -255,5 +274,41 @@ describe('reconnecting', () => {
     expect(sent.map((frame) => frame.event)).toContain('delta')
     expect(sent.at(-1).event).toBe('done')
     expect(sent.at(-1).data.content).toBe('Hello there')
+  })
+
+  /* A reload rejoins a run it did not start. Without the run's name it would
+     rejoin an answer it can watch but cannot take back. */
+  it('names the run it rejoined, on the resume frame and on the end of it', async () => {
+    resumeThreadAction.mockResolvedValue({
+      messages: [{ id: 'a1', status: 'running', content: 'Hel' }],
+      running: { id: 'a1', status: 'running', content: 'Hel' },
+      queued: [],
+    })
+    runsFor.mockResolvedValue([
+      { id: 'r9', message_id: 'a1' },
+      { id: 'r8', message_id: 'a0' },
+    ])
+    messagesFor.mockResolvedValue([{ id: 'a1', status: 'done', content: 'Hello' }])
+
+    const sent = await frames(await GET(get('?conversationId=c1')))
+
+    expect(sent[0]).toMatchObject({ event: 'resume', data: { runId: 'r9' } })
+    expect(sent.at(-1)).toMatchObject({ event: 'done', data: { runId: 'r9' } })
+  })
+
+  /* A run the thread has no row for is not a reason to refuse the reconnect. */
+  it('resumes without a run id when no run claims the running message', async () => {
+    resumeThreadAction.mockResolvedValue({
+      messages: [{ id: 'a1', status: 'running', content: 'Hel' }],
+      running: { id: 'a1', status: 'running', content: 'Hel' },
+      queued: [],
+    })
+    runsFor.mockRejectedValue(new Error('no such table'))
+    messagesFor.mockResolvedValue([{ id: 'a1', status: 'done', content: 'Hello' }])
+
+    const sent = await frames(await GET(get('?conversationId=c1')))
+
+    expect(sent[0]).toMatchObject({ event: 'resume', data: { runId: null } })
+    expect(sent.at(-1).event).toBe('done')
   })
 })

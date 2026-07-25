@@ -2,6 +2,7 @@ import { resolveModel } from '@/lib/agent/models.js'
 import { runTurn } from '@/lib/agent/run.js'
 import { resumeThreadAction, sendMessageAction } from '@/lib/actions/conversation.js'
 import { currentUserId } from '@/lib/auth/user.js'
+import { runsFor } from '@/lib/data/agent-runs.js'
 import {
   appendMessage,
   getConversation,
@@ -217,6 +218,22 @@ export async function POST(request) {
 }
 
 /**
+ * The run writing one message, by name.
+ *
+ * A failure here is not a failure to reconnect. The stream's job is to show the
+ * learner the answer arriving; losing the undo is worse than losing the read,
+ * but refusing the read to protect the undo would be worse than both.
+ */
+async function runOf(supabase, { conversationId, messageId }) {
+  try {
+    const runs = await runsFor(supabase, { conversationId })
+    return runs.find((run) => run.message_id === messageId)?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Reconnect to a run already in flight.
  *
  * `GET /api/agent/stream?conversationId=…`
@@ -246,6 +263,13 @@ export async function GET(request) {
     return json({ running: null, messages: state.messages, queued: state.queued })
   }
 
+  // Which run is writing that row. A reconnecting client did not start this
+  // run and has no other way to learn its name, and a client that cannot name
+  // the run it rejoined cannot take it back — a reload would quietly cost the
+  // learner the undo on the very turn they came back to watch. The run row
+  // already carries `message_id`, so this is a read rather than a new column.
+  const runId = await runOf(supabase, { conversationId, messageId: state.running.id })
+
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder()
@@ -262,6 +286,7 @@ export async function GET(request) {
       send({
         type: 'resume',
         conversationId,
+        runId,
         message: state.running,
         messages: state.messages,
         queued: state.queued,
@@ -291,7 +316,12 @@ export async function GET(request) {
           }
 
           if (row.status !== 'running') {
-            send({ type: row.status === 'done' ? 'done' : row.status, content, completed: [] })
+            send({
+              type: row.status === 'done' ? 'done' : row.status,
+              content,
+              completed: [],
+              runId,
+            })
             break
           }
         }

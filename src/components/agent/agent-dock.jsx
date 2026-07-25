@@ -92,6 +92,10 @@ export default function AgentDock({
   // pair a terminal frame needs in order to know what it is finishing.
   const answering = useRef(null);
   const asking = useRef(null);
+  /* The run the answer belongs to, when the stream named it before it ended —
+     which is what a reconnect does, because a rejoined run is named on the
+     frame that replays it rather than on the frame that started it. */
+  const answeringRun = useRef(null);
 
   /* Reduced motion removes the animation, and streamed text is animation: a
      line that types itself is a movement nobody asked for. Held here and
@@ -130,6 +134,7 @@ export default function AgentDock({
           ]);
           asking.current = event.message?.id ?? null;
           answering.current = null;
+          answeringRun.current = null;
           held.current = '';
           break;
         }
@@ -138,6 +143,8 @@ export default function AgentDock({
           if (event.messages) setMessages(event.messages);
           if (event.message) {
             answering.current = event.message.id;
+            // The rejoined run's name, held until its ending needs it.
+            answeringRun.current = event.runId ?? null;
             put(event.message);
             setWorking(event.message.status === 'running');
           } else {
@@ -209,10 +216,14 @@ export default function AgentDock({
           // Whether the run named itself decides how much can be said about
           // what it changed. Named: counted, and undone by name. Unnamed: it
           // can still be taken back, and the words say so without a number.
-          const runId = event.runId ?? null;
+          const runId = event.runId ?? answeringRun.current ?? null;
           const changed = (conversation?.mode ?? 'chat') === 'agent';
+          // A chat turn that succeeded changed nothing, so it gets no report —
+          // naming its run must not put an undo under an answer with nothing
+          // behind it.
+          const reportable = event.type === 'failed' || changed;
 
-          if (event.type === 'failed' || changed) {
+          if (reportable) {
             setRuns((current) => ({
               ...current,
               [id]: {
@@ -221,12 +232,13 @@ export default function AgentDock({
                 outstanding: runId ? 0 : changed ? null : 0,
               },
             }));
-          }
 
-          if (runId) count(runId, id, setRuns);
+            if (runId) count(runId, id, setRuns);
+          }
 
           held.current = '';
           answering.current = null;
+          answeringRun.current = null;
           asking.current = null;
           setWorking(false);
           break;

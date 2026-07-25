@@ -198,7 +198,12 @@ export async function runTurn({
       usage: result?.usage ?? null,
     })
 
-    emit({ type: stopped ? 'stopped' : 'done', content: answer })
+    // The run's name travels with its ending. Undo is per run, and the message
+    // this answer becomes is the only place the learner presses it — so the
+    // frame that finishes the message has to say which run it finished. Without
+    // it the bar can only reach for "the newest run in the thread", which in a
+    // thread that ran twice takes back the wrong one.
+    emit({ type: stopped ? 'stopped' : 'done', content: answer, runId: runRow.id })
 
     return {
       message: finished,
@@ -232,7 +237,9 @@ export async function runTurn({
         .join(' — '),
     })
 
-    emit({ type: 'failed', content: reason, completed })
+    // Most of all here: a failure is the turn most likely to need taking back,
+    // and `completed` above has just named writes that did land.
+    emit({ type: 'failed', content: reason, completed, runId: runRow.id })
 
     return {
       message: finished,

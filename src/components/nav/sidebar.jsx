@@ -23,9 +23,18 @@ export default function Sidebar({
       ].join(' ')}
     >
       <div
+        data-brand-row=""
         className={[
           'flex min-h-16 items-center gap-2 border-b border-rule px-3',
-          collapsed ? 'md:justify-center' : 'justify-between',
+          // A 64px rail minus its padding leaves 40px, and a 24px mark beside
+          // a 44px tap target needs 68px. Side by side they overflowed the
+          // rail: the mark fell off the left edge of the screen and the toggle
+          // sat out over the page, so the rail could not be opened again.
+          // Collapsed the row becomes a column and gives up its side padding,
+          // which leaves each of the two the full width of the rail.
+          collapsed
+            ? 'md:flex-col md:justify-center md:gap-1 md:px-0 md:py-2'
+            : 'justify-between',
         ].join(' ')}
       >
         {/* The mark stays when the word goes: a 64px rail has room for one of

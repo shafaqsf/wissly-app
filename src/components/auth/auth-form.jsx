@@ -2,6 +2,8 @@
 
 import { useActionState } from 'react';
 
+import { filledButtonClass, inputClass } from '@/components/artefact/control.js';
+
 /* Copy differs between the two screens; nothing else does, so they share
    one component rather than two near-identical files. */
 const COPY = {
@@ -9,9 +11,7 @@ const COPY = {
   'sign-up': { submit: 'Create account', pending: 'Creating account…', autoComplete: 'new-password' },
 };
 
-const field =
-  'w-full min-h-11 rounded-[var(--radius-control)] border border-rule bg-paper ' +
-  'px-3 py-2 font-body text-body text-ink placeholder:text-ink-muted';
+const field = `w-full py-2 font-body placeholder:text-ink-muted ${inputClass}`;
 
 const label = 'font-mono text-label uppercase tracking-[0.08em] text-ink';
 
@@ -67,7 +67,7 @@ export default function AuthForm({ mode, action, next = '', initialState = {} })
       <button
         type="submit"
         disabled={pending}
-        className="min-h-11 rounded-[var(--radius-control)] bg-ink px-6 font-mono text-label uppercase tracking-[0.08em] text-paper disabled:opacity-60"
+        className={filledButtonClass}
       >
         {pending ? copy.pending : copy.submit}
       </button>

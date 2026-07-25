@@ -47,8 +47,11 @@
   --text-caption: 0.75rem;
   --text-caption--line-height: 1.4;
 
-  /* Shape — controls only; structural surfaces stay square. */
-  --radius-control: 4px;
+  /* Shape — three steps, soft but calm. Controls, surfaces, and the marks
+     that are meant to read as marks. See "Shape" in docs/DESIGN.md. */
+  --radius-control: 8px;
+  --radius-surface: 14px;
+  --radius-round: 9999px;
 
   /* The reading measure. Running prose never exceeds it; tables may. */
   --container-measure: 66ch;
@@ -98,6 +101,9 @@ body {
   mix-blend-mode: multiply;
   pointer-events: none;
   z-index: -1;
+  /* Follow the corner it sits in. Without this the layer paints square over
+     every rounded surface it is attached to. */
+  border-radius: inherit;
   transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 

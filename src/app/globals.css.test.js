@@ -96,6 +96,37 @@ function fieldStates() {
   return states
 }
 
+describe('shape', () => {
+  /* Three steps, and only three. A radius that is written by hand somewhere in
+     a component is a fourth step nobody agreed to. */
+  it.each([
+    ['--radius-control', '8px'],
+    ['--radius-surface', '14px'],
+    ['--radius-round', '9999px'],
+  ])('defines %s as %s', (name, value) => {
+    expect(css).toMatch(new RegExp(`${name}:\\s*${value};`))
+  })
+
+  /* Tailwind turns the tokens into `rounded-control` / `rounded-surface` /
+     `rounded-round`. Naming the variable directly bypasses that and gives two
+     spellings for one idea, which is how the old stylesheet drifted. */
+  it('never names a radius token outside globals.css', () => {
+    const offenders = sourceFiles()
+      .filter((file) => !file.replace(/\\/g, '/').endsWith('src/app/globals.css'))
+      .filter((file) => readFileSync(file, 'utf8').includes('--radius-'))
+
+    expect(offenders).toEqual([])
+  })
+
+  /* The grain layer is an `inset: 0` pseudo-element. On a rounded surface it
+     paints square corners over the parent's rounded ones unless it is told to
+     follow them. */
+  it('lets the grain layer follow the corner it sits in', () => {
+    const layer = css.match(/\.grain::before\s*\{([^}]*)\}/)
+    expect(layer?.[1]).toMatch(/border-radius:\s*inherit;/)
+  })
+})
+
 describe('the field palette', () => {
   it('defines all five field tokens', () => {
     for (const name of ['hot', 'deep', 'warm', 'mid', 'cool']) {

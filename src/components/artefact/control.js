@@ -1,12 +1,18 @@
-/* The shared shape of a control. 44px minimum in both directions, 4px radius,
-   ink on paper, and nothing that depends on hue. Kept in one place because
-   every artefact needs the same button and none of them should invent it. */
+/* The shared shape of a control. 44px minimum in both directions, the control
+   radius, ink on paper, and nothing that depends on hue. Kept in one place
+   because every artefact needs the same button and none of them should invent
+   it — three of them used to, in three slightly different ways. */
 
 export const buttonClass =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-control border border-ink px-4 font-mono text-label uppercase text-ink transition-opacity duration-[120ms] ease-out hover:opacity-70 disabled:opacity-40';
 
 export const quietButtonClass =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-control border border-rule px-4 font-mono text-label uppercase text-ink-muted transition-opacity duration-[120ms] ease-out hover:text-ink disabled:opacity-40';
+
+/* The one filled control in the product: the button that commits an account.
+   Nothing else earns a solid fill, and nothing else should copy this. */
+export const filledButtonClass =
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-ink px-6 font-mono text-label uppercase tracking-[0.08em] text-paper transition-opacity duration-[120ms] ease-out hover:opacity-80 disabled:opacity-60';
 
 export const inputClass =
   'min-h-11 rounded-control border border-rule bg-paper px-3 text-body text-ink';

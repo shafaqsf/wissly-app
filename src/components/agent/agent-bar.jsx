@@ -271,7 +271,13 @@ export default function AgentBar({
         ) : null}
 
         <form onSubmit={submit} className="flex flex-col gap-3 px-4 py-3">
-          <div className="flex items-end gap-2">
+          {/* The field wears the hairline, not the textarea inside it: the
+              rule has to enclose the field *and* the two buttons beside it, or
+              Send sits outside the thing it belongs to. */}
+          <div
+            data-testid="agent-field"
+            className="flex items-end gap-2 rounded-control border border-rule px-2 py-1"
+          >
             <label htmlFor="agent-field" className="sr-only">
               Ask about your material
             </label>

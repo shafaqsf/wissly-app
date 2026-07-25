@@ -87,6 +87,20 @@ describe('the agent bar', () => {
     expect(screen.getByTestId('agent-state')).toBeInTheDocument();
   });
 
+  /* Every other control in the bar is drawn by a hairline. The field was the
+     one that was not, so it read as a gap in the panel rather than as the
+     place you type. */
+  it('draws the field with the same hairline as every other control', () => {
+    render(<AgentBar />);
+
+    const field = screen.getByLabelText(FIELD).closest('[data-testid="agent-field"]');
+
+    expect(field).not.toBeNull();
+    expect(field.className).toMatch(/border/);
+    expect(field.className).toMatch(/border-rule/);
+    expect(field.className).toMatch(/rounded-control/);
+  });
+
   describe('mode and model', () => {
     /* Two controls on one line. They used to stack, because the mode option
        carried its whole consequence as text and made the closed control wide

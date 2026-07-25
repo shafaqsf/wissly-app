@@ -5,12 +5,16 @@
  * message, so the transcript can say which model wrote which line. Two things
  * follow from that, and both are why this is a module rather than a constant.
  *
- * **The list is a suggestion, not a boundary.** Three curated ids with their
- * prices cover the ordinary choice; the free field takes anything OpenRouter
- * serves, because a curated list of three goes stale and the catalogue has
- * hundreds. So `isModelId` validates the *shape* of an id and nothing else.
- * Whether `nobody/nothing-at-all` exists is a question only OpenRouter can
- * answer, and answering it here would mean a network call before every send.
+ * **The bar offers three, and only three.** A free field taking any of
+ * OpenRouter's hundreds used to sit beside them; it implied the product worked
+ * with the whole catalogue when nothing here has been tried outside the three.
+ * `OPENROUTER_MODEL` still sets the default and is not held to the list, so a
+ * fourth model stays reachable as configuration rather than as a control.
+ *
+ * That is why `isModelId` survives and validates the *shape* of an id and
+ * nothing else: it guards the value arriving from the environment, and whether
+ * `nobody/nothing-at-all` exists is a question only OpenRouter can answer —
+ * answering it here would mean a network call before every send.
  *
  * **Mode and model are independent.** Nothing in this file knows about chat or
  * agent. Chat on Sonnet while the Agent works on DeepSeek is a normal

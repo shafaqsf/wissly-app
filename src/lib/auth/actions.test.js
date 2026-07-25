@@ -91,6 +91,60 @@ describe('signing in', () => {
     expect(redirect).not.toHaveBeenCalled()
   })
 
+  it('says the address is unconfirmed rather than blaming the password', async () => {
+    // Proven against a real project: Supabase answers a *correct* password on
+    // an unconfirmed address with 400 email_not_confirmed. Collapsing that into
+    // "these do not match" tells the learner to fix the one thing that is not
+    // broken, and leaves them no way out of the loop.
+    auth.signInWithPassword.mockResolvedValue({
+      data: null,
+      error: { code: 'email_not_confirmed', message: 'Email not confirmed' },
+    })
+
+    const state = await signIn({}, form({ email: 'a@b.co', password: 'hunter22' }))
+
+    expect(state.message).not.toMatch(/do not match/i)
+    expect(state.message).toMatch(/confirm/i)
+    expect(state.message).toContain('a@b.co')
+  })
+
+  it('recognises the unconfirmed state from the message when no code is given', async () => {
+    auth.signInWithPassword.mockResolvedValue({
+      data: null,
+      error: { message: 'Email not confirmed' },
+    })
+
+    const state = await signIn({}, form({ email: 'a@b.co', password: 'hunter22' }))
+
+    expect(state.message).toMatch(/confirm/i)
+  })
+
+  it('says to wait when the attempt was rate limited, not that the password is wrong', async () => {
+    auth.signInWithPassword.mockResolvedValue({
+      data: null,
+      error: { code: 'over_request_rate_limit', message: 'Request rate limit reached' },
+    })
+
+    const state = await signIn({}, form({ email: 'a@b.co', password: 'hunter22' }))
+
+    expect(state.message).not.toMatch(/do not match/i)
+    expect(state.message).toMatch(/wait/i)
+  })
+
+  it('still refuses to say which half was wrong for a real credential failure', async () => {
+    auth.signInWithPassword.mockResolvedValue({
+      data: null,
+      error: { code: 'invalid_credentials', message: 'Invalid login credentials' },
+    })
+
+    const state = await signIn({}, form({ email: 'a@b.co', password: 'hunter22' }))
+
+    // Naming the wrong half would tell an attacker which addresses are
+    // registered, so this one message stays deliberately incurious.
+    expect(state.message).toMatch(/do not match/i)
+    expect(state.message).not.toMatch(/password is/i)
+  })
+
   it('asks for both fields before calling Supabase', async () => {
     const state = await signIn({}, form({ email: '', password: '' }))
 

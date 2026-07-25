@@ -4,6 +4,66 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.14.0] - 2026-07-25
+
+Versions 0.8.0 through 0.13.0 were merged without a bump or a tag. This entry
+covers the restructuring released as 0.14.0; the work in between is in the
+commit history rather than here.
+
+### Added
+
+- Four areas replace six screens. Courses creates a course and holds its
+  shelf — the material, its sections and concepts, and what was read from it.
+  Tasks is the workbench: a surface per type, the mixed due queue, bulk
+  selection that survives a filter change. Analytics reports mastery, gaps,
+  history and what the agent cost. The dashboard answers what to do now.
+- A surface per learning format, replacing the one generic renderer: a
+  flashcard stack that turns in 3D and a table for tidying, a cloze editor
+  that marks the word in place, multiple choice with editable distractors, and
+  open questions with the answer drawn from the source.
+- Both ways of making something, side by side on every type: write one
+  yourself at no cost, or generate from chosen sections with the number of
+  model calls shown before the click and a warning for sections that already
+  carry that type.
+- The agent holds the full writing surface — courses, material, every task
+  type, moving, archiving, rescheduling — with an `agent_actions` row and an
+  undo behind every call, and it can drive the interface and act on standing
+  orders with nobody present.
+- Model choice per message: DeepSeek V4 Pro, Claude Sonnet 5 and GPT-5.6 Luna
+  with their prices, plus any OpenRouter model id.
+- Conversations get an interface at last — history, rename, pin, archive — and
+  the bar gains a visible queue, withdraw, stop, streaming over SSE, and a
+  failure report naming which writes completed.
+- Global search over material, tasks, reading and conversations, answered by
+  Postgres full text rather than a model call.
+- Anchors lead somewhere. Clicking one opens the passage it points at.
+- The keyboard runs a review round: space turns, 1–4 rate, enter advances.
+- Export: flashcards as CSV or an Anki import, reading as Markdown. Built in
+  the browser, so no endpoint exists for a tool to reach.
+
+### Changed
+
+- Adding material makes no model call. Upload ingests, splits into sections
+  and names concepts, and stops; nothing is generated until asked for.
+- The motion catalogue grew from two movements to seven — stagger, flip,
+  slide, lift and count join the settle and the drift, each with a duration, a
+  curve and a reason. Bounce, spring, parallax and autoplay stay forbidden,
+  and `prefers-reduced-motion` removes all of it.
+- The sidebar carries four destinations and no brand mark; the agent bar is
+  now the one place per viewport where the product names itself.
+- Settings holds the account and nothing else. Model choice lives in the bar,
+  standing orders with the agent, and archives where the archived things are.
+- `/review`, `/progress` and `/library` redirect to `/tasks/due`, `/analytics`
+  and `/courses`.
+- A branch that is the only one in flight now carries its own version bump and
+  changelog entry.
+
+### Fixed
+
+- Undo names the run it belongs to. Terminal stream events carried no run id,
+  so an undo pressed on an older message reversed the newest run instead.
+- Adding material no longer throws after the material has been written.
+
 ## [0.7.0] - 2026-07-25
 
 ### Changed

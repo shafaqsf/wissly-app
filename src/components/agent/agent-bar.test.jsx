@@ -231,15 +231,13 @@ describe('the agent bar', () => {
       expect(screen.getByText('A set')).toBeInTheDocument();
     });
 
-    /* One field per viewport: while the agent works, the bar's mark is the one
-       that counts and the page behind it is told to stand down. */
-    it('tells the page it is the field that counts while it works', () => {
+    /* The bar used to announce `data-agent-working` so the frame could hold a
+       page's own field down. Since v0.13.0 a field is a mark, no page paints
+       one, and nothing ever read the attribute — so the bar says nothing. */
+    it('announces no working state to the page, because nothing reads one', () => {
       const { container } = render(<AgentBar working />);
 
-      expect(container.querySelector('[data-agent-working]')).toHaveAttribute(
-        'data-agent-working',
-        'true',
-      );
+      expect(container.querySelector('[data-agent-working]')).toBeNull();
     });
   });
 

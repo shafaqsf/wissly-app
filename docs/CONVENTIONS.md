@@ -50,21 +50,26 @@ Semantic versioning, pre-1.0:
 `1.0.0` is the point at which the public surface — the database schema, the
 agent API and the env contract — is considered stable.
 
-### The bump does not happen in the feature branch
+### Where the bump happens
 
-A feature branch touches neither `package.json` nor `CHANGELOG.md`. Both are
-edited only on `main`, immediately after the merge:
+A branch that is the only one in flight bumps `package.json` and writes its
+own `CHANGELOG.md` entry, in a `chore(release)` commit of its own. The tag
+still belongs to `main` and is cut after the merge:
 
 ```bash
-git switch main && git pull
-npm version 0.3.0 --no-git-tag-version   # package.json + package-lock.json
-# add the CHANGELOG.md entry — handed over with the push
-git commit -am "chore(release): 0.3.0"
-git tag -a v0.3.0 -m "0.3.0"
-git push && git push --tags
+git tag -a v0.3.0 -m "0.3.0" && git push --tags
 ```
 
-This is what keeps parallel worktrees from fighting over the same two files.
+The rule this replaces sent both files to `main` unconditionally, on the
+grounds that parallel worktrees would otherwise fight over them. That cost is
+real but it is only paid when branches actually overlap, and the price of
+avoiding it was that six versions shipped without ever being bumped — the
+number in `package.json` stopped describing the code. A conflict you can see
+beats a ritual you can skip.
+
+**So when more than one branch is in flight, the old rule still applies**:
+leave both files alone, hand the entry over with the push, and let `main`
+carry the bump.
 
 ## Commits
 

@@ -152,10 +152,11 @@ export default function AgentBar({
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
-      // While the agent works, this is the field that counts. The frame reads
-      // it and holds the page's own state down to the ambient intensity, so
-      // there is one state being reported per viewport rather than two.
-      data-agent-working={working ? 'true' : 'false'}
+      // This used to publish `data-agent-working` so the frame could hold the
+      // page's own field down while the agent worked. Since v0.13.0 a field is
+      // a mark and no page paints one, so there is nothing left to arbitrate
+      // and nothing ever read the attribute. Do not reinstate it without a
+      // reader.
     >
       {/* There are no shadows in this design language, so a floating surface
           separates from the page with a paper fill and a hairline — and that

@@ -88,33 +88,35 @@ export default function AgentBar({
       className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
       data-working={working ? 'true' : 'false'}
     >
-      <div
-        className={[
-          'pointer-events-auto flex w-full max-w-2xl flex-col border border-rule bg-paper',
-          // No shadow anywhere in this design language, so a floating surface
-          // separates from the page with a fill and a hairline instead.
-          // A field always names the state it paints, on the same line as the
-          // field itself. Without a `.field-*` class the stops are transparent
-          // and the panel renders as clean paper — a field encoding nothing,
-          // which DESIGN.md forbids and `globals.css.test.js` fails the build
-          // over. Working is the unresolved end of the palette; the answer
-          // landing is the settle.
-          open ? `grain grain-field ${working ? 'field-unresolved' : 'field-settled'}` : '',
-          working ? 'grain-working' : '',
-        ].join(' ')}
-        style={open ? { '--grain': working ? 'var(--grain-3)' : 'var(--grain-1)' } : undefined}
-      >
+      {/* No shadow anywhere in this design language, so a floating surface
+          separates from the page with a fill and a hairline instead. */}
+      <div className="pointer-events-auto flex w-full max-w-2xl flex-col border border-rule bg-paper">
         {open ? (
-          <div className="flex flex-col">
+          // The field goes here and not around the whole panel: DESIGN.md puts
+          // a field *beside* a form, never behind one, and the text field is a
+          // form. So the transcript carries the state and the controls below it
+          // stay on clean paper — which is also what lets their labels remain
+          // muted, since muted ink may not sit on a tinted field.
+          //
+          // The state class moves grain and colour together; there is no inline
+          // --grain to set, and setting one would let the surface say one thing
+          // with its texture and another with its hue.
+          <div
+            className={[
+              'flex flex-col',
+              `grain grain-field ${working ? 'field-unresolved' : 'field-settled'}`,
+              working ? 'grain-working' : '',
+            ].join(' ')}
+          >
             <header className="flex min-h-14 items-center justify-between gap-4 border-b border-rule px-4">
-              <p className="font-mono text-label uppercase text-ink-muted">
+              <p className="font-mono text-label uppercase">
                 {working ? 'Working' : 'Your material'}
               </p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close the agent"
-                className="flex size-11 items-center justify-center rounded-control text-ink-muted hover:text-ink"
+                className="flex size-11 items-center justify-center rounded-control"
               >
                 <X size={20} strokeWidth={1.5} aria-hidden="true" />
               </button>

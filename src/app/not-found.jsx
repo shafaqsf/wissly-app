@@ -14,8 +14,7 @@ export const metadata = {
 export default function NotFound() {
   return (
     <div
-      className="grain grain-field flex flex-1 flex-col items-center justify-center gap-6 px-6 py-24 text-center"
-      style={{ '--grain': 'var(--grain-2)' }}
+      className="grain grain-field field-unresolved flex flex-1 flex-col items-center justify-center gap-6 px-6 py-24 text-center"
     >
       <p className="font-mono text-label uppercase text-ink-muted">404</p>
       <h1 className="font-display text-display-l font-bold">

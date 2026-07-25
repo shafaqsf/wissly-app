@@ -14,7 +14,7 @@ const STATUS_WORDS = {
 export default function Transcript({ messages = [], working = false }) {
   if (messages.length === 0) {
     return (
-      <p className="max-w-measure px-4 py-8 text-body text-ink-muted">
+      <p className="max-w-measure px-4 py-8 text-body">
         Ask about anything you have added. Answers come from your material and
         say which page they came from.
       </p>
@@ -34,7 +34,7 @@ export default function Transcript({ messages = [], working = false }) {
               ' ',
             )}
           >
-            <p className="font-mono text-label uppercase text-ink-muted">
+            <p className="font-mono text-label uppercase">
               {message.role === 'user' ? 'You' : 'wissly'}
               {word ? ` · ${word}` : ''}
             </p>
@@ -44,7 +44,7 @@ export default function Transcript({ messages = [], working = false }) {
                 {message.content}
               </p>
             ) : (
-              <p className="text-body text-ink-muted">
+              <p className="text-body">
                 {working ? 'Reading your material.' : 'Nothing came back.'}
               </p>
             )}

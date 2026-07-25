@@ -108,17 +108,35 @@ describe('the agent bar', () => {
     expect(screen.getByLabelText(/ask about your material/i)).toBeEnabled();
   });
 
-  it('grains at grain-3 while working and settles when it is done', async () => {
+  it('drifts while working and stops drifting when the answer lands', async () => {
     const user = userEvent.setup();
     const { container, rerender } = render(<AgentBar working />);
 
     await user.click(screen.getByLabelText(/ask about your material/i));
-    const panel = container.querySelector('.grain');
-    expect(panel).toHaveClass('grain-working');
-    expect(panel.style.getPropertyValue('--grain')).toBe('var(--grain-3)');
+    expect(container.querySelector('.grain')).toHaveClass('grain-working');
 
     rerender(<AgentBar working={false} />);
     expect(container.querySelector('.grain')).not.toHaveClass('grain-working');
+  });
+
+  it('sets no inline grain, because the state class carries both axes', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<AgentBar working />);
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+
+    // A surface that names its grain separately from its colour can say one
+    // thing with its texture and another with its hue.
+    expect(container.querySelector('.grain').style.getPropertyValue('--grain')).toBe('');
+  });
+
+  it('keeps the field off the form, because a field sits beside one, never behind', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<AgentBar working />);
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+
+    expect(container.querySelector('form').closest('.grain-field')).toBeNull();
   });
 
   it('tells the page behind it to stand down, so only one field carries state', () => {

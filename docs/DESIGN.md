@@ -208,10 +208,18 @@ Applied on a `::before` pseudo-element with `mix-blend-mode: multiply` and
 ### The field
 
 A **field** is clean paper with three colour stops bleeding in from its edges
-— heat near the left, depth from the top corner, a cool floor rising from
-below — and a grain layer masked to the same geometry, so the texture is dense
-where the colour is saturated and the paper core stays clean. The core is
-where text sits.
+— heat from the bottom-left corner, depth from the top-right, a cool floor
+rising along the bottom edge — and a grain layer masked to the same geometry,
+so the texture is dense where the colour is saturated and the paper core stays
+clean. The core is where text sits.
+
+Every stop is anchored to a corner or an edge, never to a point inside the box.
+An interior anchor makes the same class read as three different things
+depending on how the surface happens to be cut — a wide header and a tall
+column would light from different directions. `globals.css.test.js` asserts the
+anchors, and asserts that the grain mask names the same three gradients the
+background paints; the moment those drift apart the texture stops tracking the
+colour.
 
 Colour and grain are **one axis, not two**. A field is painted by one state
 class, and that class moves both:

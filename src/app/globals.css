@@ -108,9 +108,14 @@ body {
 }
 
 /* --- The field ------------------------------------------------------
-   Three colour stops bleeding in from the edges of clean paper: heat near
-   the left, depth from the top corner, a cool floor rising from below. The
-   middle stays paper, which is where text sits.
+   Three colour stops bleeding in from the edges of clean paper: heat from the
+   bottom-left corner, depth from the top-right, a cool floor rising along the
+   bottom edge. The middle stays paper, which is where text sits.
+
+   Every stop is anchored to a corner or an edge rather than to a point
+   somewhere inside the box. An interior anchor reads completely differently on
+   a wide band than on a tall column; a corner anchor gives the same light
+   whatever shape the surface happens to be.
 
    The stops are custom properties rather than literals so that one class —
    `.field-unresolved`, `.field-partial`, `.field-settled` — repaints the
@@ -164,9 +169,9 @@ body {
 .grain-field {
   background-color: var(--color-paper);
   background-image:
-    radial-gradient(ellipse 65% 55% at 6% 42%, var(--field-near) 0%, transparent 62%),
-    radial-gradient(ellipse 85% 70% at 96% 4%, var(--field-far) 0%, transparent 66%),
-    radial-gradient(ellipse 130% 90% at 50% 108%, var(--field-floor) 0%, transparent 72%);
+    radial-gradient(ellipse 70% 80% at 0% 100%, var(--field-near) 0%, transparent 65%),
+    radial-gradient(ellipse 75% 85% at 100% 0%, var(--field-far) 0%, transparent 68%),
+    radial-gradient(ellipse 120% 45% at 50% 100%, var(--field-floor) 0%, transparent 70%);
   transition:
     --field-near 600ms cubic-bezier(0.16, 1, 0.3, 1),
     --field-far 600ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -179,9 +184,9 @@ body {
    on top of everything. */
 .grain-field::before {
   mask-image:
-    radial-gradient(ellipse 65% 55% at 6% 42%, #000 0%, transparent 62%),
-    radial-gradient(ellipse 85% 70% at 96% 4%, #000 0%, transparent 66%),
-    radial-gradient(ellipse 130% 90% at 50% 108%, #000 0%, transparent 72%);
+    radial-gradient(ellipse 70% 80% at 0% 100%, #000 0%, transparent 65%),
+    radial-gradient(ellipse 75% 85% at 100% 0%, #000 0%, transparent 68%),
+    radial-gradient(ellipse 120% 45% at 50% 100%, #000 0%, transparent 70%);
 }
 
 /* A flat wash, no geometry. For surfaces that appear several at a time —

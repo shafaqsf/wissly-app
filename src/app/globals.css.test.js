@@ -127,6 +127,34 @@ describe('shape', () => {
   })
 })
 
+/* Every `ellipse W% H% at X% Y%` in a rule, in the order it is painted. */
+function geometry(selector) {
+  const block = css.match(new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`))
+  if (!block) throw new Error(`No rule ${selector} in globals.css`)
+  return [...block[1].matchAll(/ellipse\s+([\d.]+%\s+[\d.]+%\s+at\s+[\d.]+%\s+[\d.]+%)/g)].map(
+    ([, shape]) => shape.replace(/\s+/g, ' '),
+  )
+}
+
+describe('field geometry', () => {
+  /* The light has to come from the same direction on every surface, or the
+     same class reads as three different things depending on how the box
+     happens to be cut. Corners, not arbitrary interior points. */
+  it('anchors every stop to an edge or a corner', () => {
+    expect(geometry('.grain-field').map((shape) => shape.split(' at ')[1])).toEqual([
+      '0% 100%',
+      '100% 0%',
+      '50% 100%',
+    ])
+  })
+
+  /* The mask exists so grain is dense where colour is saturated. The moment
+     it drifts from the background it stops tracking anything. */
+  it('masks the grain with exactly the gradients it paints', () => {
+    expect(geometry('.grain-field::before')).toEqual(geometry('.grain-field'))
+  })
+})
+
 describe('the field palette', () => {
   it('defines all five field tokens', () => {
     for (const name of ['hot', 'deep', 'warm', 'mid', 'cool']) {

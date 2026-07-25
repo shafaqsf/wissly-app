@@ -8,6 +8,7 @@ export default function Panel({
   error,
   wide = false,
   grain = false,
+  mark,
   children,
 }) {
   const state = error ? 'error' : empty ? 'empty' : 'content';
@@ -23,7 +24,9 @@ export default function Panel({
       aria-label={title}
       data-state={state}
       className={[
-        'flex flex-col border border-rule bg-paper',
+        // `overflow-hidden` so a wash or a field inside the panel is clipped
+        // to the same corner the border draws.
+        'flex flex-col overflow-hidden rounded-surface border border-rule bg-paper',
         // No colour carries the failure. A 2px ink rule on the left does, and
         // nothing else in the interface has one.
         error ? 'border-l-2 border-l-ink' : '',
@@ -32,6 +35,20 @@ export default function Panel({
     >
       <header className="flex min-h-14 items-center justify-between gap-4 border-b border-rule px-5">
         <h2 className="font-display text-title font-semibold">{title}</h2>
+        {mark ? (
+          // A mark, not a field: the state belongs to this panel, and a panel
+          // is not large enough to carry a radial surface without the surface
+          // becoming the panel. The label is what a screen reader hears and
+          // what anyone who cannot separate three tints reads.
+          <p className="flex items-center gap-2 font-mono text-caption text-ink-muted">
+            <span
+              aria-hidden="true"
+              className={`grain grain-mark ${mark.field}`}
+              style={{ '--grain': mark.grain }}
+            />
+            {mark.label}
+          </p>
+        ) : null}
         {action}
       </header>
 

@@ -252,6 +252,17 @@ describe('colour containment', () => {
     expect(offenders).toEqual([])
   })
 
+  /* A header is a position on the page, not a state. A page-wide field band
+     is how the field ended up describing the furniture rather than the
+     subject — see "Where a field goes" in docs/DESIGN.md. */
+  it('never turns a header into a field', () => {
+    const offenders = sourceFiles()
+      .filter((file) => file.endsWith('.jsx'))
+      .filter((file) => /<header[^>]*grain-field/.test(readFileSync(file, 'utf8')))
+
+    expect(offenders).toEqual([])
+  })
+
   /* Every field carries a state class. A `.grain-field` or `.grain-mark`
      without one paints transparent stops and silently loses the signal it was
      there to give. */

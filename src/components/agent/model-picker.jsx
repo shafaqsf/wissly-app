@@ -66,7 +66,7 @@ export default function ModelPicker({ model = '', onChange, disabled = false, id
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
       <label htmlFor={id} className="sr-only">
         Which model answers
       </label>
@@ -75,7 +75,7 @@ export default function ModelPicker({ model = '', onChange, disabled = false, id
         value={free ? OTHER : model}
         disabled={disabled}
         onChange={(event) => choose(event.target.value)}
-        className="min-h-11 max-w-full rounded-control border border-rule bg-paper px-3 font-mono text-label text-ink"
+        className="min-h-11 w-full max-w-full rounded-control border border-rule bg-paper px-3 font-mono text-label text-ink"
       >
         <option value="">Default model</option>
         {CURATED_MODELS.map(({ id: value, name, pricing }) => (

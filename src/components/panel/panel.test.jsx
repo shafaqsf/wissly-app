@@ -101,6 +101,20 @@ describe('Panel', () => {
     expect(container.querySelector('[data-state="error"]')).toBeInTheDocument()
   })
 
+  /* The rule goes on the message, not on the frame. A 2px side against the
+     panel's 1px hairline mitres across a 14px corner, and the panel visibly
+     stopped being round at the two ends of the rule. Every other failure in
+     the product already rules its own paragraph — the auth form, the agent
+     transcript — so this is also the shape they all share now. */
+  it('rules the message rather than mitring the panel corner', () => {
+    const { container } = render(<Panel title="Courses" error="It broke." />)
+
+    expect(container.querySelector('[data-state="error"]').className).not.toMatch(
+      /border-l-2/,
+    )
+    expect(screen.getByRole('alert')).toHaveClass('border-l-2', 'border-l-ink')
+  })
+
   it('prefers the error over the empty state when both are given', () => {
     render(<Panel title="Courses" empty="Nothing yet." error="It broke." />)
 

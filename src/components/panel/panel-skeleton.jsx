@@ -25,10 +25,12 @@ export default function PanelSkeleton({ title, wide = false }) {
         className="grain grain-wash grain-working field-unresolved flex-1 px-5 py-5"
         style={{ '--grain': 'var(--grain-3)' }}
       >
+        {/* Rounded like everything else that is a surface rather than a page
+            edge. Square bars were the one place the shape system broke. */}
         <div className="flex flex-col gap-3" aria-hidden="true">
-          <div className="h-3 w-2/3 bg-rule" />
-          <div className="h-3 w-full bg-rule" />
-          <div className="h-3 w-1/2 bg-rule" />
+          <div className="h-3 w-2/3 rounded-round bg-rule" />
+          <div className="h-3 w-full rounded-round bg-rule" />
+          <div className="h-3 w-1/2 rounded-round bg-rule" />
         </div>
       </div>
     </section>

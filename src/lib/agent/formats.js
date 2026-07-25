@@ -26,6 +26,44 @@ export const FORMATS = Object.freeze([
   'open_question',
 ])
 
+/* Reading and tasks — the split the four areas are built on.
+ *
+ * It is derived, not a column. `format` already says everything needed, and a
+ * second column saying the same thing is a second thing to keep true. The
+ * database agrees: `artefact_schedule` in 004 enumerates the same four recall
+ * formats in its `where`, and 003 counts evidence only from those.
+ *
+ * Reading is processed material — read, never answered, so it produces no
+ * evidence, has no due date and lives beside the source on the course page.
+ * Tasks are asked of the learner, run through FSRS and live in Tasks.
+ */
+
+/** Read, not answered. No evidence, no schedule, no mastery. */
+export const READING_FORMATS = Object.freeze(['summary', 'glossary'])
+
+/** Answered. These and only these run through FSRS and feed mastery. */
+export const TASK_FORMATS = Object.freeze([
+  'flashcard',
+  'cloze',
+  'multiple_choice',
+  'open_question',
+])
+
+/** @returns {'reading'|'task'|null} null for anything not in the catalogue. */
+export function formatKind(format) {
+  if (READING_FORMATS.includes(format)) return 'reading'
+  if (TASK_FORMATS.includes(format)) return 'task'
+  return null
+}
+
+export function isReadingFormat(format) {
+  return formatKind(format) === 'reading'
+}
+
+export function isTaskFormat(format) {
+  return formatKind(format) === 'task'
+}
+
 const string = (description) => ({ type: 'string', minLength: 1, description })
 
 export const PAYLOAD_SCHEMAS = Object.freeze({

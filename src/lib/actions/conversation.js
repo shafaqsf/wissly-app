@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { resolveModel } from '@/lib/agent/models.js'
 import { runTurn } from '@/lib/agent/run.js'
 import { describeUndo, undoRun } from '@/lib/agent/undo.js'
 import { actionsFor, runsFor } from '@/lib/data/agent-runs.js'
@@ -17,8 +18,8 @@ import {
   renameConversation,
   restoreConversation,
   setConversationMode,
+  setMessageStatus,
   setPinned,
-  stopRunningMessages,
 } from '@/lib/data/conversations.js'
 import { createClient } from '@/lib/supabase/server.js'
 
@@ -40,6 +41,9 @@ async function client() {
 
 /** Anything longer is a document, and a document is material, not a message. */
 const MAX_MESSAGE = 8000
+
+/** A queue that refills itself is a bill rather than a conversation. */
+const MAX_DRAIN = 10
 
 export async function listThreadsAction({ archived = false } = {}) {
   const { supabase } = await client()
@@ -83,19 +87,39 @@ export async function newThreadAction({ mode = 'chat', subjectId = null } = {}) 
 /**
  * Send a message and answer it.
  *
- * The queue lives here. If the thread is already working, the message is
+ * Two settings ride along and they are independent of each other. **Mode** says
+ * who acts — chat reads, agent writes — and is a property of the thread from
+ * this message on. **Model** says which model answers this one line, and is
+ * recorded on the message so the transcript can show it. Chat on Sonnet while
+ * the Agent works on DeepSeek is an ordinary configuration, and it stays
+ * ordinary because nothing here derives one from the other.
+ *
+ * The queue lives here too. If the thread is already working, the message is
  * stored `queued` and this returns immediately — the learner's text field is
  * never taken away from them, and the message is on the screen before the
  * previous answer has finished. When the run that is in flight ends, it
  * drains what is waiting.
  */
-export async function sendMessageAction({ conversationId, content, mode }) {
+export async function sendMessageAction({ conversationId, content, mode, model }) {
   const { supabase, userId } = await client()
 
   const text = String(content ?? '').trim()
   if (text === '') return { error: 'Write something first.' }
   if (text.length > MAX_MESSAGE) {
     return { error: 'That is too long for a message. Add it as material instead.' }
+  }
+
+  // Before anything is written. A model id the learner mistyped is theirs to
+  // correct, not a failed turn to read about in the thread afterwards.
+  let chosen = null
+  if (model) {
+    try {
+      // A chosen id is returned as it stands; the environment is only ever
+      // read when nothing was chosen, which is not this branch.
+      chosen = resolveModel({ chosen: model })
+    } catch (error) {
+      return { error: error.message }
+    }
   }
 
   try {
@@ -118,6 +142,7 @@ export async function sendMessageAction({ conversationId, content, mode }) {
       role: 'user',
       content: text,
       mode: conversation.mode,
+      model: chosen,
       busy,
     })
 
@@ -126,29 +151,96 @@ export async function sendMessageAction({ conversationId, content, mode }) {
     if (busy) return { message: stored, queued: true }
 
     let turn = await runTurn({ supabase, userId, conversation, message: stored })
+    const intents = [...(turn.intents ?? [])]
 
     // Drain what arrived while this turn was running. Bounded, because a
     // queue that refills itself is a bill rather than a conversation.
-    for (let drained = 0; turn.next && drained < 10; drained += 1) {
-      turn = await runTurn({
-        supabase,
-        userId,
-        conversation,
-        message: turn.next,
-      })
+    for (let drained = 0; turn.next && drained < MAX_DRAIN; drained += 1) {
+      turn = await runTurn({ supabase, userId, conversation, message: turn.next })
+      intents.push(...(turn.intents ?? []))
     }
 
-    return { message: stored, answer: turn.message }
+    return {
+      message: stored,
+      answer: turn.message,
+      runId: turn.run?.id ?? null,
+      // What the agent asked the interface to do. Data; the bar performs it.
+      intents,
+      // Empty on a turn that finished. On one that died halfway it names what
+      // landed, so Undo is a decision rather than a guess.
+      completed: turn.completed ?? [],
+    }
   } catch (error) {
     return { error: error.message }
   }
 }
 
+/**
+ * Stop the turn that is running.
+ *
+ * Only the turn. A message the learner queued behind it is left `queued` and
+ * runs next: they asked for the turn to end, not for the thing they typed a
+ * moment ago to be thrown away. Withdrawing is a separate, deliberate act, and
+ * it has its own action below.
+ */
 export async function stopThreadAction({ conversationId }) {
   const { supabase } = await client()
 
   try {
-    return { stopped: await stopRunningMessages(supabase, { conversationId }) }
+    const messages = await messagesFor(supabase, { conversationId })
+    const running = messages.filter((message) => message.status === 'running')
+
+    const stopped = []
+    for (const message of running) {
+      stopped.push(await setMessageStatus(supabase, { id: message.id, status: 'stopped' }))
+    }
+
+    return { stopped }
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
+/** Take back a message that has not started. One that has can only be stopped. */
+export async function withdrawMessageAction({ conversationId, id }) {
+  const { supabase } = await client()
+
+  try {
+    const messages = await messagesFor(supabase, { conversationId })
+    const waiting = messages.find((message) => message.id === id)
+
+    if (!waiting) return { error: 'That message is no longer there.' }
+    if (waiting.status !== 'queued') {
+      return { error: 'That one has already started. Stop it instead.' }
+    }
+
+    await setMessageStatus(supabase, { id, status: 'stopped' })
+
+    return { withdrawn: true, id }
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
+/**
+ * What a reconnecting client resumes from.
+ *
+ * Every delta of a streamed answer is written to its row as it arrives, so the
+ * thread on the server is always the truth. A reload, a closed laptop or a
+ * dropped connection reads this and carries on from what is stored rather than
+ * starting the answer again.
+ */
+export async function resumeThreadAction({ conversationId }) {
+  const { supabase } = await client()
+
+  try {
+    const messages = await messagesFor(supabase, { conversationId })
+
+    return {
+      messages,
+      running: messages.find((message) => message.status === 'running') ?? null,
+      queued: messages.filter((message) => message.status === 'queued'),
+    }
   } catch (error) {
     return { error: error.message }
   }
@@ -205,6 +297,41 @@ export async function deleteThreadAction({ id }) {
   }
 }
 
+/** What one run changed, for the "Undo" the bar offers on a message. */
+export async function runActionsAction({ runId }) {
+  const { supabase } = await client()
+
+  try {
+    const actions = await actionsFor(supabase, { runId })
+
+    return {
+      actions: actions.map((action) => ({
+        id: action.id,
+        tool: action.tool,
+        result: action.result,
+        undone_at: action.undone_at ?? null,
+      })),
+      outstanding: actions.filter((action) => action.undo && !action.undone_at).length,
+    }
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
+/** Take back one run by name — the Undo on the message that caused it. */
+export async function undoRunAction({ runId }) {
+  const { supabase } = await client()
+
+  try {
+    const result = await undoRun(supabase, { runId })
+    revalidateEverythingTheAgentTouches()
+
+    return { message: describeUndo(result), ...result }
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
 /**
  * Take back what the agent last changed.
  *
@@ -225,16 +352,19 @@ export async function undoLastChangeAction({ conversationId }) {
       if (outstanding.length === 0) continue
 
       const result = await undoRun(supabase, { runId: run.id })
-      revalidatePath('/courses')
-      revalidatePath('/library')
-      revalidatePath('/review')
-      revalidatePath('/progress')
+      revalidateEverythingTheAgentTouches()
 
-      return { message: describeUndo(result), ...result }
+      return { message: describeUndo(result), runId: run.id, ...result }
     }
 
     return { message: describeUndo({ undone: [], failed: [] }), undone: [], failed: [] }
   } catch (error) {
     return { error: error.message }
+  }
+}
+
+function revalidateEverythingTheAgentTouches() {
+  for (const path of ['/dashboard', '/courses', '/tasks', '/analytics']) {
+    revalidatePath(path)
   }
 }

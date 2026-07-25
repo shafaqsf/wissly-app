@@ -90,6 +90,43 @@ describe('CitationAnchor', () => {
     expect(screen.getByRole('button', { name: /source 1/i })).toHaveClass('tap-44')
   })
 
+  it('offers the section itself as a destination when it has one', async () => {
+    const user = userEvent.setup()
+    render(
+      <CitationAnchor
+        ordinal={1}
+        anchor={{ page: 12 }}
+        passage={passage}
+        href="/courses/course-1#section-sec-1"
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /source 1/i }))
+
+    expect(screen.getByRole('link', { name: 'Open the section' })).toHaveAttribute(
+      'href',
+      '/courses/course-1#section-sec-1',
+    )
+  })
+
+  it('offers no destination when nothing was given one', async () => {
+    const user = userEvent.setup()
+    render(<CitationAnchor ordinal={1} anchor={{ page: 12 }} passage={passage} />)
+
+    await user.click(screen.getByRole('button', { name: /source 1/i }))
+
+    expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  it('shows the passage even when there is nowhere further to go', async () => {
+    const user = userEvent.setup()
+    render(<CitationAnchor ordinal={4} anchor={{ page: 2 }} passage={passage} />)
+
+    await user.click(screen.getByRole('button', { name: /source 4/i }))
+
+    expect(screen.getByText(/eigenvector of A/)).toBeInTheDocument()
+  })
+
   it('carries no grain, because a citation is not an unresolved state', async () => {
     const user = userEvent.setup()
     const { container } = render(

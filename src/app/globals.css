@@ -65,6 +65,18 @@
      the ends before compositing, so the same opacity buys scattered dark
      specks instead of an even wash. The four intensity tokens keep their
      values and their meanings; only the image behind them changed. */
+  /* Motion. Seven movements, each with a duration and a curve written down
+     once. See "Motion" in docs/DESIGN.md. A component reaches for a class
+     below rather than inventing an eighth timing. */
+  --motion-settle: 600ms;
+  --motion-settle-curve: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-drift: 8s;
+  --motion-stagger-step: 40ms;
+  --motion-flip: 300ms;
+  --motion-slide: 200ms;
+  --motion-lift: 120ms;
+  --motion-count: 400ms;
+
   --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='3' intercept='-1'/%3E%3CfeFuncG type='linear' slope='3' intercept='-1'/%3E%3CfeFuncB type='linear' slope='3' intercept='-1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
@@ -98,7 +110,7 @@ body {
   /* Follow the corner it sits in. Without this the layer paints square over
      every rounded surface it is attached to. */
   border-radius: inherit;
-  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity var(--motion-settle) var(--motion-settle-curve);
 }
 
 /* --- The field ------------------------------------------------------
@@ -161,12 +173,12 @@ body {
   border-radius: var(--radius-round);
   background-color: var(--color-paper);
   background-image: linear-gradient(var(--field-mark), var(--field-mark));
-  transition: --field-mark 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: --field-mark var(--motion-settle) var(--motion-settle-curve);
 }
 
 /* The drift: an agent is still working. */
 .grain-working::before {
-  animation: grain-drift 8s ease-in-out infinite alternate;
+  animation: grain-drift var(--motion-drift) ease-in-out infinite alternate;
 }
 
 @keyframes grain-drift {
@@ -176,6 +188,124 @@ body {
   to {
     transform: translate3d(-8px, 6px, 0);
   }
+}
+
+/* --- Motion ----------------------------------------------------------
+   The settle and the drift are above, on the mark and the grain layer, because
+   they belong to the signature. The five below are general: any component may
+   reach for them, and no component may write its own timing. Every one of them
+   is switched off under `prefers-reduced-motion: reduce`. */
+
+/* The stagger: a list arrives. Six items carry the offset and everything after
+   the sixth arrives with it, because past six the offset stops reading as
+   arrival and starts reading as the page being slow. */
+.motion-stagger > * {
+  animation: motion-arrive var(--motion-slide) ease-out both;
+}
+
+.motion-stagger > :nth-child(2) {
+  animation-delay: var(--motion-stagger-step);
+}
+
+.motion-stagger > :nth-child(3) {
+  animation-delay: calc(var(--motion-stagger-step) * 2);
+}
+
+.motion-stagger > :nth-child(4) {
+  animation-delay: calc(var(--motion-stagger-step) * 3);
+}
+
+.motion-stagger > :nth-child(5) {
+  animation-delay: calc(var(--motion-stagger-step) * 4);
+}
+
+.motion-stagger > :nth-child(6) {
+  animation-delay: calc(var(--motion-stagger-step) * 5);
+}
+
+.motion-stagger > :nth-child(n + 7) {
+  animation-delay: calc(var(--motion-stagger-step) * 5);
+}
+
+@keyframes motion-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The flip: a flashcard turns. The only movement in the product that uses a
+   third dimension, and it is allowed one because a card with two faces is a
+   real object a learner already understands. Put `.motion-flip` on the element
+   that turns and `.motion-flip-face` on each face; set `data-turned` to flip.
+   The faces stack, so the box keeps the height of the taller one. */
+.motion-flip {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform var(--motion-flip) ease-out;
+}
+
+.motion-flip[data-turned='true'] {
+  transform: rotateY(180deg);
+}
+
+.motion-flip-face {
+  backface-visibility: hidden;
+}
+
+.motion-flip-face[data-face='back'] {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+/* The slide: a panel opens, a type changes. Transform only — moving a width or
+   a height re-lays the page out on every frame, and the text inside reflows
+   while the learner is reading it. */
+.motion-slide {
+  transition: transform var(--motion-slide) ease-out;
+}
+
+/* The lift: the pointer is over something that can be acted on. One pixel and
+   a darker hairline. It answers "is this a control?" and nothing else, so it
+   never grows, never shadows, and never changes the ink of the label. */
+.motion-lift {
+  transition:
+    transform var(--motion-lift) ease-out,
+    border-color var(--motion-lift) ease-out;
+}
+
+.motion-lift:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-ink-muted);
+}
+
+/* The count: a number changes. Monospace so the digits do not shuffle sideways
+   while they move, and a linear curve so the value reads as counted rather
+   than as thrown. `--motion-count-value` is registered below so it can
+   actually interpolate; a plain custom property would jump. */
+@property --motion-count-value {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+
+.motion-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  transition: --motion-count-value var(--motion-count) linear;
+}
+
+/* Opt in to the animated digits by carrying `data-count` and setting
+   `--motion-count-value` inline. Without the attribute the class is only the
+   typography and the tabular figures, which is all most numbers need. */
+.motion-count[data-count]::after {
+  content: counter(motion-count);
+  counter-reset: motion-count var(--motion-count-value);
 }
 
 /* --- Interaction floor ---------------------------------------------- */
@@ -211,6 +341,25 @@ body {
      its new fill, it just does not travel there. */
   .grain-mark {
     transition: none;
+  }
+
+  /* The whole catalogue goes, not a faster version of it. Every movement in
+     this stylesheet is decoration over a state change that has already
+     happened, so removing it costs nothing: the list is still there, the card
+     is still turned, the number still reads the new value. */
+  .motion-stagger > * {
+    animation: none;
+  }
+
+  .motion-flip,
+  .motion-slide,
+  .motion-lift,
+  .motion-count {
+    transition: none;
+  }
+
+  .motion-lift:hover {
+    transform: none;
   }
 
   *,

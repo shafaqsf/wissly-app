@@ -21,7 +21,7 @@ export async function rateArtefactAction({ artefactId, rating }) {
   const schedule = await scheduleFor(supabase, { artefactId })
 
   if (!schedule) {
-    return { message: 'That artefact is gone. Reload the queue.' }
+    return { message: 'That task is gone. Reload the queue.' }
   }
 
   const review = await recordReview(supabase, {
@@ -31,8 +31,10 @@ export async function rateArtefactAction({ artefactId, rating }) {
     state: fsrsState(schedule),
   })
 
-  revalidatePath('/review')
-  revalidatePath('/progress')
+  // The queue moved into the workbench, and so did what it changes: the count
+  // on the left of every task surface is the same number this rating moves.
+  revalidatePath('/tasks', 'layout')
+  revalidatePath('/analytics')
   revalidatePath('/dashboard')
 
   return { dueAt: review.due_at }

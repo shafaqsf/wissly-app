@@ -62,4 +62,16 @@ describe('SummaryArtefact', () => {
       screen.getByRole('button', { name: 'Source 1, page 12' }),
     ).toBeInTheDocument()
   })
+
+  it('points the anchor back at the section on its course shelf', async () => {
+    const user = userEvent.setup()
+    render(<SummaryArtefact artefact={summaryFixture} />)
+
+    await user.click(screen.getByRole('button', { name: 'Source 1, page 12' }))
+
+    expect(screen.getByRole('link', { name: 'Open the section' })).toHaveAttribute(
+      'href',
+      '/courses/subject-linear-algebra#section-section-eigenvectors',
+    )
+  })
 })

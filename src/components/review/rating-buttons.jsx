@@ -27,6 +27,11 @@ export default function RatingButtons({ onRate }) {
             className={buttonClass}
           >
             {rating.label}
+            {/* The key that does the same thing, written on the control that
+                does it. A shortcut nobody can see is a shortcut nobody uses. */}
+            <span aria-hidden="true" className="text-ink-muted">
+              {rating.grade}
+            </span>
           </button>
         ))}
       </div>

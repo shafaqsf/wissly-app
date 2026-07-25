@@ -79,3 +79,8 @@ export function argsOf(call, method) {
 export function methodsOf(call) {
   return call?.chain.map((step) => step.method) ?? []
 }
+
+/** Every call to `method` in the chain, for a query that filters more than once. */
+export function argsOfAll(call, method) {
+  return (call?.chain ?? []).filter((step) => step.method === method).map((step) => step.args)
+}

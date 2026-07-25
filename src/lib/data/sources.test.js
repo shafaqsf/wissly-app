@@ -2,8 +2,15 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { argsOf, fakeSupabase, methodsOf } from './fake-supabase.js'
-import { createSource, listSources, sectionsForSource } from './sources.js'
+import { argsOf, argsOfAll, fakeSupabase, methodsOf } from './fake-supabase.js'
+import {
+  archiveSource,
+  createSource,
+  listSources,
+  listSourcesWithSections,
+  restoreSource,
+  sectionsForSource,
+} from './sources.js'
 
 const section = (ordinal, content, anchor) => ({ ordinal, content, anchor })
 
@@ -139,5 +146,93 @@ describe('reading material back', () => {
       'ordinal',
       { ascending: true },
     ])
+  })
+})
+
+describe('the archive', () => {
+  it('leaves archived sources out of the shelf by default', async () => {
+    const supabase = fakeSupabase({ sources: { data: [], error: null } })
+
+    await listSources(supabase, { subjectId: 'sub-1' })
+
+    expect(argsOf(supabase.query('sources'), 'is')).toEqual(['archived_at', null])
+  })
+
+  it('shows only the archived ones when the archive is asked for', async () => {
+    const supabase = fakeSupabase({ sources: { data: [], error: null } })
+
+    await listSources(supabase, { subjectId: 'sub-1', archived: true })
+
+    const call = supabase.query('sources')
+    expect(methodsOf(call)).not.toContain('is')
+    expect(argsOf(call, 'not')).toEqual(['archived_at', 'is', null])
+  })
+
+  it('archives by writing a timestamp, never by deleting', async () => {
+    const supabase = fakeSupabase({ sources: { data: { id: 'src-1' }, error: null } })
+    const now = () => new Date('2026-07-25T09:00:00.000Z')
+
+    await archiveSource(supabase, { id: 'src-1', now })
+
+    const call = supabase.query('sources')
+    expect(methodsOf(call)).not.toContain('delete')
+    expect(argsOf(call, 'update')).toEqual([{ archived_at: '2026-07-25T09:00:00.000Z' }])
+    expect(argsOf(call, 'eq')).toEqual(['id', 'src-1'])
+  })
+
+  it('restores by clearing it', async () => {
+    const supabase = fakeSupabase({ sources: { data: { id: 'src-1' }, error: null } })
+
+    await restoreSource(supabase, { id: 'src-1' })
+
+    expect(argsOf(supabase.query('sources'), 'update')).toEqual([{ archived_at: null }])
+  })
+})
+
+describe('a course shelf', () => {
+  it('reads every source and every section in two queries, not one per source', async () => {
+    const supabase = fakeSupabase({
+      sources: {
+        data: [
+          { id: 'src-1', title: 'Notes' },
+          { id: 'src-2', title: 'Script' },
+        ],
+        error: null,
+      },
+      sections: {
+        data: [
+          { id: 'sec-1', source_id: 'src-1', ordinal: 1, content: 'One.', anchor: {} },
+          { id: 'sec-2', source_id: 'src-2', ordinal: 1, content: 'Two.', anchor: {} },
+          { id: 'sec-3', source_id: 'src-1', ordinal: 2, content: 'Three.', anchor: {} },
+        ],
+        error: null,
+      },
+    })
+
+    const shelf = await listSourcesWithSections(supabase, { subjectId: 'sub-1' })
+
+    expect(supabase.calls).toHaveLength(2)
+    expect(argsOf(supabase.query('sections'), 'in')).toEqual(['source_id', ['src-1', 'src-2']])
+    expect(shelf.map((source) => source.sections.map((section) => section.id))).toEqual([
+      ['sec-1', 'sec-3'],
+      ['sec-2'],
+    ])
+  })
+
+  it('gives a source with no sections an empty shelf rather than nothing', async () => {
+    const supabase = fakeSupabase({
+      sources: { data: [{ id: 'src-1' }], error: null },
+      sections: { data: [], error: null },
+    })
+
+    const [source] = await listSourcesWithSections(supabase, { subjectId: 'sub-1' })
+    expect(source.sections).toEqual([])
+  })
+
+  it('asks the database nothing more when there are no sources', async () => {
+    const supabase = fakeSupabase({ sources: { data: [], error: null } })
+
+    await expect(listSourcesWithSections(supabase, { subjectId: 'sub-1' })).resolves.toEqual([])
+    expect(supabase.query('sections')).toBeUndefined()
   })
 })

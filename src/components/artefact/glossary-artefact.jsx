@@ -1,4 +1,4 @@
-import CitationAnchor from './citation-anchor';
+import CitationAnchor, { sectionHref } from './citation-anchor';
 import { renderInline } from './prose';
 
 /* One term, one definition, one anchor. A description list says that
@@ -16,6 +16,7 @@ export default function GlossaryArtefact({ artefact }) {
           ordinal={artefact.section_ordinal}
           anchor={artefact.anchor}
           passage={artefact.passage}
+          href={sectionHref(artefact)}
         />
       </dd>
     </dl>

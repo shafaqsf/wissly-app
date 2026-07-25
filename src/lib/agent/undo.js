@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { actionsFor, markUndone } from '../data/agent-runs.js'
+import { assertLearnerClient } from './guard.js'
 import { applyUndo } from './write-tools.js'
 
 /**
@@ -17,6 +18,10 @@ import { applyUndo } from './write-tools.js'
  * cannot see through.
  */
 export async function undoRun(supabase, { runId }) {
+  // An undo is a write like any other, so it acts as the learner like any
+  // other. It reverses what they can see, under the policies they act under.
+  assertLearnerClient(supabase)
+
   const actions = await actionsFor(supabase, { runId })
 
   const undone = []

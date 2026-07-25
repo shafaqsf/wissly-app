@@ -4,6 +4,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 import AgentBar from './agent-bar';
 
+const FIELD = /ask about your material/i;
+
+const said = (over = {}) => ({
+  id: 'm1',
+  role: 'user',
+  content: 'What is a σ-algebra?',
+  status: 'done',
+  mode: 'chat',
+  model: null,
+  ...over,
+});
+
 describe('the agent bar', () => {
   it('starts as one line and lifts into a panel when the field takes focus', async () => {
     const user = userEvent.setup();
@@ -11,202 +23,297 @@ describe('the agent bar', () => {
 
     expect(screen.queryByText(/answers come from your material/i)).toBeNull();
 
-    await user.click(screen.getByLabelText(/ask about your material/i));
+    await user.click(screen.getByLabelText(FIELD));
 
     expect(screen.getByText(/answers come from your material/i)).toBeInTheDocument();
   });
 
-  /* The mark is who is speaking. It sits once, in the panel header, rather
-     than on every turn — a column of the same coloured mark would read as
-     texture, which is the one thing the design language will not have. */
-  it('wears the brand mark once the agent panel is open', async () => {
+  /* The lift is a transform and never a height: animating layout re-flows the
+     page on every frame and the text reflows while it is being read. */
+  it('lifts with the named slide rather than an invented timing', async () => {
+    const user = userEvent.setup();
+    render(<AgentBar />);
+
+    await user.click(screen.getByLabelText(FIELD));
+
+    expect(screen.getByTestId('agent-panel').className).toMatch(/motion-slide/);
+  });
+
+  /* The sidebar gave its mark up, so this is the one place per viewport where
+     the product names itself. A second one would be a repetition, and a column
+     of the same coloured mark reads as texture. */
+  it('wears exactly one brand mark, and only once it is open', async () => {
     const user = userEvent.setup();
     const { container } = render(<AgentBar />);
 
     expect(container.querySelector('[data-brand-mark]')).toBeNull();
 
-    await user.click(screen.getByLabelText(/ask about your material/i));
+    await user.click(screen.getByLabelText(FIELD));
 
     const marks = container.querySelectorAll('[data-brand-mark]');
     expect(marks).toHaveLength(1);
-    // Decorative: the header already names the agent in words beside it.
     expect(marks[0]).toHaveAttribute('alt', '');
   });
 
-  it('offers both modes and opens in the one that changes nothing', () => {
-    render(<AgentBar />);
-
-    expect(screen.getByRole('radio', { name: /chat/i })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /agent/i })).not.toBeChecked();
-  });
-
-  it('says what agent mode means before the learner picks it', () => {
-    render(<AgentBar />);
-
-    expect(screen.getByRole('radio', { name: /agent/i })).toHaveAttribute(
-      'title',
-      expect.stringMatching(/undone/i),
-    );
-  });
-
-  it('sends what was typed, in the mode that was chosen', async () => {
+  it('keeps one mark when the history is open too', async () => {
     const user = userEvent.setup();
-    const onSend = vi.fn().mockResolvedValue({});
-    render(<AgentBar onSend={onSend} />);
+    const { container } = render(<AgentBar threads={[{ id: 't1', title: 'Measure theory' }]} />);
 
-    await user.click(screen.getByRole('radio', { name: /agent/i }));
-    await user.type(
-      screen.getByLabelText(/ask about your material/i),
-      'make cards for chapter 3',
-    );
-    // The placeholder follows the mode; the label does not, because a label
-    // that moves is a label a screen reader user has to re-learn.
-    expect(screen.getByLabelText(/ask about your material/i)).toHaveAttribute(
-      'placeholder',
-      'Tell the agent what to do',
-    );
-    await user.click(screen.getByRole('button', { name: /^send$/i }));
+    await user.click(screen.getByLabelText(FIELD));
+    await user.click(screen.getByRole('button', { name: /conversations/i }));
 
-    expect(onSend).toHaveBeenCalledWith({
-      content: 'make cards for chapter 3',
-      mode: 'agent',
+    expect(container.querySelectorAll('[data-brand-mark]')).toHaveLength(1);
+  });
+
+  describe('mode and model', () => {
+    it('offers both as dropdowns rather than as toggles', () => {
+      render(<AgentBar />);
+
+      expect(screen.getByLabelText(/what the agent may do/i).tagName).toBe('SELECT');
+      expect(screen.getByLabelText(/which model answers/i).tagName).toBe('SELECT');
+      expect(screen.queryByRole('radio')).toBeNull();
+    });
+
+    it('sends both with the message, and they are independent of each other', async () => {
+      const user = userEvent.setup();
+      const onSend = vi.fn().mockResolvedValue({});
+      render(<AgentBar onSend={onSend} />);
+
+      await user.selectOptions(screen.getByLabelText(/what the agent may do/i), 'agent');
+      await user.selectOptions(
+        screen.getByLabelText(/which model answers/i),
+        'deepseek/deepseek-v4-pro',
+      );
+      await user.type(screen.getByLabelText(FIELD), 'make cards for chapter 3');
+      await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+      expect(onSend).toHaveBeenCalledWith({
+        content: 'make cards for chapter 3',
+        mode: 'agent',
+        model: 'deepseek/deepseek-v4-pro',
+      });
+    });
+
+    it('reports the mode outward so the thread can record it', async () => {
+      const user = userEvent.setup();
+      const onModeChange = vi.fn();
+      render(<AgentBar onModeChange={onModeChange} />);
+
+      await user.selectOptions(screen.getByLabelText(/what the agent may do/i), 'agent');
+
+      expect(onModeChange).toHaveBeenCalledWith('agent');
+    });
+
+    /* The placeholder follows the mode; the label does not, because a label
+       that moves is one a screen reader user has to learn twice. */
+    it('changes the placeholder with the mode and leaves the label alone', async () => {
+      const user = userEvent.setup();
+      render(<AgentBar />);
+
+      await user.selectOptions(screen.getByLabelText(/what the agent may do/i), 'agent');
+
+      expect(screen.getByLabelText(FIELD)).toHaveAttribute(
+        'placeholder',
+        'Tell the agent what to do',
+      );
     });
   });
 
-  it('clears the field immediately, so a second message can follow the first', async () => {
-    const user = userEvent.setup();
-    let release;
-    const onSend = vi.fn(() => new Promise((resolve) => (release = resolve)));
-    render(<AgentBar onSend={onSend} />);
+  describe('the queue', () => {
+    /* The field is never taken away: a message sent while a run is in flight is
+       written `queued` and rendered immediately. */
+    it('keeps the field usable while a run is in flight', () => {
+      render(<AgentBar working />);
 
-    const field = screen.getByLabelText(/ask about your material/i);
-    await user.type(field, 'first{Enter}');
+      expect(screen.getByLabelText(FIELD)).not.toBeDisabled();
+    });
 
-    expect(field).toHaveValue('');
-    release?.({});
+    it('sends while working rather than making the learner wait', async () => {
+      const user = userEvent.setup();
+      const onSend = vi.fn().mockResolvedValue({});
+      render(<AgentBar working onSend={onSend} />);
+
+      await user.type(screen.getByLabelText(FIELD), 'and the σ-algebra of what?');
+      await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+      expect(onSend).toHaveBeenCalled();
+    });
+
+    it('counts what is waiting, in words', async () => {
+      const user = userEvent.setup();
+      render(
+        <AgentBar
+          working
+          messages={[said({ status: 'queued' }), said({ id: 'm2', status: 'queued' })]}
+        />,
+      );
+
+      await user.click(screen.getByLabelText(FIELD));
+
+      expect(screen.getByText(/2 waiting/i)).toBeInTheDocument();
+    });
+
+    it('passes a withdraw through from the transcript', async () => {
+      const user = userEvent.setup();
+      const onWithdraw = vi.fn();
+      render(<AgentBar working messages={[said({ status: 'queued' })]} onWithdraw={onWithdraw} />);
+
+      await user.click(screen.getByLabelText(FIELD));
+      await user.click(screen.getByRole('button', { name: /withdraw/i }));
+
+      expect(onWithdraw).toHaveBeenCalledWith('m1');
+    });
   });
 
-  it('will not send an empty message', async () => {
-    render(<AgentBar onSend={vi.fn()} />);
+  describe('stop', () => {
+    it('offers stop beside the field while a run is in flight, and send otherwise', async () => {
+      const user = userEvent.setup();
+      const onStop = vi.fn();
+      const { rerender } = render(<AgentBar working onStop={onStop} />);
 
-    expect(screen.getByRole('button', { name: /^send$/i })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: /^stop$/i }));
+      expect(onStop).toHaveBeenCalled();
+
+      rerender(<AgentBar onStop={onStop} />);
+      expect(screen.queryByRole('button', { name: /^stop$/i })).toBeNull();
+    });
+
+    /* Stop ends the turn. It does not withdraw what the learner queued behind
+       it — that is a separate, deliberate act with its own control. */
+    it('says that stopping leaves what is waiting alone', () => {
+      render(<AgentBar working messages={[said({ status: 'queued' })]} />);
+
+      expect(screen.getByRole('button', { name: /^stop$/i })).toHaveAttribute(
+        'title',
+        expect.stringMatching(/waiting/i),
+      );
+    });
   });
 
-  it('reports a refusal in words, where the learner is looking', async () => {
-    const user = userEvent.setup();
-    const onSend = vi.fn().mockResolvedValue({ error: 'That is too long for a message.' });
-    render(<AgentBar onSend={onSend} />);
+  describe('the working state', () => {
+    /* The state is a mark on the thing that has it, beside the word that names
+       it, drifting until the answer lands — never a surface. */
+    it('wears an unresolved mark beside the word while the agent works', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<AgentBar working />);
 
-    await user.type(screen.getByLabelText(/ask about your material/i), 'x{Enter}');
+      await user.click(screen.getByLabelText(FIELD));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(/too long/i);
+      const mark = container.querySelector('.grain-mark');
+      expect(mark.className).toMatch(/field-unresolved/);
+      expect(mark.className).toMatch(/grain-working/);
+      expect(screen.getByTestId('agent-state')).toHaveTextContent(/working/i);
+    });
+
+    it('settles the mark when the answer lands', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<AgentBar messages={[said({ role: 'assistant' })]} />);
+
+      await user.click(screen.getByLabelText(FIELD));
+
+      const mark = container.querySelector('.grain-mark');
+      expect(mark.className).toMatch(/field-settled/);
+      expect(mark.className).not.toMatch(/grain-working/);
+    });
+
+    it('paints no surface anywhere, at any state', () => {
+      const { container } = render(<AgentBar working />);
+
+      expect(container.innerHTML).not.toMatch(/grain-field|grain-wash/);
+    });
+
+    /* A run in flight is something to watch, so the panel lifts itself: a bar
+       answering behind a closed line would report nothing to anyone. This is
+       what a reload during a run resumes into. */
+    it('lifts itself while a run is in flight, without being asked', () => {
+      render(<AgentBar working messages={[said({ role: 'assistant', content: 'A set' })]} />);
+
+      expect(screen.getByText('A set')).toBeInTheDocument();
+    });
+
+    /* The bar used to announce `data-agent-working` so the frame could hold a
+       page's own field down. Since v0.13.0 a field is a mark, no page paints
+       one, and nothing ever read the attribute — so the bar says nothing. */
+    it('announces no working state to the page, because nothing reads one', () => {
+      const { container } = render(<AgentBar working />);
+
+      expect(container.querySelector('[data-agent-working]')).toBeNull();
+    });
   });
 
-  it('offers a stop rather than a send while the agent works', () => {
-    render(<AgentBar working messages={[{ id: 'm1', role: 'user', content: 'hi' }]} />);
+  describe('conversations', () => {
+    it('reaches the history from the edge of the panel', async () => {
+      const user = userEvent.setup();
+      render(<AgentBar threads={[{ id: 't1', title: 'Measure theory' }]} />);
 
-    expect(screen.getByRole('button', { name: /stop the agent/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^send$/i })).toBeNull();
+      await user.click(screen.getByLabelText(FIELD));
+      expect(screen.queryByRole('button', { name: /measure theory/i })).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: /conversations/i }));
+
+      expect(screen.getByRole('button', { name: /measure theory/i })).toBeInTheDocument();
+    });
+
+    it('asks for the history the moment it is opened', async () => {
+      const user = userEvent.setup();
+      const onLoadThreads = vi.fn();
+      render(<AgentBar onLoadThreads={onLoadThreads} />);
+
+      await user.click(screen.getByLabelText(FIELD));
+      await user.click(screen.getByRole('button', { name: /conversations/i }));
+
+      expect(onLoadThreads).toHaveBeenCalled();
+    });
+
   });
 
-  it('says how many messages are waiting rather than blocking the field', () => {
-    render(
-      <AgentBar
-        working
-        messages={[
-          { id: 'm1', role: 'user', content: 'one', status: 'running' },
-          { id: 'm2', role: 'user', content: 'two', status: 'queued' },
-          { id: 'm3', role: 'user', content: 'three', status: 'queued' },
-        ]}
-      />,
-    );
+  describe('what it says when something breaks', () => {
+    it('rules the message and paints nothing', () => {
+      render(<AgentBar error="The agent could not be reached." />);
 
-    expect(screen.getByText('2 waiting')).toBeInTheDocument();
-    expect(screen.getByLabelText(/ask about your material/i)).toBeEnabled();
+      const message = screen.getByRole('status');
+      expect(message).toHaveTextContent(/could not be reached/i);
+      expect(message.className).toMatch(/border-l-2/);
+      expect(message.className).toMatch(/border-l-ink/);
+      expect(message.className).not.toMatch(/red|green|amber/);
+    });
   });
 
-  it('drifts while working and stops drifting when the answer lands', async () => {
-    const user = userEvent.setup();
-    const { container, rerender } = render(<AgentBar working />);
-
-    await user.click(screen.getByLabelText(/ask about your material/i));
-    expect(container.querySelector('.grain')).toHaveClass('grain-working');
-
-    rerender(<AgentBar working={false} />);
-    expect(container.querySelector('.grain')).toBeNull();
-  });
-
-  /* The transcript used to be a tinted surface while a run was in flight, and
-     the answer then had to be read on top of it. Nothing in the bar paints a
-     background any more — see "The field" in docs/DESIGN.md. */
-  it('paints no background, however long the run takes', async () => {
-    const user = userEvent.setup();
-    const { container } = render(<AgentBar working />);
-
-    await user.click(screen.getByLabelText(/ask about your material/i));
-
-    expect(container.querySelector('.grain-field, .grain-wash')).toBeNull();
-  });
-
-  it('closes on Escape', async () => {
+  it('closes on Escape without losing what was typed', async () => {
     const user = userEvent.setup();
     render(<AgentBar />);
 
-    await user.click(screen.getByLabelText(/ask about your material/i));
-    expect(screen.getByText(/answers come from your material/i)).toBeInTheDocument();
-
+    const field = screen.getByLabelText(FIELD);
+    await user.type(field, 'half a thought');
     await user.keyboard('{Escape}');
+
     expect(screen.queryByText(/answers come from your material/i)).toBeNull();
-  });
-});
-
-describe('the mark the bar wears', () => {
-  /* The state sits on the thing that has it, beside the word that names it.
-     A mark with no word next to it would be a dot nobody can read. */
-  it('marks the run beside the word that names it', async () => {
-    const user = userEvent.setup();
-    const { container, rerender } = render(<AgentBar working />);
-
-    await user.click(screen.getByLabelText(/ask about your material/i));
-
-    const mark = container.querySelector('.grain-mark');
-    expect(mark).toHaveClass('field-unresolved');
-    expect(mark.parentElement).toHaveTextContent('Working');
-
-    rerender(<AgentBar working={false} />);
-    expect(container.querySelector('.grain-mark')).toBeNull();
-    expect(screen.getByText('Your material')).toBeInTheDocument();
-  });
-});
-
-describe('taking a change back', () => {
-  it('offers undo only when there is something to take back', async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<AgentBar canUndo={false} />);
-
-    await user.click(screen.getByLabelText(/ask about your material/i));
-    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
-
-    rerender(<AgentBar canUndo />);
-    expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
+    expect(field).toHaveValue('half a thought');
   });
 
-  it('hides undo while the agent is still working', async () => {
+  it('sends nothing when nothing was typed', async () => {
     const user = userEvent.setup();
-    render(<AgentBar canUndo working />);
+    const onSend = vi.fn();
+    render(<AgentBar onSend={onSend} />);
 
-    await user.click(screen.getByLabelText(/ask about your material/i));
-    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+    expect(onSend).not.toHaveBeenCalled();
   });
 
-  it('says what came back, so a silent undo is never mistaken for none', async () => {
+  it('empties the field once the message is on its way', async () => {
     const user = userEvent.setup();
-    const onUndo = vi.fn().mockResolvedValue({ message: 'Took back 2 changes.' });
-    render(<AgentBar canUndo onUndo={onUndo} />);
+    render(<AgentBar onSend={vi.fn().mockResolvedValue({})} />);
 
-    await user.click(screen.getByLabelText(/ask about your material/i));
-    await user.click(screen.getByRole('button', { name: /undo/i }));
+    const field = screen.getByLabelText(FIELD);
+    await user.type(field, 'what is a ring?{Enter}');
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Took back 2 changes.');
+    expect(field).toHaveValue('');
+  });
+
+  it('never says artefact', () => {
+    const { container } = render(<AgentBar messages={[said()]} />);
+
+    expect(container.textContent).not.toMatch(/artefact/i);
   });
 });

@@ -156,3 +156,38 @@ describe('ConceptMastery', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('a concept linked to directly', () => {
+  const concepts = [
+    { id: 'c1', name: 'Cauchy sequence', mastery: 0.2 },
+    { id: 'c2', name: 'Compactness', mastery: 0.95 },
+  ];
+
+  it('opens on the concept the url named', () => {
+    render(
+      <ConceptMastery subject="Analysis" concepts={concepts} initialConceptId="c2" />,
+    );
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Compactness' }),
+    ).toBeInTheDocument();
+  });
+
+  it('opens on the whole course when the url names nothing', () => {
+    render(<ConceptMastery subject="Analysis" concepts={concepts} />);
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Analysis' }),
+    ).toBeInTheDocument();
+  });
+
+  it('ignores a concept that is not in this course', () => {
+    render(
+      <ConceptMastery subject="Analysis" concepts={concepts} initialConceptId="nope" />,
+    );
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Analysis' }),
+    ).toBeInTheDocument();
+  });
+});

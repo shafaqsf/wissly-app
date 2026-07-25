@@ -5,20 +5,90 @@ import { unwrap, unwrapList } from './result.js'
  * cite nothing and generate nothing — it is not a half-done upload, it is a
  * broken one. */
 
-const SOURCE_COLUMNS = 'id, subject_id, kind, title, created_at'
+const SOURCE_COLUMNS = 'id, subject_id, kind, title, archived_at, created_at'
 const SECTION_COLUMNS = 'id, source_id, ordinal, content, anchor'
 
-export async function listSources(supabase, { subjectId } = {}) {
-  let query = supabase
-    .from('sources')
-    .select(SOURCE_COLUMNS)
-    .order('created_at', { ascending: false })
+export async function listSources(supabase, { subjectId, archived = false } = {}) {
+  let query = supabase.from('sources').select(SOURCE_COLUMNS)
 
   if (subjectId) {
     query = query.eq('subject_id', subjectId)
   }
 
-  return unwrapList(await query, 'list your material')
+  // The shelf and the archive are two lists over one table, and every caller
+  // wants exactly one of them. Defaulting to the shelf means a caller that
+  // forgets cannot accidentally show archived material.
+  query = archived
+    ? query.not('archived_at', 'is', null)
+    : query.is('archived_at', null)
+
+  return unwrapList(
+    await query.order('created_at', { ascending: false }),
+    'list your material',
+  )
+}
+
+/**
+ * The course shelf: every source with the sections it was cut into.
+ *
+ * Two queries whatever the size of the shelf. One per source would be easier
+ * to write and would grow with the library, which is the wrong direction for
+ * the page a learner opens first.
+ */
+export async function listSourcesWithSections(supabase, { subjectId, archived = false } = {}) {
+  const sources = await listSources(supabase, { subjectId, archived })
+
+  if (sources.length === 0) return []
+
+  const sections = unwrapList(
+    await supabase
+      .from('sections')
+      .select(SECTION_COLUMNS)
+      .in(
+        'source_id',
+        sources.map((source) => source.id),
+      )
+      .order('ordinal', { ascending: true }),
+    'read the sources',
+  )
+
+  const bySource = new Map(sources.map((source) => [source.id, []]))
+  for (const section of sections) {
+    bySource.get(section.source_id)?.push(section)
+  }
+
+  return sources.map((source) => ({ ...source, sections: bySource.get(source.id) ?? [] }))
+}
+
+/**
+ * Archive a source. Its sections, concepts and artefacts stay where they are —
+ * archiving is about what the shelf shows, not about taking anything away.
+ *
+ * There is no `deleteSource`, and that is deliberate: destruction is soft
+ * everywhere the agent can reach, and the agent can reach this.
+ */
+export async function archiveSource(supabase, { id, now = () => new Date() }) {
+  return unwrap(
+    await supabase
+      .from('sources')
+      .update({ archived_at: now().toISOString() })
+      .eq('id', id)
+      .select(SOURCE_COLUMNS)
+      .single(),
+    'archive the source',
+  )
+}
+
+export async function restoreSource(supabase, { id }) {
+  return unwrap(
+    await supabase
+      .from('sources')
+      .update({ archived_at: null })
+      .eq('id', id)
+      .select(SOURCE_COLUMNS)
+      .single(),
+    'restore the source',
+  )
 }
 
 export async function sectionsForSource(supabase, { sourceId }) {

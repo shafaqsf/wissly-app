@@ -43,3 +43,30 @@ describe('the root layout', () => {
     expect(metadata.icons.apple).toBe(MARK)
   })
 })
+
+/* Three screens moved when the six areas became four. A bookmark, a link in a
+   note, an old tab — none of them may land on a 404. */
+describe('the routes that moved', () => {
+  it('sends every retired URL to the area that took it over', async () => {
+    const { default: nextConfig } = await import('../../next.config.mjs')
+    const redirects = await nextConfig.redirects()
+
+    const map = Object.fromEntries(
+      redirects.map((rule) => [rule.source, rule.destination]),
+    )
+
+    expect(map['/review']).toBe('/tasks/due')
+    expect(map['/progress']).toBe('/analytics')
+    expect(map['/library']).toBe('/courses')
+  })
+
+  /* Permanent, because these addresses are not coming back — the areas they
+     named no longer exist. */
+  it('makes them permanent', async () => {
+    const { default: nextConfig } = await import('../../next.config.mjs')
+
+    for (const rule of await nextConfig.redirects()) {
+      expect(rule.permanent).toBe(true)
+    }
+  })
+})

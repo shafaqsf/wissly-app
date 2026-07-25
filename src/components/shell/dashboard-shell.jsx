@@ -76,7 +76,10 @@ export default function DashboardShell({ children }) {
           </span>
         </header>
 
-        <main className="flex-1 px-6 py-8 md:px-12 md:py-12">{children}</main>
+        {/* The bottom padding is the agent bar's room. It floats over this
+            content, and a page whose last line sits under it is a page with a
+            line the learner cannot read. */}
+        <main className="flex-1 px-6 pt-8 pb-32 md:px-12 md:pt-12">{children}</main>
       </div>
     </div>
   );

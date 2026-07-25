@@ -158,10 +158,23 @@ scales without artefacts:
   <filter id="g">
     <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
     <feColorMatrix type="saturate" values="0"/>
+    <feComponentTransfer>
+      <feFuncR type="linear" slope="3" intercept="-1"/>
+      <feFuncG type="linear" slope="3" intercept="-1"/>
+      <feFuncB type="linear" slope="3" intercept="-1"/>
+    </feComponentTransfer>
   </filter>
   <rect width="100%" height="100%" filter="url(#g)"/>
 </svg>
 ```
+
+The transfer function is not optional. `fractalNoise` scatters its values
+around mid grey, and mid grey composited onto white paper at `--grain-1`
+darkens it by under two percent — invisible. Stretching the distribution to
+the ends first turns an even wash into scattered dark specks, which is what
+grain is. Opacity is not the lever here: raising it would smear grey over the
+page rather than scatter grain across it, and it would break the meaning the
+four intensities carry.
 
 Applied on a `::before` pseudo-element with `mix-blend-mode: multiply` and
 `pointer-events: none`, so it never intercepts a click.

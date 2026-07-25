@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import AgentDock from '@/components/agent/agent-dock';
 import DashboardShell from '@/components/shell/dashboard-shell';
 import { createClient } from '@/lib/supabase/server.js';
 
@@ -21,5 +22,12 @@ export default async function DashboardLayout({ children }) {
     redirect('/sign-in');
   }
 
-  return <DashboardShell>{children}</DashboardShell>;
+  // The bar sits in the layout rather than on a page: it is the one entry to
+  // the agent and it is reachable from every screen behind this frame.
+  return (
+    <DashboardShell>
+      {children}
+      <AgentDock />
+    </DashboardShell>
+  );
 }

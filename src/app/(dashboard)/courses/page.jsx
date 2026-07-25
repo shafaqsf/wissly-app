@@ -33,8 +33,7 @@ export default async function CoursesPage() {
         // Nothing here yet is the one unresolved surface on this page, so it
         // is the one that gets the field.
         <div
-          className="grain grain-field flex min-h-64 flex-col items-start justify-center gap-6 border border-rule px-6 py-12"
-          style={{ '--grain': 'var(--grain-2)' }}
+          className="grain grain-field field-unresolved flex min-h-64 flex-col items-start justify-center gap-6 border border-rule px-6 py-12"
         >
           <p className="max-w-measure text-body">
             No courses yet. Add a page of your notes and wissly will read it,

@@ -61,7 +61,14 @@
   --grain-2: 0.07;
   --grain-3: 0.14;
 
-  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* Turbulence alone renders nothing. `fractalNoise` scatters values around
+     mid grey, and mid grey multiplied onto white paper at 0.035 darkens it
+     by under two percent — the specification followed exactly, showing
+     nothing. The `feComponentTransfer` stretches that distribution out to
+     the ends before compositing, so the same opacity buys scattered dark
+     specks instead of an even wash. The four intensity tokens keep their
+     values and their meanings; only the image behind them changed. */
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='3' intercept='-1'/%3E%3CfeFuncG type='linear' slope='3' intercept='-1'/%3E%3CfeFuncB type='linear' slope='3' intercept='-1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 body {
@@ -177,6 +184,15 @@ body {
 .grain-wash {
   background-color: var(--color-paper-sunk);
   background-image: linear-gradient(var(--field-far), var(--field-far));
+}
+
+/* One grain field per viewport. The agent bar floats over pages that carry a
+   field of their own — the empty course list, the progress page — and two
+   competing fields read as a texture pack rather than as a signal. While the
+   agent works, its field is the one that means something and the page's falls
+   back to ambient. `AgentBar` sets the attribute. */
+body[data-agent-working='true'] main .grain-field {
+  --grain: var(--grain-1);
 }
 
 /* The drift: an agent is still working. */

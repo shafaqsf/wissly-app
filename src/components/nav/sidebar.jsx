@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import NavItem from './nav-item';
 import { navItems } from './nav-items';
+import BrandMark from '@/components/brand/brand-mark';
 
 /* The sidebar holds no state of its own. Collapsing and the small-screen
    overlay are owned by the shell, so both can be reasoned about in one place. */
@@ -27,10 +28,14 @@ export default function Sidebar({
           collapsed ? 'md:justify-center' : 'justify-between',
         ].join(' ')}
       >
+        {/* The mark stays when the word goes: a 64px rail has room for one of
+            the two, and the mark is the half that survives being small. */}
+        <BrandMark size={24} />
+
         <Link
           href="/dashboard"
           className={[
-            'font-display text-title font-semibold lowercase',
+            'mr-auto font-display text-title font-semibold lowercase',
             collapsed ? 'md:sr-only' : '',
           ].join(' ')}
         >

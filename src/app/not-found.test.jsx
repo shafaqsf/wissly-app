@@ -26,6 +26,16 @@ describe('a URL that is not a page', () => {
     expect(field).not.toBe(container.firstChild)
   })
 
+  /* There is no sidebar out here, so nothing else on the page says which
+     product this is. */
+  it('stands the brand mark in the field, where no frame carries it', () => {
+    const { container } = render(<NotFound />)
+
+    const marks = container.querySelectorAll('[data-brand-mark]')
+    expect(marks).toHaveLength(1)
+    expect(container.querySelector('.grain-field').contains(marks[0])).toBe(true)
+  })
+
   it('keeps muted ink off the field', () => {
     const { container } = render(<NotFound />)
 

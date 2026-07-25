@@ -33,8 +33,22 @@ describe('the auth frame', () => {
 
     expect(field).not.toBeNull()
     expect(field.className).toMatch(/field-unresolved/)
-    expect(field).toBeEmptyDOMElement()
     expect(field).toHaveStyle({ '--grain': 'var(--grain-3)' })
+  })
+
+  /* The block used to be empty, which made it hard to read as anything but
+     decoration. The mark is drawn from the same palette the field is painted
+     in, so it belongs there rather than sitting on it. */
+  it('stands the brand mark in the field', () => {
+    const { container } = render(
+      <AuthLayout>
+        <p>Sign in</p>
+      </AuthLayout>,
+    )
+
+    const marks = container.querySelectorAll('[data-brand-mark]')
+    expect(marks).toHaveLength(1)
+    expect(container.querySelector('.grain-field').contains(marks[0])).toBe(true)
   })
 
   /* It used to take half the viewport. A field that fills half a screen is

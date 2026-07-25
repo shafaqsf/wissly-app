@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import BrandMark from '@/components/brand/brand-mark';
+
 export const metadata = {
   title: 'Not found — wissly',
 };
@@ -20,6 +22,9 @@ export default function NotFound() {
         className="grain grain-field field-unresolved flex flex-col items-center gap-3 rounded-surface px-8 py-10"
         style={{ '--grain': 'var(--grain-3)' }}
       >
+        {/* This page renders outside the dashboard frame, so there is no
+            sidebar here to say which product the learner is lost in. */}
+        <BrandMark size={40} />
         <p className="font-mono text-label uppercase text-ink">404</p>
         <h1 className="font-display text-display-l font-bold">
           This page is not here

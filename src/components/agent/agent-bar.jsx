@@ -93,7 +93,13 @@ export default function AgentBar({
           'pointer-events-auto flex w-full max-w-2xl flex-col border border-rule bg-paper',
           // No shadow anywhere in this design language, so a floating surface
           // separates from the page with a fill and a hairline instead.
-          open ? 'grain grain-field' : '',
+          // A field always names the state it paints, on the same line as the
+          // field itself. Without a `.field-*` class the stops are transparent
+          // and the panel renders as clean paper — a field encoding nothing,
+          // which DESIGN.md forbids and `globals.css.test.js` fails the build
+          // over. Working is the unresolved end of the palette; the answer
+          // landing is the settle.
+          open ? `grain grain-field ${working ? 'field-unresolved' : 'field-settled'}` : '',
           working ? 'grain-working' : '',
         ].join(' ')}
         style={open ? { '--grain': working ? 'var(--grain-3)' : 'var(--grain-1)' } : undefined}

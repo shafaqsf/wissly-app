@@ -140,3 +140,16 @@ describe('the agent bar', () => {
     expect(screen.queryByText(/answers come from your material/i)).toBeNull();
   });
 });
+
+describe('the field the bar paints', () => {
+  it('names the state it encodes, so it is never colour for its own sake', async () => {
+    const user = userEvent.setup();
+    const { container, rerender } = render(<AgentBar working />);
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+    expect(container.querySelector('.grain-field')).toHaveClass('field-unresolved');
+
+    rerender(<AgentBar working={false} />);
+    expect(container.querySelector('.grain-field')).toHaveClass('field-settled');
+  });
+});

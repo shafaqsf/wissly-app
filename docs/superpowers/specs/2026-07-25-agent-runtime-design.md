@@ -188,16 +188,23 @@ dashboard shell, it holds the mode switch, and it is the only entry to the
 agent. Collapsed it is a single line. Focused it lifts into a panel: the
 transcript above, the field below, conversations reachable from its edge.
 
-It obeys `DESIGN.md` without exception — no colour, Newsreader for what the
-agent says, JetBrains Mono for what the system says about itself, hairlines
-and no shadow. A floating element with no shadow needs a `--paper` fill and a
-`--rule` hairline to separate from the page. That is the whole treatment.
+It obeys `DESIGN.md` without exception — chrome in ink only, Newsreader for
+what the agent says, JetBrains Mono for what the system says about itself,
+hairlines and no shadow. A floating element with no shadow needs a `--paper`
+fill and a `--rule` hairline to separate from the page. That is the whole
+treatment.
 
-**Grain is the working state and nothing else on this surface.** While a run
-is in flight the panel is a `grain-field` at `--grain-3` with the drift; when
-the answer lands it settles to `--grain-1` over 600ms. This is the animation
-`DESIGN.md` says is the only one anyone should remember, and the agent is
-where it belongs.
+**The field is the working state and nothing else on this surface.** While a
+run is in flight the panel is a `grain-field` carrying `.field-unresolved` at
+`--grain-3` with the drift; when the answer lands it becomes `.field-settled`
+at `--grain-1` over 600ms. This is the animation `DESIGN.md` says is the only
+one anyone should remember, and the agent is where it belongs.
+
+The `.field-*` class is not optional and not decoration. A `grain-field`
+without one paints transparent stops and renders as clean paper — a field
+encoding nothing, which is exactly what `DESIGN.md` forbids and what
+`globals.css.test.js` fails the build over. Naming the state is how colour
+stays a signal rather than becoming a style.
 
 Which raises the constraint that the bar has to respect: **one grain field per
 viewport.** The bar floats over pages that already have one — the courses
@@ -224,10 +231,11 @@ toward black and white before it is composited, so the same 0.035 buys visible
 grain rather than a faint wash. The four intensity tokens keep their values
 and their meanings; only the image behind them changes.
 
-The reference the discussion started from (`gggrain`) makes its grain visible
-through colour and heavy gradients. Colour is not available here and the
-gradient is already specified. Contrast is the part of that look this design
-language can take.
+The reference the discussion started from (`gggrain`) gets its presence from
+two things: colour in the gradient, and contrast in the noise. The field
+palette merged in v0.9.0 supplies the first. This supplies the second — and
+the two are independent, which is why the field could already be visible while
+the grain over it still was not.
 
 ## Testing
 

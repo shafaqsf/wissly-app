@@ -23,6 +23,44 @@ function credentials(formData) {
   }
 }
 
+/**
+ * Why a sign-in failed, in the learner's terms.
+ *
+ * The one message this used to return was written to avoid user enumeration —
+ * a good instinct, and it still governs the credential case: Supabase says
+ * "Invalid login credentials" whether or not the account exists, and so do we,
+ * because naming which half was wrong tells an attacker which addresses are
+ * registered.
+ *
+ * But it was applied to *every* error, including two that are not about
+ * credentials at all. An unconfirmed address answers a **correct** password
+ * with `email_not_confirmed`, and telling that learner their password is wrong
+ * sends them to change the one thing that works — with no way out of the loop,
+ * because no number of correct passwords will ever be accepted.
+ *
+ * Naming the unconfirmed state does concede that the address is registered.
+ * That is a real cost, and it is smaller than locking someone out of their own
+ * account while lying to them about why.
+ *
+ * Not exported: a 'use server' module may only export async functions, because
+ * every export becomes a callable server action. This is a pure helper and it
+ * is reached through `signIn`, which is where the tests exercise it.
+ */
+function explainSignInFailure(error, email) {
+  const code = error?.code ?? ''
+  const message = String(error?.message ?? '')
+
+  if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) {
+    return `${email} has not been confirmed yet. Open the link in the email wissly sent you, then sign in.`
+  }
+
+  if (code === 'over_request_rate_limit' || error?.status === 429) {
+    return 'Too many attempts just now. Wait a minute and try again.'
+  }
+
+  return 'That email and password do not match. Check both and try again.'
+}
+
 export async function signIn(previousState, formData) {
   const { email, password } = credentials(formData)
 
@@ -34,10 +72,7 @@ export async function signIn(previousState, formData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Supabase says "Invalid login credentials" whether the account exists
-    // or not, and so do we — naming which half was wrong tells an attacker
-    // which emails are registered.
-    return { message: 'That email and password do not match. Check both and try again.' }
+    return { message: explainSignInFailure(error, email) }
   }
 
   revalidatePath('/', 'layout')

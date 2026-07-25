@@ -186,9 +186,14 @@ What the exception does not license:
   and the two must not be confused.
 - **It is never the only carrier of meaning.** It is decorative — `alt=""` —
   and the words it sits beside do the work.
-- **It appears once per screen.** Repeating it down a transcript would put a
-  column of the same colour on the page, which reads as texture and is exactly
-  what [Grain](#grain) forbids.
+- **It is never repeated within a list.** The ban is on repetition, because a
+  column of the same colour down a transcript or a table reads as texture, and
+  that is exactly what [Grain](#grain) forbids. Two marks in two different
+  roles are not repetition: the frame may carry one as the product's identity,
+  and a panel that speaks may carry one as its face. Where it goes today:
+  the sidebar brand row, the agent panel header, the signed-out field and the
+  404 card — the last two because neither renders inside the frame, so nothing
+  else on those screens says which product this is.
 - **Nothing else follows it.** No coloured illustration, no coloured
   spot art, no second brand asset. This is the exception, in the singular.
 

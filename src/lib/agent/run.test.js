@@ -646,42 +646,6 @@ describe('navigation intents', () => {
   })
 })
 
-describe('a standing order’s run', () => {
-  it('is stamped as one, so the dashboard can say what happened unattended', async () => {
-    const supabase = supabaseFor()
-
-    await runTurn({
-      supabase,
-      userId: 'u1',
-      conversation: { ...conversation, mode: 'agent' },
-      message,
-      trigger: 'schedule',
-      runAgent: async () => ({ finalOutput: 'Topped up. [s:a]' }),
-      createAgent,
-      configure,
-      createClient: () => ({}),
-    })
-
-    expect(updates(supabase, 'agent_runs')[0]).toMatchObject({ trigger: 'schedule' })
-  })
-
-  it('leaves an ordinary turn unstamped rather than writing the default twice', async () => {
-    const supabase = supabaseFor()
-
-    await runTurn({
-      supabase,
-      userId: 'u1',
-      conversation,
-      message,
-      runAgent: async () => ({ finalOutput: 'ok [s:a]' }),
-      createAgent,
-      configure,
-    })
-
-    expect(updates(supabase, 'agent_runs').some((patch) => 'trigger' in patch)).toBe(false)
-  })
-})
-
 describe('a stopped provider', () => {
   it('does not leave the run at running, which would block the thread forever', async () => {
     const supabase = supabaseFor()

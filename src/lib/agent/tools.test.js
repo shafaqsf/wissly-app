@@ -12,7 +12,6 @@ import {
   listCourses,
   listReading,
   listSources,
-  listStandingOrders,
   listTasks,
   readSection,
   searchEverything,
@@ -222,19 +221,6 @@ describe('searchEverything', () => {
   })
 })
 
-describe('listStandingOrders', () => {
-  it('lets the agent read the orders it acts under', async () => {
-    const supabase = fakeSupabase({
-      standing_orders: {
-        data: [{ id: 'o1', instruction: 'top up weak concepts', schedule: 'weekly', enabled: true }],
-        error: null,
-      },
-    })
-
-    expect(await listStandingOrders(supabase)).toMatchObject([{ id: 'o1' }])
-  })
-})
-
 describe('READ_ONLY_TOOLS', () => {
   it('is what chat mode holds, and none of it writes', () => {
     expect(READ_ONLY_TOOLS.map((definition) => definition.name).sort()).toEqual([
@@ -242,7 +228,6 @@ describe('READ_ONLY_TOOLS', () => {
       'list_courses',
       'list_reading',
       'list_sources',
-      'list_standing_orders',
       'list_tasks',
       'read_section',
       'search_everything',

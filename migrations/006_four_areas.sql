@@ -3,7 +3,7 @@
 -- The schema the four areas need. See
 -- docs/superpowers/specs/2026-07-25-four-areas-restructuring-design.md.
 --
--- Five things, and one shape they share:
+-- Four things, and one shape they share:
 --
 --   1. Soft delete. `artefacts` and `sources` gain `archived_at`, the same
 --      timestamp `conversations` has carried since 005. The agent archives;
@@ -12,11 +12,7 @@
 --      card or the agent did, so the interface can say so without guessing.
 --   3. `messages.model` — chosen per message, in the bar, so the transcript
 --      can say which model answered which line.
---   4. Standing orders, and the `trigger` on a run that says whether a person
---      asked for it. `agent_runs.conversation_id` stays NOT NULL: a standing
---      order posts its report into a thread like everything else, so that all
---      of what the agent did is in one place.
---   5. Full text search: a generated `tsvector` per searchable table, a GIN
+--   4. Full text search: a generated `tsvector` per searchable table, a GIN
 --      index on each, and one view that unions them. Searching is a reflex,
 --      and a reflex must not cost a model call.
 --
@@ -25,9 +21,9 @@
 -- the ownership predicate `(select auth.uid()) = user_id`. Policies are per
 -- table and per command, never per column, so a new column is covered by the
 -- existing policies the moment it exists — verified table by table against
--- 001 and 005 below. The one new *table*, `standing_orders`, brings its own
--- full set. The one new *view* is `security_invoker = true`, without which it
--- would run as its owner and hand every learner every other learner's rows.
+-- 001 and 005 below. This file creates no new table. The one new *view* is
+-- `security_invoker = true`, without which it would run as its owner and hand
+-- every learner every other learner's rows.
 
 -- --- artefacts: soft delete and provenance -----------------------------
 -- Covered by the four artefact policies in 001, all predicated on user_id.
@@ -86,82 +82,6 @@ create index if not exists sources_subject_active_idx
 
 alter table public.messages
   add column if not exists model text;
-
--- --- agent_runs: who asked ---------------------------------------------
--- Covered by the four run policies in 005, all predicated on user_id.
---
--- `conversation_id` stays NOT NULL. A standing order creates or reuses a
--- thread and posts its report there; nothing needs a run without one.
-
-alter table public.agent_runs
-  add column if not exists trigger text not null default 'user';
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'agent_runs_trigger_check'
-  ) then
-    alter table public.agent_runs
-      add constraint agent_runs_trigger_check check (trigger in ('user', 'schedule'));
-  end if;
-end
-$$;
-
--- --- standing_orders ---------------------------------------------------
--- An instruction the agent acts on with nobody present: "notice concepts
--- below --grain-2 and generate more", weekly. `schedule` is plain text —
--- a cron expression or a phrase the trigger understands — because the
--- scheduler is not built yet and a column shape guessed now would be wrong.
---
--- `enabled` is a boolean and not a timestamp, unlike `pinned_at` and
--- `archived_at`: there is nothing to order and nothing to date, only a
--- switch. `last_run_at` carries the date that matters.
-
-create table if not exists public.standing_orders (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
-  instruction text not null,
-  schedule text not null,
-  enabled boolean not null default true,
-  last_run_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists standing_orders_user_id_idx
-  on public.standing_orders (user_id, created_at desc);
-
--- What the scheduler asks: whose orders are switched on, least recently run
--- first. The archive of switched-off orders never enters it.
-create index if not exists standing_orders_due_idx
-  on public.standing_orders (last_run_at nulls first)
-  where enabled;
-
-alter table public.standing_orders enable row level security;
-
-create policy "Standing orders are selectable by their owner"
-  on public.standing_orders for select
-  to authenticated
-  using ((select auth.uid()) = user_id);
-
-create policy "Standing orders are insertable by their owner"
-  on public.standing_orders for insert
-  to authenticated
-  with check ((select auth.uid()) = user_id);
-
--- Editing the instruction, flipping `enabled`, stamping `last_run_at`: one
--- policy. `with check` is not optional — without it the owner could hand an
--- order to someone else by writing a different `user_id`, and the agent runs
--- these with nobody watching.
-create policy "Standing orders are updatable by their owner"
-  on public.standing_orders for update
-  to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
-create policy "Standing orders are deletable by their owner"
-  on public.standing_orders for delete
-  to authenticated
-  using ((select auth.uid()) = user_id);
 
 -- --- full text search --------------------------------------------------
 -- One generated column per searchable table. Generated rather than

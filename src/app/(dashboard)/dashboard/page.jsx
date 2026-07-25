@@ -5,7 +5,7 @@ import PanelSkeleton from '@/components/panel/panel-skeleton';
 
 import {
   ActionPanel,
-  AwayPanel,
+  AgentChangesPanel,
   CoursesPanel,
   EffortPanel,
   RecentlyPanel,
@@ -44,8 +44,8 @@ export default function DashboardPage() {
           <ActionPanel />
         </Suspense>
 
-        <Suspense fallback={<PanelSkeleton title="While you were away" wide />}>
-          <AwayPanel />
+        <Suspense fallback={<PanelSkeleton title="What the agent changed" wide />}>
+          <AgentChangesPanel />
         </Suspense>
 
         <Suspense fallback={<PanelSkeleton title="Weakest" />}>

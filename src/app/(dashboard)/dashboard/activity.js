@@ -1,7 +1,7 @@
 /* Turning one recorded write into a sentence and a destination.
 
-   "While you were away" is a list of things that happened without anybody
-   present, so every row has to say what happened in the learner's words and
+   "What the agent changed" is a list of writes the learner may not have
+   watched, so every row has to say what happened in the learner's words and
    lead to where it landed. A tool name is not a sentence, and a row that
    cannot be followed is a notification rather than an entrance.
 

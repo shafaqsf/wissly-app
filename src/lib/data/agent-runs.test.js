@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  autonomousActions,
+  recentAgentActions,
   dueCounts,
   effortByDay,
   gapConcepts,
@@ -36,16 +36,16 @@ describe('runCost', () => {
   })
 })
 
-describe('autonomousActions', () => {
-  it('reads only the runs nobody asked for', async () => {
+describe('recentAgentActions', () => {
+  it('reads the recent runs whoever asked for them', async () => {
     const supabase = fakeSupabase({
       agent_runs: { data: [{ id: 'run-1' }], error: null },
       agent_actions: { data: [], error: null },
     })
 
-    await autonomousActions(supabase, { limit: 5 })
+    await recentAgentActions(supabase, { limit: 5 })
 
-    expect(argsOf(supabase.query('agent_runs'), 'eq')).toEqual(['trigger', 'schedule'])
+    expect(argsOf(supabase.query('agent_runs'), 'eq')).toBeUndefined()
   })
 
   it('leaves out what has already been taken back', async () => {
@@ -68,7 +68,7 @@ describe('autonomousActions', () => {
       },
     })
 
-    const actions = await autonomousActions(supabase, { limit: 5 })
+    const actions = await recentAgentActions(supabase, { limit: 5 })
 
     expect(argsOf(supabase.query('agent_actions'), 'is')).toEqual(['undone_at', null])
     expect(argsOf(supabase.query('agent_actions'), 'in')).toEqual(['run_id', ['run-1']])
@@ -84,10 +84,10 @@ describe('autonomousActions', () => {
     ])
   })
 
-  it('asks for no actions at all when the agent has never run alone', async () => {
+  it('asks for no actions at all when the agent has never run', async () => {
     const supabase = fakeSupabase({ agent_runs: { data: [], error: null } })
 
-    expect(await autonomousActions(supabase)).toEqual([])
+    expect(await recentAgentActions(supabase)).toEqual([])
     expect(supabase.query('agent_actions')).toBeUndefined()
   })
 })
@@ -104,27 +104,24 @@ describe('effortByDay', () => {
     expect(days.every((day) => day.calls === 0 && day.cost === 0)).toBe(true)
   })
 
-  it('counts the calls and adds up the cost, split by who asked', async () => {
+  it('counts the calls and adds up the cost', async () => {
     const supabase = fakeSupabase({
       agent_runs: {
         data: [
           {
             id: 'a',
-            trigger: 'user',
             model: 'anthropic/claude-sonnet-5',
             usage: { cost: 0.5 },
             started_at: '2026-07-25T08:00:00.000Z',
           },
           {
             id: 'b',
-            trigger: 'schedule',
             model: 'anthropic/claude-sonnet-5',
             usage: { cost: 0.25 },
             started_at: '2026-07-25T09:00:00.000Z',
           },
           {
             id: 'c',
-            trigger: 'user',
             model: 'anthropic/claude-sonnet-5',
             usage: { cost: 1 },
             started_at: '2026-07-24T09:00:00.000Z',
@@ -141,7 +138,6 @@ describe('effortByDay', () => {
       date: '2026-07-25',
       calls: 2,
       cost: 0.75,
-      byCause: { user: 0.5, schedule: 0.25 },
     })
     expect(days.at(-2).calls).toBe(1)
   })

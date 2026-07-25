@@ -21,7 +21,7 @@ const pending = () =>
 function mockPanels(factory) {
   vi.doMock('./panels', () => ({
     ActionPanel: factory('The action'),
-    AwayPanel: factory('While you were away'),
+    AgentChangesPanel: factory('What the agent changed'),
     WeakestPanel: factory('Weakest'),
     CoursesPanel: factory('Courses'),
     RecentlyPanel: factory('Recently'),
@@ -32,7 +32,7 @@ function mockPanels(factory) {
 
 const ORDER = [
   'The action',
-  'While you were away',
+  'What the agent changed',
   'Weakest',
   'Courses',
   'Recently',

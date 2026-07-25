@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import Effort from './effort';
 
 const DAYS = [
-  { date: '2026-07-24', calls: 2, cost: 1, byCause: { user: 0.75, schedule: 0.25 } },
-  { date: '2026-07-25', calls: 3, cost: 0.5, byCause: { user: 0.1, schedule: 0.4 } },
+  { date: '2026-07-24', calls: 2, cost: 1 },
+  { date: '2026-07-25', calls: 3, cost: 0.5 },
 ];
 
 describe('effort', () => {
@@ -16,13 +16,11 @@ describe('effort', () => {
     expect(screen.getByText('5 model calls over seven days')).toBeInTheDocument();
   });
 
-  it('splits the cost by who asked for it', () => {
+  it('claims no split by cause, because there is no longer one to make', () => {
     render(<Effort days={DAYS} />);
 
-    expect(screen.getByText('You asked for')).toBeInTheDocument();
-    expect(screen.getByText('$0.85')).toBeInTheDocument();
-    expect(screen.getByText('The agent decided')).toBeInTheDocument();
-    expect(screen.getByText('$0.65')).toBeInTheDocument();
+    expect(screen.queryByText('You asked for')).not.toBeInTheDocument();
+    expect(screen.queryByText('The agent decided')).not.toBeInTheDocument();
   });
 
   it('plots the cost of each day', () => {
@@ -32,7 +30,7 @@ describe('effort', () => {
   });
 
   it('says nothing has been spent when nothing has', () => {
-    render(<Effort days={[{ date: '2026-07-25', calls: 0, cost: 0, byCause: { user: 0, schedule: 0 } }]} />);
+    render(<Effort days={[{ date: '2026-07-25', calls: 0, cost: 0 }]} />);
 
     expect(screen.getByText('Nothing spent yet.')).toBeInTheDocument();
   });

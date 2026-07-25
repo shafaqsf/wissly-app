@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 /* Undo, from the dashboard row that reports the change.
 
    `undoRun` in `src/lib/agent/undo.js` takes back a whole run; this takes
-   back one action, because "While you were away" lists actions and a learner
+   back one action, because "What the agent changed" lists actions and a learner
    who disagrees with one of five generations should not have to reject all
    five.
 

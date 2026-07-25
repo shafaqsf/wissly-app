@@ -4,7 +4,7 @@ import DayBars from '@/components/analytics/day-bars';
 import Effort from '@/components/analytics/effort';
 import Panel from '@/components/panel/panel';
 import {
-  autonomousActions,
+  recentAgentActions,
   dueCounts,
   effortByDay,
   reviewsByDay,
@@ -112,26 +112,29 @@ export async function ActionPanel() {
   );
 }
 
-/* --- While you were away ---------------------------------------------- */
+/* --- What the agent changed ------------------------------------------- */
 
 /**
- * What the agent did with nobody present, each row reversible.
+ * The agent's recent writes, each row reversible.
  *
- * Full autonomy is only defensible if it is legible afterwards, so this panel
- * is not a courtesy — it is the other half of the permission. A row that
- * could not be taken back would be a notification.
+ * This panel used to list only what happened with nobody present. Autonomy is
+ * only defensible if it is legible afterwards — but so is a turn the learner
+ * started and then scrolled away from. Thirty rows written in one turn are
+ * worth reviewing either way, so the panel reports every recent change and
+ * offers the same `Undo` on each. A row that could not be taken back would be
+ * a notification.
  */
-export async function AwayPanel() {
+export async function AgentChangesPanel() {
   const supabase = await createClient();
-  const actions = await autonomousActions(supabase, { limit: WEAKEST });
+  const actions = await recentAgentActions(supabase, { limit: WEAKEST });
 
   return (
     <Panel
-      title="While you were away"
+      title="What the agent changed"
       wide
       empty={
         actions.length === 0
-          ? 'The agent has not done anything on its own. When it does, every change appears here with a way to take it back.'
+          ? 'The agent has not changed anything yet. When it does, every change appears here with a way to take it back.'
           : undefined
       }
     >

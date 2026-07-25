@@ -241,7 +241,7 @@ describe('the agent bar', () => {
     });
   });
 
-  describe('conversations and standing orders', () => {
+  describe('conversations', () => {
     it('reaches the history from the edge of the panel', async () => {
       const user = userEvent.setup();
       render(<AgentBar threads={[{ id: 't1', title: 'Measure theory' }]} />);
@@ -265,30 +265,6 @@ describe('the agent bar', () => {
       expect(onLoadThreads).toHaveBeenCalled();
     });
 
-    it('reaches the standing orders from the same edge', async () => {
-      const user = userEvent.setup();
-      render(
-        <AgentBar
-          orders={[{ id: 'o1', instruction: 'Plan my week', schedule: 'weekly', enabled: true }]}
-        />,
-      );
-
-      await user.click(screen.getByLabelText(FIELD));
-      await user.click(screen.getByRole('button', { name: /standing orders/i }));
-
-      expect(screen.getByText(/plan my week/i)).toBeInTheDocument();
-    });
-
-    it('comes back to the conversation from either of them', async () => {
-      const user = userEvent.setup();
-      render(<AgentBar />);
-
-      await user.click(screen.getByLabelText(FIELD));
-      await user.click(screen.getByRole('button', { name: /standing orders/i }));
-      await user.click(screen.getByRole('button', { name: /back to the conversation/i }));
-
-      expect(screen.getByText(/answers come from your material/i)).toBeInTheDocument();
-    });
   });
 
   describe('what it says when something breaks', () => {

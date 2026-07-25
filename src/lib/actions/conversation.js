@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 
 import { resolveModel } from '@/lib/agent/models.js'
 import { runTurn } from '@/lib/agent/run.js'
-import { intervalMs } from '@/lib/agent/standing-orders.js'
 import { describeUndo, undoRun } from '@/lib/agent/undo.js'
 import { actionsFor, runsFor } from '@/lib/data/agent-runs.js'
 import { requireUserId } from '@/lib/auth/user.js'
@@ -22,13 +21,6 @@ import {
   setMessageStatus,
   setPinned,
 } from '@/lib/data/conversations.js'
-import {
-  createStandingOrder,
-  deleteStandingOrder,
-  listStandingOrders,
-  setStandingOrderEnabled,
-  updateStandingOrder,
-} from '@/lib/data/standing-orders.js'
 import { createClient } from '@/lib/supabase/server.js'
 
 /* The bar's other half.
@@ -374,75 +366,5 @@ export async function undoLastChangeAction({ conversationId }) {
 function revalidateEverythingTheAgentTouches() {
   for (const path of ['/dashboard', '/courses', '/tasks', '/analytics']) {
     revalidatePath(path)
-  }
-}
-
-/* --- standing orders --------------------------------------------------
- *
- * A surface of its own, beside the history. The runtime that carries them out
- * lives in `src/lib/agent/standing-orders.js` and is called by something with a
- * clock; these are the four things the learner does to them. */
-
-export async function listStandingOrdersAction() {
-  const { supabase } = await client()
-
-  try {
-    return { orders: await listStandingOrders(supabase) }
-  } catch (error) {
-    return { error: error.message }
-  }
-}
-
-/** The schedule is checked here because a schedule nothing can read never runs. */
-function assertReadableSchedule(schedule) {
-  if (intervalMs(schedule) === null) {
-    throw new Error(
-      `"${schedule}" is not a schedule anything could act on. Say daily, weekly, monthly, or "every 3 days".`,
-    )
-  }
-}
-
-export async function createStandingOrderAction({ instruction, schedule }) {
-  const { supabase, userId } = await client()
-
-  try {
-    assertReadableSchedule(schedule)
-
-    return { order: await createStandingOrder(supabase, { userId, instruction, schedule }) }
-  } catch (error) {
-    return { error: error.message }
-  }
-}
-
-export async function updateStandingOrderAction({ id, instruction, schedule, enabled }) {
-  const { supabase } = await client()
-
-  try {
-    if (schedule !== undefined) assertReadableSchedule(schedule)
-
-    return { order: await updateStandingOrder(supabase, { id, instruction, schedule, enabled }) }
-  } catch (error) {
-    return { error: error.message }
-  }
-}
-
-export async function setStandingOrderEnabledAction({ id, enabled }) {
-  const { supabase } = await client()
-
-  try {
-    return { order: await setStandingOrderEnabled(supabase, { id, enabled }) }
-  } catch (error) {
-    return { error: error.message }
-  }
-}
-
-/** An order is the one thing the learner can genuinely delete. */
-export async function deleteStandingOrderAction({ id }) {
-  const { supabase } = await client()
-
-  try {
-    return await deleteStandingOrder(supabase, { id })
-  } catch (error) {
-    return { error: error.message }
   }
 }

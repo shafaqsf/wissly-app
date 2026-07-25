@@ -70,7 +70,6 @@ function transcript(messages) {
  * @param {string} params.userId
  * @param {object} params.conversation
  * @param {object} params.message the learner's message, already stored
- * @param {'user'|'schedule'} [params.trigger] who asked for this run
  * @param {(event: object) => void} [params.onEvent] the stream, as it happens
  * @param {() => Promise<boolean>} [params.shouldStop] has Stop been pressed?
  * @param {number} [params.persistEveryMs]
@@ -86,7 +85,6 @@ export async function runTurn({
   userId,
   conversation,
   message,
-  trigger = 'user',
   onEvent,
   shouldStop,
   persistEveryMs = PERSIST_EVERY_MS,
@@ -141,12 +139,6 @@ export async function runTurn({
     model,
     mode: conversation.mode,
   })
-
-  // `startRun` does not know about triggers and does not need to: `user` is the
-  // column default, so only the unattended case is worth a second statement.
-  if (trigger === 'schedule') {
-    await supabase.from('agent_runs').update({ trigger: 'schedule' }).eq('id', runRow.id)
-  }
 
   const agent = createAgent({
     supabase,

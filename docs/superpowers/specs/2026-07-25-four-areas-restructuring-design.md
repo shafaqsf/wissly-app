@@ -76,7 +76,7 @@ decoration.
 | Surface | Content | Leads to |
 | --- | --- | --- |
 | The action | "12 tasks due · 3 overdue" + `Start a round` | `/tasks/due` |
-| While you were away | What the agent did autonomously, each row with `Undo` | the affected surface |
+| What the agent changed | The agent's recent writes, each row with `Undo` | the affected surface |
 | Weakest | Five concepts with the lowest mastery, as grain marks | `/analytics?concept=…` |
 | Courses | Title, size, concepts settled, grain | `/courses/[id]` |
 | Recently | Last source, last generated tasks, last conversation | each to its own place |
@@ -147,14 +147,14 @@ rescheduling and re-typing work in bulk, across courses when the picker says
 Mastery per concept as grain (the existing `ConceptMastery`), plus what the
 progress page never had: a gap report naming what demonstrably does not hold
 yet and linking to its source, history over time, and effort — model calls and
-cost, by day and by cause.
+cost, by day.
 
 ### Settings
 
 The account: email, password, sign out, delete account. Nothing else.
 
-Model choice lives in the agent bar. Standing orders live with the agent.
-Archives live where the archived things live.
+Model choice lives in the agent bar. Archives live where the archived things
+live.
 
 ## What happens to what exists
 
@@ -183,15 +183,15 @@ ones.
 
 ### Reach
 
-Full autonomy. Three levels, each including the last:
+Two levels, the second including the first:
 
 1. **It writes data** — create and rename courses, ingest material, generate
    every task type, edit, move, archive, write reading, reschedule reviews.
 2. **It drives the interface** — navigate to where a result landed, set the
    course picker, open a type, apply a filter, start a review round.
-3. **It decides** — standing orders let it act with nobody present: notice
-   concepts below `--grain-2` and generate more, plan the week, archive
-   duplicates.
+
+Every run has a person behind it. A third level — the agent acting with nobody
+present — was built and then removed; see "Not built: standing orders" below.
 
 What holds this safe is unchanged and non-negotiable:
 
@@ -210,14 +210,29 @@ What holds this safe is unchanged and non-negotiable:
 There is no spending cap. Cost is visible on the dashboard and in Analytics;
 it is not enforced.
 
-### Standing orders
+### Not built: standing orders
 
-A standing order runs without a request, which is infrastructure the product
-does not have: `agent_runs` always has a `conversation_id` today. It needs a
-table of orders, a schedule, and a trigger that is not a page load.
+A standing order was to be an instruction the agent carried out on a schedule
+with nobody present — "notice any concept below `--grain-2` and generate more",
+weekly — with its report landing as a message in a thread like every other run.
+It was built: a `standing_orders` table, a runtime, a cron route, a surface
+beside the conversation history, three agent tools, and an `agent_runs.trigger`
+column separating autonomous work from work the learner asked for.
 
-It is the last thing built, so it blocks nothing, and its report still lands as
-a message in a thread so that everything the agent did is in one place.
+It was removed, because it could not run. A trigger that is not a page load has
+no browser session, so it must carry the learner's identity itself, and what it
+carried was a Supabase **refresh token**. Supabase rotates refresh tokens on
+use and the route never handed the new one back, so a stored token was dead
+after the first tick. The feature was a shape, not a working capability.
+
+The real fix is a per-learner **scheduler token**: its own table, its own row
+level security policy, issued and revoked by the learner in Settings, and
+carrying only the right to start a run for that one account — not the bearer
+credential that being signed in is. That is a feature in its own right, and it
+will be built as one or not at all. `agent_runs.trigger` went with it: nothing
+remained that could ever write `schedule`, and the dashboard panel it fed now
+reports every recent change, whoever asked for it, still un-undone and still
+reversible per row.
 
 ### Models
 
@@ -254,7 +269,6 @@ it needs:
 - **Undo** on the message that caused the writes.
 - **A failure state that says what got through.** With thirty writes in a run,
   a run that dies halfway must report what completed, or undo is guesswork.
-- **Standing orders** as a surface of its own, beside the history.
 
 ## Motion
 

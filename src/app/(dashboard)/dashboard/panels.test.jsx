@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   dueCounts: vi.fn(),
-  autonomousActions: vi.fn(),
+  recentAgentActions: vi.fn(),
   effortByDay: vi.fn(),
   reviewsByDay: vi.fn(),
   listConceptMastery: vi.fn(),
@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({})) }));
 vi.mock('@/lib/data/agent-runs', () => ({
   dueCounts: mocks.dueCounts,
-  autonomousActions: mocks.autonomousActions,
+  recentAgentActions: mocks.recentAgentActions,
   effortByDay: mocks.effortByDay,
   reviewsByDay: mocks.reviewsByDay,
 }));
@@ -33,7 +33,7 @@ vi.mock('./actions', () => ({ undoAgentAction: mocks.undoAgentAction }));
 
 import {
   ActionPanel,
-  AwayPanel,
+  AgentChangesPanel,
   CoursesPanel,
   EffortPanel,
   RecentlyPanel,
@@ -44,9 +44,9 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.dueCounts.mockResolvedValue({ due: 12, overdue: 3 });
-  mocks.autonomousActions.mockResolvedValue([]);
+  mocks.recentAgentActions.mockResolvedValue([]);
   mocks.effortByDay.mockResolvedValue([
-    { date: '2026-07-25', calls: 2, cost: 1.5, byCause: { user: 1, schedule: 0.5 } },
+    { date: '2026-07-25', calls: 2, cost: 1.5 },
   ]);
   mocks.reviewsByDay.mockResolvedValue([{ date: '2026-07-25', reviews: 3 }]);
   mocks.listConceptMastery.mockResolvedValue([]);
@@ -94,10 +94,10 @@ describe('while you were away', () => {
     createdAt: '2026-07-25T09:00:00.000Z',
   };
 
-  it('says what the agent did on its own, in words', async () => {
-    mocks.autonomousActions.mockResolvedValue([action]);
+  it('says what the agent changed, in words', async () => {
+    mocks.recentAgentActions.mockResolvedValue([action]);
 
-    render(await AwayPanel());
+    render(await AgentChangesPanel());
 
     expect(
       screen.getByRole('link', { name: /Made 4 flashcards from your material/ }),
@@ -105,19 +105,19 @@ describe('while you were away', () => {
   });
 
   it('offers to take every one of them back', async () => {
-    mocks.autonomousActions.mockResolvedValue([action]);
+    mocks.recentAgentActions.mockResolvedValue([action]);
 
-    render(await AwayPanel());
+    render(await AgentChangesPanel());
 
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('act-1')).toHaveAttribute('name', 'actionId');
   });
 
   it('says nothing happened rather than showing an empty list', async () => {
-    render(await AwayPanel());
+    render(await AgentChangesPanel());
 
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
-    expect(screen.getByText(/has not done anything on its own/)).toBeInTheDocument();
+    expect(screen.getByText(/has not changed anything yet/)).toBeInTheDocument();
   });
 });
 
@@ -264,6 +264,6 @@ describe('effort', () => {
     render(await EffortPanel());
 
     expect(screen.getByText('$1.50')).toBeInTheDocument();
-    expect(screen.getByText('The agent decided')).toBeInTheDocument();
+    expect(screen.getByText('2 model calls over seven days')).toBeInTheDocument();
   });
 });

@@ -7,10 +7,7 @@ import AgentBar from '@/components/agent/agent-bar';
 import { openStream, reconnect as reconnectStream } from '@/components/agent/agent-stream';
 import {
   archiveThreadAction,
-  createStandingOrderAction,
-  deleteStandingOrderAction,
   deleteThreadAction,
-  listStandingOrdersAction,
   listThreadsAction,
   newThreadAction,
   openThreadAction,
@@ -18,11 +15,9 @@ import {
   renameThreadAction,
   restoreThreadAction,
   runActionsAction,
-  setStandingOrderEnabledAction,
   stopThreadAction,
   undoLastChangeAction,
   undoRunAction,
-  updateStandingOrderAction,
   withdrawMessageAction,
 } from '@/lib/actions/conversation';
 
@@ -81,7 +76,6 @@ export default function AgentDock({
   const [error, setError] = useState(null);
   const [threads, setThreads] = useState([]);
   const [archived, setArchived] = useState(false);
-  const [orders, setOrders] = useState([]);
   /* Once the stream has said anything at all the panel stays up. A thread
      rejoined on load, a run that has just failed, an answer half written — all
      of them are things to be read, and none of them should need a click first. */
@@ -371,15 +365,6 @@ export default function AgentDock({
     [archived],
   );
 
-  const loadOrders = useCallback(async () => {
-    const result = await listStandingOrdersAction();
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setOrders(result.orders);
-  }, []);
-
   async function openThread(id) {
     const result = await openThreadAction({ id });
     if (result.error) {
@@ -415,23 +400,10 @@ export default function AgentDock({
     };
   }
 
-  function thenReloadOrders(action) {
-    return async (...args) => {
-      const result = await action(...args);
-      if (result?.error) {
-        setError(result.error);
-        return result;
-      }
-      await loadOrders();
-      return result;
-    };
-  }
-
   return (
     <AgentBar
       messages={messages}
       threads={threads}
-      orders={orders}
       openThreadId={conversation?.id ?? null}
       archived={archived}
       mode={conversation?.mode ?? 'chat'}
@@ -456,13 +428,6 @@ export default function AgentDock({
         setArchived(next);
         loadThreads(next);
       }}
-      onLoadOrders={loadOrders}
-      onCreateOrder={thenReloadOrders((fields) => createStandingOrderAction(fields))}
-      onUpdateOrder={thenReloadOrders((fields) => updateStandingOrderAction(fields))}
-      onToggleOrder={thenReloadOrders((id, enabled) =>
-        setStandingOrderEnabledAction({ id, enabled }),
-      )}
-      onDeleteOrder={thenReloadOrders((id) => deleteStandingOrderAction({ id }))}
     />
   );
 }

@@ -1,21 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowUp, CalendarClock, MessagesSquare, Square, X } from 'lucide-react';
+import { ArrowLeft, ArrowUp, MessagesSquare, Square, X } from 'lucide-react';
 
 import ModePicker from '@/components/agent/mode-picker';
 import ModelPicker from '@/components/agent/model-picker';
 import Transcript from '@/components/agent/transcript';
 import BrandMark from '@/components/brand/brand-mark';
 import ConversationList from '@/components/conversation/conversation-list';
-import StandingOrderList from '@/components/standing-order/standing-order-list';
 
 /* The agent, as the learner meets it.
  *
  * **One bar, one thread, two modes.** Chat and Agent are not two interfaces
  * and this is not two components: it is a single line at the foot of the
  * screen that lifts into a panel — transcript above, field below, the
- * conversations and the standing orders reachable from its edge. Mode and
+ * conversations reachable from its edge. Mode and
  * model are dropdowns beside the field because they are settings that ride
  * along with a message, not places to be in.
  *
@@ -48,12 +47,11 @@ const PLACEHOLDER = {
   agent: 'Tell the agent what to do',
 };
 
-const VIEWS = { transcript: 'transcript', threads: 'threads', orders: 'orders' };
+const VIEWS = { transcript: 'transcript', threads: 'threads' };
 
 export default function AgentBar({
   messages = [],
   threads = [],
-  orders = [],
   openThreadId = null,
   archived = false,
   mode: initialMode = 'chat',
@@ -78,11 +76,6 @@ export default function AgentBar({
   onRestoreThread,
   onDeleteThread,
   onShowArchived,
-  onLoadOrders,
-  onCreateOrder,
-  onUpdateOrder,
-  onToggleOrder,
-  onDeleteOrder,
 }) {
   const [open, setOpen] = useState(false);
   /* The panel lifts itself when there is something to watch — a run in flight,
@@ -144,7 +137,6 @@ export default function AgentBar({
     setView(next);
     setOpen(true);
     if (next === VIEWS.threads) onLoadThreads?.();
-    if (next === VIEWS.orders) onLoadOrders?.();
   }
 
   const waiting = messages.filter((message) => message.status === 'queued').length;
@@ -191,18 +183,11 @@ export default function AgentBar({
 
               <div className="flex flex-wrap items-center gap-1">
                 {view === VIEWS.transcript ? (
-                  <>
-                    <HeaderAction
-                      icon={MessagesSquare}
-                      label="Conversations"
-                      onClick={() => show(VIEWS.threads)}
-                    />
-                    <HeaderAction
-                      icon={CalendarClock}
-                      label="Standing orders"
-                      onClick={() => show(VIEWS.orders)}
-                    />
-                  </>
+                  <HeaderAction
+                    icon={MessagesSquare}
+                    label="Conversations"
+                    onClick={() => show(VIEWS.threads)}
+                  />
                 ) : (
                   <HeaderAction
                     icon={ArrowLeft}
@@ -255,15 +240,6 @@ export default function AgentBar({
               />
             ) : null}
 
-            {view === VIEWS.orders ? (
-              <StandingOrderList
-                orders={orders}
-                onCreate={onCreateOrder}
-                onUpdate={onUpdateOrder}
-                onToggle={onToggleOrder}
-                onDelete={onDeleteOrder}
-              />
-            ) : null}
           </div>
         ) : null}
 

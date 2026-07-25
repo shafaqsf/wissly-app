@@ -34,7 +34,7 @@ beforeEach(() => {
   ]);
   mocks.gapConcepts.mockResolvedValue([]);
   mocks.effortByDay.mockResolvedValue([
-    { date: '2026-07-25', calls: 2, cost: 1, byCause: { user: 1, schedule: 0 } },
+    { date: '2026-07-25', calls: 2, cost: 1 },
   ]);
   mocks.reviewsByDay.mockResolvedValue([{ date: '2026-07-25', reviews: 3 }]);
 });
@@ -103,10 +103,10 @@ describe('the analytics page', () => {
     );
   });
 
-  it('shows what the agent has cost, split by who asked', async () => {
+  it('shows what the agent has cost', async () => {
     render(await AnalyticsPage(params()));
 
-    expect(screen.getByText('The agent decided')).toBeInTheDocument();
+    expect(screen.getByText('$1.00')).toBeInTheDocument();
   });
 
   it('shows no percentage, no streak and no progress bar anywhere', async () => {

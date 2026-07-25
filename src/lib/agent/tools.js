@@ -8,7 +8,6 @@ import { unwrap, unwrapList } from '../data/result.js'
 import { dueArtefacts } from '../data/review.js'
 import { search, SEARCH_KINDS } from '../data/search.js'
 import { listSourcesWithSections } from '../data/sources.js'
-import { listStandingOrders as readStandingOrders } from '../data/standing-orders.js'
 import { READING_FORMATS, TASK_FORMATS, isTaskFormat } from './formats.js'
 import { assertLearnerClient } from './guard.js'
 
@@ -244,13 +243,6 @@ export async function searchEverything(supabase, { query, subjectId, kinds, limi
   return search(supabase, { query, subjectId, kinds, limit })
 }
 
-/** The orders the agent acts under, so it can say what it is doing and why. */
-export async function listStandingOrders(supabase) {
-  assertLearnerClient(supabase)
-
-  return readStandingOrders(supabase)
-}
-
 /**
  * Bind the read-only tools to one request's client.
  *
@@ -367,12 +359,5 @@ export const READ_ONLY_TOOLS = [
     }),
     run: (supabase, input) =>
       searchEverything(supabase, { ...input, kinds: input.kinds ?? undefined }),
-  },
-  {
-    name: 'list_standing_orders',
-    description:
-      'List the learner’s standing orders — the instructions the agent acts on without them present, with the schedule of each and when it last ran. Takes no arguments.',
-    parameters: z.object({}),
-    run: (supabase) => listStandingOrders(supabase),
   },
 ]

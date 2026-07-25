@@ -196,21 +196,24 @@ function windowOf(days, now) {
 }
 
 /**
- * What the agent did with nobody present, newest first.
+ * What the agent changed most recently, newest first.
  *
  * Two queries rather than an embed, like every other read in this layer: the
- * runs that nobody asked for, then the writes they made. An action already
- * taken back is not news, so it never reaches the panel.
+ * recent runs, then the writes they made. An action already taken back is not
+ * news, so it never reaches the panel.
+ *
+ * Who asked is deliberately not part of the question. The agent writing thirty
+ * rows in one turn is worth reviewing whether or not the learner watched it
+ * happen, and a run they started is exactly as reversible as one they did not.
  */
-export async function autonomousActions(supabase, { limit = 5 } = {}) {
+export async function recentAgentActions(supabase, { limit = 5 } = {}) {
   const runs = unwrapList(
     await supabase
       .from('agent_runs')
       .select('id, started_at')
-      .eq('trigger', 'schedule')
       .order('started_at', { ascending: false })
       .limit(limit * 4),
-    'read what the agent did on its own',
+    'read what the agent changed',
   )
 
   if (runs.length === 0) return []
@@ -226,7 +229,7 @@ export async function autonomousActions(supabase, { limit = 5 } = {}) {
       .is('undone_at', null)
       .order('created_at', { ascending: false })
       .limit(limit),
-    'read what the agent did on its own',
+    'read what the agent changed',
   )
 
   return actions.map((action) => ({
@@ -240,11 +243,13 @@ export async function autonomousActions(supabase, { limit = 5 } = {}) {
 }
 
 /**
- * Model calls and cost per day, and by cause.
+ * Model calls and cost per day.
  *
- * The cause is `agent_runs.trigger`: work the learner asked for against work
- * the agent decided to do. Without the split the effort surface would say how
- * much was spent and not the one thing worth knowing about it.
+ * This used to split the cost by cause, on `agent_runs.trigger` — work the
+ * learner asked for against work the agent decided on alone. Standing orders
+ * were the only thing that ever produced the second kind, and they were
+ * removed, so the split became a legend describing a distinction that no
+ * longer exists.
  */
 export async function effortByDay(supabase, { days = 7, now = new Date() } = {}) {
   const window = windowOf(days, now)
@@ -252,29 +257,22 @@ export async function effortByDay(supabase, { days = 7, now = new Date() } = {})
   const runs = unwrapList(
     await supabase
       .from('agent_runs')
-      .select('id, trigger, model, usage, started_at')
+      .select('id, model, usage, started_at')
       .gte('started_at', window[0].toISOString())
       .order('started_at', { ascending: true }),
     'read what the agent has cost',
   )
 
   const buckets = new Map(
-    window.map((day) => [
-      dayOf(day),
-      { date: dayOf(day), calls: 0, cost: 0, byCause: { user: 0, schedule: 0 } },
-    ]),
+    window.map((day) => [dayOf(day), { date: dayOf(day), calls: 0, cost: 0 }]),
   )
 
   for (const run of runs) {
     const bucket = buckets.get(dayOf(run.started_at))
     if (!bucket) continue
 
-    const cost = runCost(run)
-    const cause = run.trigger === 'schedule' ? 'schedule' : 'user'
-
     bucket.calls += 1
-    bucket.cost += cost
-    bucket.byCause[cause] += cost
+    bucket.cost += runCost(run)
   }
 
   return [...buckets.values()]

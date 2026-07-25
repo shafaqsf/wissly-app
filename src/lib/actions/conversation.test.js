@@ -36,14 +36,6 @@ vi.mock('@/lib/agent/undo.js', () => ({
   describeUndo: vi.fn(() => 'Took back 1 change.'),
 }))
 
-vi.mock('@/lib/data/standing-orders.js', () => ({
-  createStandingOrder: vi.fn(async (_s, input) => ({ id: 'o1', ...input })),
-  deleteStandingOrder: vi.fn(async () => ({ id: 'o1' })),
-  listStandingOrders: vi.fn(async () => [{ id: 'o1' }]),
-  setStandingOrderEnabled: vi.fn(async () => ({ id: 'o1', enabled: false })),
-  updateStandingOrder: vi.fn(async () => ({ id: 'o1' })),
-}))
-
 const {
   appendMessage,
   getConversation,
@@ -55,11 +47,8 @@ const { runsFor, actionsFor } = await import('@/lib/data/agent-runs.js')
 const { undoRun } = await import('@/lib/agent/undo.js')
 
 const {
-  createStandingOrderAction,
-  listStandingOrdersAction,
   resumeThreadAction,
   sendMessageAction,
-  setStandingOrderEnabledAction,
   stopThreadAction,
   undoRunAction,
   withdrawMessageAction,
@@ -269,36 +258,6 @@ describe('undoRunAction', () => {
 
     expect(undoRun.mock.calls[0][1]).toEqual({ runId: 'r1' })
     expect(result.message).toBe('Took back 1 change.')
-  })
-})
-
-describe('standing orders', () => {
-  it('lists them for the surface beside the history', async () => {
-    expect(await listStandingOrdersAction()).toEqual({ orders: [{ id: 'o1' }] })
-  })
-
-  it('creates one', async () => {
-    const result = await createStandingOrderAction({
-      instruction: 'top up weak concepts',
-      schedule: 'weekly',
-    })
-
-    expect(result.order).toMatchObject({ instruction: 'top up weak concepts' })
-  })
-
-  it('refuses a schedule nothing could read, rather than storing a dead order', async () => {
-    const result = await createStandingOrderAction({
-      instruction: 'top up weak concepts',
-      schedule: 'when I feel like it',
-    })
-
-    expect(result.error).toMatch(/schedule/i)
-  })
-
-  it('switches one off', async () => {
-    expect(await setStandingOrderEnabledAction({ id: 'o1', enabled: false })).toMatchObject({
-      order: { enabled: false },
-    })
   })
 })
 

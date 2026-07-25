@@ -1,8 +1,7 @@
 /* Export, as two files a learner can actually open.
 
    Export is the one path that carries data out of the account, so it is a
-   thing only the learner triggers — never a tool, never a standing order. That
-   is why the whole of it is here, in the browser, over rows the page already
+   thing only the learner triggers, never a tool. That is why the whole of it is here, in the browser, over rows the page already
    holds: there is no endpoint for an agent to find.
 
    Two shapes, because they are read by two different things. CSV is for a

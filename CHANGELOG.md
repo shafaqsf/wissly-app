@@ -27,8 +27,8 @@ commit history rather than here.
   carry that type.
 - The agent holds the full writing surface — courses, material, every task
   type, moving, archiving, rescheduling — with an `agent_actions` row and an
-  undo behind every call, and it can drive the interface and act on standing
-  orders with nobody present.
+  undo behind every call, and it can drive the interface: navigate to what it
+  made, set the course picker, open a type, start a round.
 - Model choice per message: DeepSeek V4 Pro, Claude Sonnet 5 and GPT-5.6 Luna
   with their prices, plus any OpenRouter model id.
 - Conversations get an interface at last — history, rename, pin, archive — and
@@ -52,7 +52,7 @@ commit history rather than here.
 - The sidebar carries four destinations and no brand mark; the agent bar is
   now the one place per viewport where the product names itself.
 - Settings holds the account and nothing else. Model choice lives in the bar,
-  standing orders with the agent, and archives where the archived things are.
+  and archives where the archived things are.
 - `/review`, `/progress` and `/library` redirect to `/tasks/due`, `/analytics`
   and `/courses`.
 - A branch that is the only one in flight now carries its own version bump and

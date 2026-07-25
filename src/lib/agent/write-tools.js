@@ -17,11 +17,6 @@ import { createCourse } from '../data/courses.js'
 import { unwrap, unwrapList } from '../data/result.js'
 import { fsrsState, recordReview, scheduleFor } from '../data/review.js'
 import { archiveSource, restoreSource } from '../data/sources.js'
-import {
-  createStandingOrder,
-  getStandingOrder,
-  updateStandingOrder,
-} from '../data/standing-orders.js'
 import { addMaterial as addMaterialToLibrary } from '../material/add-material.js'
 import { generateArtefact, gradeAnswer } from './artefacts.js'
 import { FORMATS, isFormat, validatePayload } from './formats.js'
@@ -571,68 +566,6 @@ export async function showInInterface(
   return { intent, showed: intent.label }
 }
 
-/* --- standing orders -------------------------------------------------- */
-
-export async function createStandingOrderTool(
-  supabase,
-  { userId, runId, instruction, schedule, record = recordAction },
-) {
-  assertLearnerClient(supabase)
-
-  const order = await createStandingOrder(supabase, { userId, instruction, schedule })
-
-  await record(supabase, {
-    userId,
-    runId,
-    tool: 'create_standing_order',
-    args: { instruction, schedule },
-    result: { id: order.id },
-    undo: { kind: 'remove_standing_order', id: order.id },
-  })
-
-  return { standing_order_id: order.id, instruction: order.instruction, schedule: order.schedule }
-}
-
-/** Edit an order or switch it off. The whole previous row is the inverse. */
-export async function setStandingOrder(
-  supabase,
-  { userId, runId, standingOrderId, instruction, schedule, enabled, record = recordAction },
-) {
-  assertLearnerClient(supabase)
-
-  const before = await getStandingOrder(supabase, { id: standingOrderId })
-  if (!before) throw new Error(`Standing order ${standingOrderId} was not found.`)
-
-  const after = await updateStandingOrder(supabase, {
-    id: standingOrderId,
-    instruction,
-    schedule,
-    enabled,
-  })
-
-  await record(supabase, {
-    userId,
-    runId,
-    tool: 'set_standing_order',
-    args: { standingOrderId, instruction, schedule, enabled },
-    result: { enabled: after.enabled },
-    undo: {
-      kind: 'restore_standing_order',
-      id: standingOrderId,
-      instruction: before.instruction,
-      schedule: before.schedule,
-      enabled: before.enabled,
-    },
-  })
-
-  return {
-    standing_order_id: after.id,
-    instruction: after.instruction,
-    schedule: after.schedule,
-    enabled: after.enabled,
-  }
-}
-
 /* --- undo ------------------------------------------------------------- */
 
 /**
@@ -725,24 +658,6 @@ export async function applyUndo(supabase, { undo }) {
       'take the review back',
     )
     return { undone: 'record_review' }
-  }
-
-  if (kind === 'remove_standing_order') {
-    unwrap(
-      await supabase.from('standing_orders').delete().eq('id', undo.id),
-      'take the standing order back',
-    )
-    return { undone: 'create_standing_order' }
-  }
-
-  if (kind === 'restore_standing_order') {
-    await updateStandingOrder(supabase, {
-      id: undo.id,
-      instruction: undo.instruction,
-      schedule: undo.schedule,
-      enabled: undo.enabled,
-    })
-    return { undone: 'set_standing_order' }
   }
 
   throw new Error('That action cannot be undone.')
@@ -972,36 +887,6 @@ export const WRITE_TOOLS = [
       conceptId: nullableId('Opens analytics on one concept, or null.'),
     }),
     run: (supabase, input) => showInInterface(supabase, input),
-  },
-  {
-    name: 'create_standing_order',
-    description:
-      'Write a standing instruction the agent carries out on a schedule with the learner not present — "top up any concept below half mastery", weekly. Its report lands as a message in a thread.',
-    parameters: z.object({
-      instruction: z.string().describe('What to do, in full, as if nobody were there to ask.'),
-      schedule: z
-        .string()
-        .describe('How often: daily, weekly, monthly, or "every 3 days".'),
-    }),
-    run: (supabase, input) => createStandingOrderTool(supabase, input),
-  },
-  {
-    name: 'set_standing_order',
-    description:
-      'Change a standing order or switch it off. Use list_standing_orders for the id. The previous version is kept so the learner can undo this.',
-    parameters: z.object({
-      standingOrderId: z.string().describe('The order to change.'),
-      instruction: z.string().nullable().describe('New instruction, or null to keep it.'),
-      schedule: z.string().nullable().describe('New schedule, or null to keep it.'),
-      enabled: z.boolean().nullable().describe('Switch it on or off, or null to keep it.'),
-    }),
-    run: (supabase, input) =>
-      setStandingOrder(supabase, {
-        ...input,
-        instruction: input.instruction ?? undefined,
-        schedule: input.schedule ?? undefined,
-        enabled: input.enabled ?? undefined,
-      }),
   },
 ]
 

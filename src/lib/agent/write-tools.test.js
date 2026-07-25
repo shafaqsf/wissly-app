@@ -529,7 +529,6 @@ describe('WRITE_TOOLS', () => {
       'archive_source',
       'archive_tasks',
       'create_course',
-      'create_standing_order',
       'edit_artefact',
       'grade_answer',
       'make_artefacts',
@@ -539,7 +538,6 @@ describe('WRITE_TOOLS', () => {
       'reschedule_tasks',
       'restore_source',
       'restore_tasks',
-      'set_standing_order',
       'show_in_interface',
       'write_artefact',
     ])

@@ -21,11 +21,6 @@ vi.mock('@/lib/actions/conversation', () => ({
   runActionsAction: vi.fn(),
   undoRunAction: vi.fn(),
   undoLastChangeAction: vi.fn(),
-  listStandingOrdersAction: vi.fn(),
-  createStandingOrderAction: vi.fn(),
-  updateStandingOrderAction: vi.fn(),
-  setStandingOrderEnabledAction: vi.fn(),
-  deleteStandingOrderAction: vi.fn(),
 }));
 
 import * as actions from '@/lib/actions/conversation';
@@ -48,7 +43,6 @@ beforeEach(() => {
   actions.openThreadAction.mockResolvedValue({ conversation, messages: [] });
   actions.listThreadsAction.mockResolvedValue({ threads: [] });
   actions.resumeThreadAction.mockResolvedValue({ messages: [], running: null, queued: [] });
-  actions.listStandingOrdersAction.mockResolvedValue({ orders: [] });
 });
 
 async function send(user, text, stream) {
@@ -396,39 +390,6 @@ describe('the agent dock', () => {
       await waitFor(() =>
         expect(actions.listThreadsAction).toHaveBeenCalledWith({ archived: true }),
       );
-    });
-  });
-
-  describe('the standing orders', () => {
-    it('loads them when the surface is opened', async () => {
-      const user = userEvent.setup();
-      actions.listStandingOrdersAction.mockResolvedValue({
-        orders: [{ id: 'o1', instruction: 'Plan my week', schedule: 'weekly', enabled: true }],
-      });
-      render(<AgentDock conversation={conversation} stream={{ open: vi.fn() }} />);
-
-      await user.click(screen.getByLabelText(FIELD));
-      await user.click(screen.getByRole('button', { name: /standing orders/i }));
-
-      expect(await screen.findByText(/plan my week/i)).toBeInTheDocument();
-    });
-
-    it('creates one and reloads', async () => {
-      const user = userEvent.setup();
-      actions.createStandingOrderAction.mockResolvedValue({ order: { id: 'o2' } });
-      render(<AgentDock conversation={conversation} stream={{ open: vi.fn() }} />);
-
-      await user.click(screen.getByLabelText(FIELD));
-      await user.click(screen.getByRole('button', { name: /standing orders/i }));
-
-      await user.type(await screen.findByLabelText(/what should the agent do/i), 'Plan my week');
-      await user.type(screen.getByLabelText(/how often/i), 'weekly');
-      await user.click(screen.getByRole('button', { name: /add standing order/i }));
-
-      expect(actions.createStandingOrderAction).toHaveBeenCalledWith({
-        instruction: 'Plan my week',
-        schedule: 'weekly',
-      });
     });
   });
 

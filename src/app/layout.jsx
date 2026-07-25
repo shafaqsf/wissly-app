@@ -3,7 +3,6 @@ import { Bricolage_Grotesque, JetBrains_Mono, Newsreader } from "next/font/googl
 // not an edge case, so it loads with the document.
 import "katex/dist/katex.min.css";
 import "./globals.css";
-import { MARK } from "@/components/brand/brand-mark";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -26,10 +25,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata = {
   title: "wissly",
   description: "An open source agentic learning platform.",
-  // Declared rather than dropped into `app/` as `icon.png`, so the browser tab
-  // and the agent read the same single file. The file convention would need a
-  // second copy inside the route tree, and two copies of a mark drift.
-  icons: { icon: MARK, apple: MARK },
+  // No `icons` here on purpose. `src/app/icon.png` is a file convention: Next
+  // emits the <link> tags itself, with a content hash that a hand-written
+  // path under /public does not get. See src/components/brand/brand-mark.jsx.
 };
 
 export default function RootLayout({ children }) {

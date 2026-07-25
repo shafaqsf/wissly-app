@@ -270,7 +270,9 @@ describe('colour containment', () => {
   it('keeps the brand mark to the one component that owns it', () => {
     const offenders = sourceFiles()
       .filter((file) => !file.replace(/\\/g, '/').endsWith('components/brand/brand-mark.jsx'))
-      .filter((file) => readFileSync(file, 'utf8').includes('/brand/icon'))
+      // The import specifier, not the bare filename — prose may name the file,
+      // and a comment explaining the convention is not a second reference.
+      .filter((file) => readFileSync(file, 'utf8').includes("from '@/app/icon.png'"))
 
     expect(offenders).toEqual([])
   })

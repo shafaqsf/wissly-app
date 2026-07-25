@@ -1,5 +1,15 @@
 import Image from 'next/image';
 
+// `src/app/icon.png` is a Next.js metadata file convention: placing the mark
+// there is what makes it the browser tab icon, and Next emits the <link> tags
+// itself with a content hash in the URL. The hash matters — a plain path under
+// /public is cached by the browser per origin, so a localhost port that once
+// served a different icon goes on serving it.
+//
+// Importing the same file here is what keeps the tab and the app on one asset.
+// Replace that file and both follow; there is no second copy to forget.
+import mark from '@/app/icon.png';
+
 /* The wissly mark: the one coloured thing in the product.
 
    docs/DESIGN.md keeps hue out of the chrome so that colour inside a field
@@ -13,13 +23,13 @@ import Image from 'next/image';
    `globals.css.test.js` holds the exception to this one file, so composing
    this component is the only way to reach the asset. */
 
-export const MARK = '/brand/icon.png';
+export const MARK = mark;
 
 export default function BrandMark({ size = 20 }) {
   return (
     <Image
       data-brand-mark=""
-      src={MARK}
+      src={mark}
       width={size}
       height={size}
       // Decorative everywhere it is used: the mark sits beside the product's

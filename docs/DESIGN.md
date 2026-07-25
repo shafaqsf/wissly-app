@@ -165,7 +165,7 @@ The mark below is not an icon and none of this applies to it.
 
 ## The mark
 
-`public/brand/icon.png` — a flame, drawn in the field palette and grained:
+`src/app/icon.png` — a flame, drawn in the field palette and grained:
 heat at its edges, depth behind it, a cool core. It is the browser tab icon and
 it is the agent's face, and it is **the one coloured thing in the product**.
 
@@ -178,9 +178,13 @@ arbitrary, and then it would be a loophole.
 
 What the exception does not license:
 
-- **One file, one owner.** `src/components/brand/brand-mark.jsx` names the
-  asset; everything else composes that component or reads its `MARK` export.
-  `src/app/globals.css.test.js` fails if a second file names the path.
+- **One file, one owner.** It sits at `src/app/icon.png` because that is a
+  Next.js metadata file convention — Next writes the `<link rel="icon">` tags
+  and content-hashes the URL, which a static path under `/public` never gets
+  and which is what defeats the browser's per-origin favicon cache.
+  `src/components/brand/brand-mark.jsx` imports that same file for every place
+  the mark appears in the interface; everything else composes the component.
+  `src/app/globals.css.test.js` fails if a second file imports it.
 - **It is never given a state.** No `.field-*` class, no grain intensity, no
   settle. It does not brighten when the agent works. It is identity, not state,
   and the two must not be confused.

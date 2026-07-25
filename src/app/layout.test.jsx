@@ -11,9 +11,10 @@ vi.mock('next/font/google', () => {
   }
 })
 
-import RootLayout, { metadata } from './layout'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
-import { MARK } from '@/components/brand/brand-mark'
+import RootLayout, { metadata } from './layout'
 
 /* Browser extensions write their own attributes onto `<body>` before React
    hydrates — a password manager, a colour picker, a reader mode. React sees
@@ -35,11 +36,12 @@ describe('the root layout', () => {
     expect(html.props.suppressHydrationWarning).toBeUndefined()
   })
 
-  /* One file is the mark: the browser tab and the agent point at the same
-     asset, so the two can never drift apart. Declaring it here rather than
-     through the app/icon file convention is what keeps it to one copy. */
-  it('points the browser tab at the one brand mark', () => {
-    expect(metadata.icons.icon).toBe(MARK)
-    expect(metadata.icons.apple).toBe(MARK)
+  /* `app/icon.png` is a Next.js file convention: it emits the <link> tags on
+     its own, with a content hash in the URL. The hash is the point — a static
+     path under /public gets cached by the browser under the origin and an
+     origin that once served a different icon keeps showing it. */
+  it('leaves the tab icon to the file convention', () => {
+    expect(existsSync(join(process.cwd(), 'src/app/icon.png'))).toBe(true)
+    expect(metadata.icons).toBeUndefined()
   })
 })

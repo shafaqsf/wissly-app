@@ -1,18 +1,21 @@
 # brand
 
-`icon.png` is the wissly mark: 500×500, RGBA, transparent background. One file
-serves the browser tab and the agent.
+**The mark does not live here. It lives at `src/app/icon.png`.**
 
-Nothing else may reach it directly. `src/components/brand/brand-mark.jsx` owns
-the path and exports `MARK`; the root layout points `metadata.icons` at that
-export, and the agent panel composes the component. A test in
-`src/app/globals.css.test.js` fails if any other file names the asset.
+That is a Next.js metadata file convention, and it is the reason for the move:
+Next emits the `<link rel="icon">` tags itself and puts a content hash in the
+URL. A plain path under `/public` gets none, and browsers cache a favicon per
+origin — so a `localhost` port that once served a different icon goes on
+serving it no matter what the markup says.
 
-The mark is the one coloured thing in the product — a named exception to the
-no-colour-in-the-chrome rule, not a loophole. See "The mark" in
-[`docs/DESIGN.md`](../../docs/DESIGN.md) for why it earns that, and for what
-must not follow it.
+One file serves both jobs. `src/components/brand/brand-mark.jsx` imports the
+same PNG for the places the mark appears inside the app, so there is no second
+copy to forget. A test in `src/app/globals.css.test.js` fails if any other file
+imports it.
 
-Replacing the mark means replacing this file. Keep it square, keep the
-background transparent, and keep it drawn from the field palette — a mark in
-some other hue would make the exception arbitrary.
+To replace the mark, replace `src/app/icon.png`. Keep it square, keep the
+background transparent, and keep it drawn from the field palette — see
+"The mark" in [`docs/DESIGN.md`](../../docs/DESIGN.md) for why that last part
+is not cosmetic.
+
+This directory is kept only for this note.

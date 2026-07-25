@@ -3,17 +3,25 @@
 import Link from 'next/link';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import NavItem from './nav-item';
-import { navItems } from './nav-items';
-import BrandMark from '@/components/brand/brand-mark';
+import { accountItem, navItems } from './nav-items';
 
 /* The sidebar holds no state of its own. Collapsing and the small-screen
-   overlay are owned by the shell, so both can be reasoned about in one place. */
+   overlay are owned by the shell, so both can be reasoned about in one place.
+
+   No brand mark here, and this is deliberate: the product names itself once
+   per viewport, and the agent bar is that one place — see docs/DESIGN.md,
+   "The mark". A second mark in the rail would be the repetition the document
+   forbids, so do not add one back. What makes the collapsed rail
+   recognisable is the nav itself: four named destinations, each keeping its
+   name on hover and to a screen reader at 64px, with the current one filled. */
 export default function Sidebar({
   collapsed = false,
   onToggleCollapse,
   mobileOpen = false,
   onCloseMobile,
 }) {
+  const railCollapsed = collapsed && !mobileOpen;
+
   return (
     <div
       className={[
@@ -26,21 +34,15 @@ export default function Sidebar({
         data-brand-row=""
         className={[
           'flex min-h-16 items-center gap-2 border-b border-rule px-3',
-          // A 64px rail minus its padding leaves 40px, and a 24px mark beside
-          // a 44px tap target needs 68px. Side by side they overflowed the
-          // rail: the mark fell off the left edge of the screen and the toggle
-          // sat out over the page, so the rail could not be opened again.
-          // Collapsed the row becomes a column and gives up its side padding,
-          // which leaves each of the two the full width of the rail.
+          // A 64px rail minus its padding leaves 40px, and the toggle is a
+          // 44px tap target. Collapsed the row gives up its side padding and
+          // centres the one control it still holds, so the rail can always be
+          // opened again.
           collapsed
-            ? 'md:flex-col md:justify-center md:gap-1 md:px-0 md:py-2'
+            ? 'md:justify-center md:gap-1 md:px-0'
             : 'justify-between',
         ].join(' ')}
       >
-        {/* The mark stays when the word goes: a 64px rail has room for one of
-            the two, and the mark is the half that survives being small. */}
-        <BrandMark size={24} />
-
         <Link
           href="/dashboard"
           // Rounded for the focus ring: an outline follows the element's own
@@ -85,9 +87,24 @@ export default function Sidebar({
             href={item.href}
             label={item.label}
             icon={item.icon}
-            collapsed={collapsed && !mobileOpen}
+            collapsed={railCollapsed}
           />
         ))}
+      </nav>
+
+      {/* The account, not a fifth area. It sits at the foot behind a hairline
+          so the list above stays four things long, and it keeps its 44px tap
+          target whether the rail is open or 64px wide. */}
+      <nav
+        aria-label="Account"
+        className="mt-auto flex flex-col border-t border-rule p-3"
+      >
+        <NavItem
+          href={accountItem.href}
+          label={accountItem.label}
+          icon={accountItem.icon}
+          collapsed={railCollapsed}
+        />
       </nav>
     </div>
   );

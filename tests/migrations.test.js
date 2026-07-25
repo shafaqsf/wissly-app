@@ -45,6 +45,7 @@ describe('the schema', () => {
       'reviews',
       'sections',
       'sources',
+      'standing_orders',
       'subjects',
     ])
   })

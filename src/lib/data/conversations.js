@@ -22,7 +22,7 @@ import { unwrap, unwrapList } from './result.js'
 const CONVERSATION_COLUMNS =
   'id, subject_id, title, mode, pinned_at, archived_at, created_at, updated_at, last_message_at'
 const MESSAGE_COLUMNS =
-  'id, conversation_id, role, content, mode, status, anchors, created_at'
+  'id, conversation_id, role, content, mode, model, status, anchors, created_at'
 
 const MODES = new Set(['chat', 'agent'])
 const STATUSES = new Set(['queued', 'running', 'done', 'stopped', 'failed'])
@@ -192,6 +192,7 @@ export async function appendMessage(
     role,
     content,
     mode = null,
+    model = null,
     busy = false,
     anchors = [],
     now = () => new Date(),
@@ -214,6 +215,10 @@ export async function appendMessage(
         role,
         content: text,
         mode,
+        // The model is chosen per message, in the bar, so the transcript can
+        // say which one answered which line. Free text: OpenRouter's
+        // catalogue has hundreds of ids and the bar takes any of them.
+        model,
         status: busy ? 'queued' : 'running',
         anchors,
       })

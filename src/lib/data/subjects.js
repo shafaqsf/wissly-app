@@ -33,6 +33,13 @@ export async function createSubject(supabase, { userId, title }) {
   )
 }
 
+export async function subjectById(supabase, { id }) {
+  return unwrap(
+    await supabase.from('subjects').select(COLUMNS).eq('id', id).maybeSingle(),
+    'open the subject',
+  )
+}
+
 /**
  * The subject with this title, or null. Matching is case-insensitive so that
  * adding material to "optics" twice does not produce two subjects that look

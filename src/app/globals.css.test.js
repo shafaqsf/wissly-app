@@ -202,6 +202,16 @@ describe('the field palette', () => {
     expect(coloured).toEqual([])
   })
 
+  /* If a `--color-field-*` token ever comes back, it may only live inside a
+     `.field-*` class — and there is no such token today, so the honest form of
+     the rule is that it appears nowhere at all. Hue stays inside a grain field
+     and the chrome stays ink. */
+  it('names no --color-field-* token outside a .field-* class', () => {
+    const outside = css.replace(/\.field-[a-z]+\s*\{[^}]*\}/g, '')
+    expect(outside).not.toMatch(/--color-field-/)
+    expect(css).not.toMatch(/--color-field-/)
+  })
+
   it('defines the three field states', () => {
     expect([...fieldStates().keys()].sort()).toEqual([
       'partial',
@@ -249,6 +259,85 @@ describe('no text on a field', () => {
     const mark = css.match(/\.grain-mark\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(mark).toMatch(/width:\s*0\.75rem/)
     expect(mark).toMatch(/height:\s*0\.75rem/)
+  })
+})
+
+describe('the motion catalogue', () => {
+  /* Motion is named, not improvised. Seven movements, each with a duration and
+     a curve written down once — see "Motion" in docs/DESIGN.md. A component
+     that needs movement reaches for one of these classes rather than inventing
+     an eighth timing nobody agreed to. */
+  const MOTION_TOKENS = [
+    ['--motion-settle', '600ms'],
+    ['--motion-drift', '8s'],
+    ['--motion-stagger-step', '40ms'],
+    ['--motion-flip', '300ms'],
+    ['--motion-slide', '200ms'],
+    ['--motion-lift', '120ms'],
+    ['--motion-count', '400ms'],
+  ]
+
+  const MOTION_CLASSES = [
+    '.motion-stagger',
+    '.motion-flip',
+    '.motion-slide',
+    '.motion-lift',
+    '.motion-count',
+  ]
+
+  it.each(MOTION_TOKENS)('defines %s as %s', (name, value) => {
+    expect(css).toMatch(new RegExp(`${name}:\\s*${value};`))
+  })
+
+  it('defines the settle curve once, as a token', () => {
+    expect(css).toMatch(
+      /--motion-settle-curve:\s*cubic-bezier\(0\.16,\s*1,\s*0\.3,\s*1\);/,
+    )
+  })
+
+  it.each(MOTION_CLASSES)('defines %s', (selector) => {
+    expect(css).toMatch(new RegExp(`\\${selector}(?![a-z-])[^{;]*\\{`))
+  })
+
+  /* The stagger stops at six. Past that a list is a queue and the offset reads
+     as latency rather than as arrival. */
+  it('stops the stagger at six items', () => {
+    const stagger = css.match(/\.motion-stagger[\s\S]*?(?=\n\/\* ---)/)?.[0] ?? ''
+    expect(stagger).toMatch(/nth-child\(-n \+ 6\)|nth-child\(n \+ 7\)/)
+    expect(stagger).not.toMatch(/nth-child\(7\)/)
+  })
+
+  /* Reduced motion removes all of it. Not a shorter version, not a fainter
+     one — the state change lands instantly and the information survives. */
+  it('disables every movement under prefers-reduced-motion', () => {
+    const reduced = css.match(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\n([\s\S]*?)\n\}\n/,
+    )?.[1]
+
+    expect(reduced).toBeTruthy()
+
+    for (const selector of [...MOTION_CLASSES, '.grain-working::before', '.grain-mark']) {
+      expect(reduced, selector).toContain(selector)
+    }
+
+    expect(reduced).toMatch(/animation:\s*none/)
+    expect(reduced).toMatch(/transition:\s*none/)
+  })
+
+  /* Forbidden outright. A bounce or a spring says "look at me"; a parallax
+     says the page is deeper than it is; autoplay takes the decision away. */
+  it('names no forbidden movement anywhere in the stylesheet', () => {
+    expect(css).not.toMatch(/bounce|spring|parallax|autoplay/i)
+  })
+
+  it('names no forbidden movement in any source file', () => {
+    const offenders = sourceFiles().filter((file) =>
+      /animate-bounce|motion-bounce|motion-spring|parallax|autoPlay|autoplay/i.test(
+        readFileSync(file, 'utf8'),
+      ),
+    )
+
+    expect(offenders).toEqual([])
   })
 })
 

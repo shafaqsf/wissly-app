@@ -44,4 +44,34 @@ describe('NavItem', () => {
 
     expect(screen.getByRole('link', { name: 'Courses' })).toBeInTheDocument()
   })
+
+  /* With no mark in the rail, the destinations are what say which product this
+     is. Collapsed they are 20px glyphs, so each one has to name itself on
+     hover as well as to assistive technology. */
+  it('names itself on hover once the label is off screen', () => {
+    render(<NavItem href="/courses" label="Courses" icon={BookOpen} collapsed />)
+
+    expect(screen.getByRole('link', { name: 'Courses' })).toHaveAttribute(
+      'title',
+      'Courses',
+    )
+  })
+
+  /* The current destination is the other half of that: a rail with no mark
+     still says where you are at 64px. `--paper-sunk` and ink, no colour — the
+     2px ink rule belongs to failure messages and to nothing else. */
+  it('marks the current destination while collapsed', () => {
+    usePathname.mockReturnValue('/courses')
+    render(<NavItem href="/courses" label="Courses" icon={BookOpen} collapsed />)
+
+    const link = screen.getByRole('link')
+    expect(link).toHaveAttribute('aria-current', 'page')
+    expect(link.className).toMatch(/bg-paper-sunk/)
+  })
+
+  it('keeps the 44px tap target floor', () => {
+    render(<NavItem href="/courses" label="Courses" icon={BookOpen} collapsed />)
+
+    expect(screen.getByRole('link').className).toMatch(/min-h-11/)
+  })
 })

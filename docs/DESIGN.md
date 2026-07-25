@@ -349,22 +349,87 @@ fails on a `.grain-mark` element with a text child.
 
 ## Motion
 
-Motion is rare and it is functional.
+Motion is named. That is the rule, and it is a different rule from the one
+this section used to carry.
 
-- **The settle.** When an agent finishes, or a learner picks a concept they
-  have already mastered, its mark travels to the new state over 600ms,
-  `cubic-bezier(0.16, 1, 0.3, 1)` — grain and fill together, the ink draining
-  out of it as the noise clears. This is the only animation anyone should
-  remember. `--field-mark` is registered with `@property` so the fill can
-  actually interpolate; without that the mark would jump.
-- **The drift.** While an agent works, the grain layer translates by a few
-  pixels on a 8s loop. Slow enough to be felt, not watched.
-- Everything else — hover, focus, disclosure — is 120ms `ease-out` on opacity
-  or transform. No spring, no bounce, no stagger.
+This document said motion was rare and allowed two movements, the settle and
+the drift, and forbade everything else by name. Rarity turned out to be the
+wrong constraint. A flashcard that changes its face without turning is a
+substitution, not a card; a panel that appears where nothing was is a jump
+cut; a list that materialises whole gives the eye no order to read it in. Each
+of those is a place where the interface knows something about what just
+happened and refuses to say it. The prohibition was not keeping the product
+quiet, it was making it abrupt.
 
-`prefers-reduced-motion: reduce` removes the drift entirely and replaces the
-settle with an instant state change. The information survives; only the
-movement goes.
+So the catalogue grows and the discipline moves. Every movement has a name, a
+duration, a curve and a reason, and it is written down once in
+`src/app/globals.css` as a token and a utility class. A component that needs
+movement reaches for one of these. A component that invents an eighth timing
+is the thing this section exists to prevent.
+
+| Movement | Where | Spec |
+| --- | --- | --- |
+| **Settle** | An answer lands, a concept resolves | 600ms `cubic-bezier(0.16, 1, 0.3, 1)` |
+| **Drift** | The agent is working | 8s loop |
+| **Stagger** | A list appears | 40ms offset, at most 6 items, then all at once |
+| **Flip** | A flashcard turns | 300ms, 3D, `ease-out` |
+| **Slide** | A panel or a type changes | 200ms `ease-out` on transform |
+| **Lift** | Hover on an interactive surface | 120ms, 1px rise, hairline darkens |
+| **Count** | A number changes | 400ms, monospace, no easing bounce |
+
+**The settle** is still the only animation anyone should remember. When an
+agent finishes, or a learner picks a concept they have already mastered, its
+mark travels to the new state — grain and fill together, the ink draining out
+of it as the noise clears. `--field-mark` is registered with `@property` so
+the fill can interpolate; without that the mark would jump.
+
+**The drift** translates the grain layer by a few pixels while an agent works.
+Slow enough to be felt, not watched.
+
+**The stagger** stops at six because past six the offset stops reading as
+arrival and starts reading as the page being slow. Items seven onward land
+with the sixth. Six times 40ms is 240ms, which is under the quarter second at
+which a delay becomes a wait.
+
+**The flip** is the only movement allowed a third dimension, and it gets one
+because a card with two faces is a real object a learner already understands.
+Nothing else in the product may rotate in depth.
+
+**The slide** moves a transform and never a width, a height or a position.
+Animating layout re-flows the page on every frame, and the text inside reflows
+while it is being read.
+
+**The lift** answers one question — is this a control? — and answers nothing
+else. One pixel and a darker hairline. It does not grow, it does not shadow
+(there are no shadows, see [Shape](#shape)), and it does not change the ink of
+the label.
+
+**The count** is monospace so the digits do not shuffle sideways as they move,
+and linear so the value reads as counted rather than as thrown.
+
+### What is still forbidden
+
+- **Bounce and spring.** Overshoot says "look at me" about a thing the learner
+  already asked for.
+- **Parallax.** It claims the page has a depth it does not have, and it makes
+  a reading column move at a different speed from the thing it is about.
+- **Autoplay.** Anything that starts moving without being asked takes the
+  decision away from the learner, including video, carousels and looping
+  demonstrations. The drift is the exception, and it is the exception because
+  it reports that the agent is busy right now.
+- **Any movement carrying information nothing else carries.** If removing the
+  animation loses the meaning, the meaning was never in the interface — it was
+  in the transition, where a screen reader, a still screenshot and a reduced
+  motion setting all miss it. Say it in words first, then move.
+
+### Reduced motion
+
+`prefers-reduced-motion: reduce` removes **all** of it. Not a faster version,
+not a fainter one: the drift stops, the settle becomes an instant state
+change, and every class in the catalogue drops its transition. This is cheap
+to honour precisely because of the rule above — every movement here decorates
+a state change that has already happened, so the list is still there, the card
+is still turned and the number still reads its new value.
 
 ## Interaction floor
 

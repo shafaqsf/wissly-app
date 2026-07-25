@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import Sidebar from './sidebar'
@@ -24,42 +24,95 @@ describe('the sidebar', () => {
     )
   })
 
-  /* The mark is the product's identity, so it sits in the frame rather than on
-     any one page. It is decorative: the word "wissly" is right beside it. */
-  it('wears the brand mark beside the wordmark', () => {
+  /* This assertion used to require exactly one mark here, because the product
+     names itself once per viewport and the frame was the only thing that could
+     carry it. The agent bar carries it now, so a mark in the rail would be the
+     second one on the screen — see docs/DESIGN.md, "The mark". */
+  it('wears no brand mark, because the agent bar is the one that does', () => {
     const { container } = render(<Sidebar />)
 
-    const marks = container.querySelectorAll('[data-brand-mark]')
-    expect(marks).toHaveLength(1)
-    expect(marks[0]).toHaveAttribute('alt', '')
+    expect(container.querySelectorAll('[data-brand-mark]')).toHaveLength(0)
   })
 
-  /* Collapsed, the word is the thing that goes. The mark is what a 64px rail
-     has room for, and it is what makes the rail recognisable at all. */
-  it('keeps the mark when the rail collapses and the word does not fit', () => {
+  it('wears no brand mark collapsed either', () => {
     const { container } = render(<Sidebar collapsed />)
 
-    expect(container.querySelectorAll('[data-brand-mark]')).toHaveLength(1)
-    expect(screen.getByRole('link', { name: 'wissly' }).className).toMatch(
-      /md:sr-only/,
-    )
+    expect(container.querySelectorAll('[data-brand-mark]')).toHaveLength(0)
   })
 
-  /* A 64px rail minus its padding is 40px of room. A 24px mark and a 44px tap
-     target do not fit on one line inside that, and side by side they pushed the
-     mark off the left edge of the screen and the toggle out over the page —
-     which is what made the rail impossible to open again. Collapsed, the row
-     becomes a column, and each of the two gets the full width to itself. */
-  it('stacks the mark above the toggle so the collapsed rail can be reopened', () => {
+  /* Four areas, each answering a question no other one answers. `Review` is
+     `/tasks/due` now and `Library` dissolved into the course page. */
+  it('offers the four areas, in order, and nothing else in the main list', () => {
+    render(<Sidebar />)
+
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    const labels = within(nav)
+      .getAllByRole('link')
+      .map((link) => link.textContent)
+
+    expect(labels).toEqual(['Dashboard', 'Courses', 'Tasks', 'Analytics'])
+  })
+
+  it('has no Review and no Library destination left', () => {
+    render(<Sidebar />)
+
+    expect(screen.queryByRole('link', { name: 'Review' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Library' })).toBeNull()
+  })
+
+  /* Settings is not a fifth area. It is the account, so it sits in the foot,
+     separated by a hairline rather than by a gap. */
+  it('puts Settings in the foot, under a hairline, outside the main list', () => {
+    render(<Sidebar />)
+
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).queryByRole('link', { name: 'Settings' })).toBeNull()
+
+    const foot = screen.getByRole('navigation', { name: 'Account' })
+    const settings = within(foot).getByRole('link', { name: 'Settings' })
+    expect(settings).toHaveAttribute('href', '/settings')
+    expect(foot.className).toMatch(/border-t/)
+    expect(foot.className).toMatch(/mt-auto/)
+  })
+
+  it('keeps Settings and its 44px tap target when the rail collapses', () => {
+    render(<Sidebar collapsed />)
+
+    const foot = screen.getByRole('navigation', { name: 'Account' })
+    const settings = within(foot).getByRole('link', { name: 'Settings' })
+    expect(settings.className).toMatch(/min-h-11/)
+  })
+
+  /* Nothing in the rail is a logo any more, so the nav is what makes it
+     recognisable: every destination keeps its name on hover and to assistive
+     technology at 64px. */
+  it('keeps every destination named when collapsed to a 64px rail', () => {
+    render(<Sidebar collapsed />)
+
+    for (const label of [
+      'Dashboard',
+      'Courses',
+      'Tasks',
+      'Analytics',
+      'Settings',
+    ]) {
+      expect(screen.getByRole('link', { name: label })).toHaveAttribute(
+        'title',
+        label,
+      )
+    }
+  })
+
+  /* A 64px rail minus its padding is 40px of room. The toggle is a 44px tap
+     target, so collapsed the row gives up its side padding and centres the one
+     control it still holds. */
+  it('keeps the collapsed rail openable', () => {
     const { container } = render(<Sidebar collapsed />)
 
     const brandRow = container.querySelector('[data-brand-row]')
-    expect(brandRow.className).toMatch(/md:flex-col/)
-
     const toggle = screen.getByRole('button', { name: 'Expand sidebar' })
+
     expect(brandRow.contains(toggle)).toBe(true)
-    // 44px is the tap target floor and it stays. The rail gives up its side
-    // padding instead, so the target has the full 64px to sit in.
     expect(toggle.className).toMatch(/size-11/)
     expect(brandRow.className).toMatch(/md:px-0/)
   })

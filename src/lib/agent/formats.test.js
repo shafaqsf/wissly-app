@@ -1,7 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 
-import { FORMATS, PAYLOAD_SCHEMAS, isFormat, validatePayload } from './formats.js'
+import {
+  FORMATS,
+  PAYLOAD_SCHEMAS,
+  READING_FORMATS,
+  TASK_FORMATS,
+  formatKind,
+  isFormat,
+  isReadingFormat,
+  isTaskFormat,
+  validatePayload,
+} from './formats.js'
 
 describe('FORMATS', () => {
   it('is exactly the stage 1 catalogue, in the order the database enumerates it', () => {
@@ -186,5 +196,31 @@ describe('validatePayload — an unknown format', () => {
     expect(validatePayload('concept_map', {}).errors).toEqual([
       ': unknown artefact format "concept_map"',
     ])
+  })
+})
+
+describe('reading and tasks', () => {
+  it('reads a summary and a glossary, and answers everything else', () => {
+    expect(READING_FORMATS).toEqual(['summary', 'glossary'])
+    expect(TASK_FORMATS).toEqual(['flashcard', 'cloze', 'multiple_choice', 'open_question'])
+  })
+
+  it('splits the catalogue in two with nothing left over and nothing in both', () => {
+    expect([...READING_FORMATS, ...TASK_FORMATS].sort()).toEqual([...FORMATS].sort())
+    expect(READING_FORMATS.some((format) => TASK_FORMATS.includes(format))).toBe(false)
+  })
+
+  it('names which side a format is on', () => {
+    expect(formatKind('summary')).toBe('reading')
+    expect(formatKind('cloze')).toBe('task')
+    expect(formatKind('concept_map')).toBe(null)
+  })
+
+  it('answers the two questions the surfaces actually ask', () => {
+    expect(isReadingFormat('glossary')).toBe(true)
+    expect(isReadingFormat('flashcard')).toBe(false)
+    expect(isTaskFormat('open_question')).toBe(true)
+    expect(isTaskFormat('summary')).toBe(false)
+    expect(isTaskFormat('concept_map')).toBe(false)
   })
 })

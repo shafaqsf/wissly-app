@@ -4,7 +4,7 @@
 
    Flat grain and a flat wash, no radial gradient — several panels can load at
    once, and several gradient fields would read as texture instead of as
-   signal. The colour is the unresolved one either way. */
+   signal. The depth is the unresolved one either way. */
 export default function PanelSkeleton({ title, wide = false }) {
   return (
     <section

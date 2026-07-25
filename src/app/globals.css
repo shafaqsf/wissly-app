@@ -11,15 +11,9 @@
   --color-ink-muted: #5c5c5c;
   --color-ink: #000000;
 
-  /* Field — the only colour in the product, and it lives inside a grain
-     field. A `--color-field-*` token may be named in a `.field-*` class in
-     this file and nowhere else: not in a component, not on text, not on a
-     border, not on an icon. `globals.css.test.js` enforces that. */
-  --color-field-hot: #ed625d;
-  --color-field-deep: #03232d;
-  --color-field-warm: #f79f88;
-  --color-field-mid: #42b6c6;
-  --color-field-cool: #b2dfe6;
+  /* There is no field palette. A field is ink, diluted — see "Colour" in
+     docs/DESIGN.md. `globals.css.test.js` fails on any hue in any source
+     file, so the rule cannot quietly come back one component at a time. */
 
   /* Type */
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
@@ -119,8 +113,14 @@ body {
 
    The stops are custom properties rather than literals so that one class —
    `.field-unresolved`, `.field-partial`, `.field-settled` — repaints the
-   whole field. Registering them makes the settle able to move colour, not
-   just grain. */
+   whole field. Registering them makes the settle able to move the fill, not
+   just the grain.
+
+   Every stop is ink at a dilution. The field used to carry hue, and hue is
+   what made it read as decoration: a pink and teal wash behind a heading is a
+   mood, and three of them on one screen is a texture pack. Depth is the whole
+   signal, so depth is all that is left — the field gets darker the less
+   resolved the thing under it is, and that reads the same to anyone. */
 
 @property --field-near {
   syntax: "<color>";
@@ -140,27 +140,40 @@ body {
   initial-value: transparent;
 }
 
-/* Unattempted, unknown, or an agent still working. Hottest and deepest. */
-.field-unresolved {
-  --field-near: color-mix(in srgb, var(--color-field-hot) 55%, transparent);
-  --field-far: color-mix(in srgb, var(--color-field-deep) 36%, transparent);
-  --field-floor: color-mix(in srgb, var(--color-field-cool) 30%, transparent);
+/* A field mark reads by fill, not by tint. Three dilutions two points apart
+   are three shades of nothing at 12px; filled, half and empty are a legend
+   anyone can read across a column. */
+@property --field-mark {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
 }
 
-/* Under way. The heat softens, the depth turns to open water. */
+/* Unattempted, unknown, or an agent still working. The deepest the page gets. */
+.field-unresolved {
+  --field-near: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  --field-far: color-mix(in srgb, var(--color-ink) 9%, transparent);
+  --field-floor: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --field-mark: color-mix(in srgb, var(--color-ink) 100%, transparent);
+}
+
+/* Under way. Half the depth, and the same three anchors. */
 .field-partial {
-  --field-near: color-mix(in srgb, var(--color-field-warm) 42%, transparent);
-  --field-far: color-mix(in srgb, var(--color-field-mid) 30%, transparent);
-  --field-floor: color-mix(in srgb, var(--color-field-cool) 24%, transparent);
+  --field-near: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --field-far: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  --field-floor: color-mix(in srgb, var(--color-ink) 3%, transparent);
+  --field-mark: color-mix(in srgb, var(--color-ink) 45%, transparent);
 }
 
 /* Settled. Nothing left to resolve — but still a surface, not an absence.
    `--grain-0` alone renders nothing at all, which reads as a missing element
-   rather than as an arrival. This is what the learner earns. */
+   rather than as an arrival. A breath of ink is what the learner earns; the
+   mark empties out entirely and is read by its ring. */
 .field-settled {
-  --field-near: color-mix(in srgb, var(--color-field-cool) 10%, transparent);
-  --field-far: color-mix(in srgb, var(--color-field-cool) 26%, transparent);
-  --field-floor: color-mix(in srgb, var(--color-field-cool) 16%, transparent);
+  --field-near: color-mix(in srgb, var(--color-ink) 3%, transparent);
+  --field-far: color-mix(in srgb, var(--color-ink) 2%, transparent);
+  --field-floor: color-mix(in srgb, var(--color-ink) 2%, transparent);
+  --field-mark: color-mix(in srgb, var(--color-ink) 0%, transparent);
 }
 
 /* A grainy gradient. Reserved for agent work states, empty states and the
@@ -208,8 +221,8 @@ body {
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-round);
   background-color: var(--color-paper);
-  background-image: linear-gradient(var(--field-far), var(--field-far));
-  transition: --field-far 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  background-image: linear-gradient(var(--field-mark), var(--field-mark));
+  transition: --field-mark 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* A flat wash, no geometry. For surfaces that appear several at a time —

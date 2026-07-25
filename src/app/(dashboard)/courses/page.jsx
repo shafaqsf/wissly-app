@@ -9,7 +9,7 @@ export const metadata = {
 
 /* One line per course, and the line says the two things a learner asks first:
    how much is in here, and how much of it has settled. Neither is a bar or a
-   percentage — mastery is grain, and the grain lives on the progress page,
+   percentage — mastery is grain and depth, and both live on the progress page,
    which is where each course here leads. */
 
 function count(amount, singular, plural = `${singular}s`) {

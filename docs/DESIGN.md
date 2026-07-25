@@ -9,25 +9,32 @@ wissly is a learning platform. Learning is the movement from noise to signal —
 from a subject you cannot yet resolve to one you can.
 
 **So the field is not decoration here. The field is the measure of what is not
-yet known.** A topic you have never touched is heavily grained and runs hot at
-its edges. A topic you have mastered is near-clean paper with a cool breath
-left on it. An agent that is still thinking sits in a drifting field; when it
-answers, the field settles — the noise clears and the heat drains out of it
+yet known.** A topic you have never touched is heavily grained and sits deepest
+in the paper. A topic you have mastered is near-clean paper with a breath of
+ink left on it. An agent that is still thinking sits in a drifting field; when
+it answers, the field settles — the noise clears and the depth drains out of it
 together.
 
 Everything else on the page is quiet so that this one device can carry
-meaning. That is also why the interface has no other colour: hue anywhere else
-would compete with the only place hue means something. If a field on a screen
-does not encode state, remove it.
+meaning. If a field on a screen does not encode state, remove it.
 
 ## Colour
 
-**The chrome has no colour. Colour exists only inside a field.**
+**There is no colour. The product is ink on paper, and the only exception is
+[the mark](#the-mark).**
 
-Every control, every glyph, every icon, every border is ink on paper. Hue
-appears in two places and no others: the grainy gradient described under
-[Grain](#grain), where it encodes the same thing the grain encodes, and
-[the mark](#the-mark), which is that gradient standing still.
+The field used to carry hue: a heat and a depth and a cool floor, bleeding in
+from three edges. It was meant to be the one place colour meant something, and
+on real screens it did the opposite — a pink and teal wash behind a heading is
+a mood, three of them on one page are a texture pack, and the reading it was
+supposed to give (how resolved is this?) was the thing hardest to read out of
+it. Depth was always carrying the signal on its own.
+
+So a field is ink, diluted, and nothing else. Every control, every glyph, every
+icon, every border, every field is drawn in the same ink. There is no
+`--color-field-*` token, and `src/app/globals.css.test.js` fails on any hue in
+any source file: a hex whose three channels are not equal, anywhere, is the
+rule coming back one component at a time.
 
 ### Ink and paper
 
@@ -43,23 +50,20 @@ appears in two places and no others: the grainy gradient described under
 Contrast against `--paper`: `--ink` 21:1, `--ink-muted` 7.0:1, `--ink-faint`
 2.8:1. `--ink-faint` therefore never carries text of any size.
 
-### The field palette
+### The field, in ink
 
-| Token | Value | Reads as |
-| --- | --- | --- |
-| `--color-field-hot` | `#ED625D` | Heat. The unattempted edge. |
-| `--color-field-deep` | `#03232D` | Depth. The corner you cannot see into yet. |
-| `--color-field-warm` | `#F79F88` | The heat, cooling. Work under way. |
-| `--color-field-mid` | `#42B6C6` | Open water. Work under way. |
-| `--color-field-cool` | `#B2DFE6` | Arrival. What settling looks like. |
+| Stop | Unresolved | Under way | Settled |
+| --- | --- | --- | --- |
+| `--field-near` | ink 12% | ink 6% | ink 3% |
+| `--field-far` | ink 9% | ink 5% | ink 2% |
+| `--field-floor` | ink 6% | ink 3% | ink 2% |
+| `--field-mark` | ink 100% | ink 45% | ink 0% |
 
-**A `--color-field-*` token may be named in a `.field-*` class in
-`globals.css` and nowhere else.** Not in a component, not on text, not on a
-border, not on an icon, not in a chart. `src/app/globals.css.test.js` fails
-the build if one escapes.
-
-This containment is the whole point. Colour that can go anywhere becomes
-decoration; colour that can only go in one place stays a signal.
+A field *surface* reads by depth: the less resolved the thing under it is, the
+further into the paper it sits. A [field mark](#two-forms) reads by fill
+instead — filled, half, empty — because three dilutions two points apart are
+three shades of nothing at 12px, while a filled dot beside a half one beside
+an empty ring is a legend anyone can read down a column.
 
 ### No dark mode
 
@@ -69,15 +73,20 @@ add a `prefers-color-scheme: dark` block.
 
 ### No status colours
 
-No red for errors, no green for success — not even now that the palette
-contains a red and a blue-green. A field's colour says *how resolved this is*,
-never *whether something went well*. Status is carried by three things that
-work without hue:
+No red for errors, no green for success. A field's depth says *how resolved
+this is*, never *whether something went well*. Status is carried by three
+things that work without hue:
 
 - **Words.** "Lesson not saved. Check your connection and try again."
 - **An icon**, monochrome, from the same set as everything else.
-- **A rule.** A destructive or failed surface gets a 2px solid `--ink` left
+- **A rule.** A destructive or failed message gets a 2px solid `--ink` left
   border. Nothing else on the page has one, so it reads instantly.
+
+**The rule goes on the message, never on the surface around it.** A 2px side
+against the 1px hairline beside it mitres across a `--radius-surface` corner,
+and the panel visibly stops being round at both ends of the rule. Every failure
+in the product rules its own paragraph — the panel, the auth form, the agent
+transcript — and `panel.test.jsx` holds that shape.
 
 This is stricter than accessibility requires, and it is the constraint that
 keeps the interface recognisable.
@@ -165,16 +174,16 @@ The mark below is not an icon and none of this applies to it.
 
 ## The mark
 
-`public/brand/icon.png` — a flame, drawn in the field palette and grained:
-heat at its edges, depth behind it, a cool core. It is the browser tab icon and
-it is the agent's face, and it is **the one coloured thing in the product**.
+`public/brand/icon.png` — a flame, grained, with heat at its edges and a cool
+core. It is the browser tab icon and it is the agent's face, and it is **the
+one coloured thing in the product**.
 
-This is a named exception, and it earns that on the same grounds the colour
-rule exists. Hue is contained so it stays a signal rather than becoming
-decoration. The mark does not spend that signal — it *is* the signal, held
-still: the same three tints, the same texture, the same one idea the whole
-interface is built on. A mark in some other palette would make the exception
-arbitrary, and then it would be a loophole.
+It was once the field palette standing still. The field has no palette any
+more, and the mark is better for it: hue no longer means one thing on a
+progress surface and another on the tab icon, because it means exactly one
+thing now — *this is wissly*. One object in the whole interface is allowed a
+hue, and that object is identity, never state. That is a rule you can hold in
+one hand, which is more than the old one could claim.
 
 What the exception does not license:
 
@@ -200,7 +209,7 @@ What the exception does not license:
 ## Grain
 
 The signature. One implementation, four intensities, and — inside a field —
-a colour that moves with them.
+a depth of ink that moves with them.
 
 ### Source
 
@@ -244,11 +253,11 @@ Applied on a `::before` pseudo-element with `mix-blend-mode: multiply` and
 
 ### The field
 
-A **field** is clean paper with three colour stops bleeding in from its edges
-— heat from the bottom-left corner, depth from the top-right, a cool floor
-rising along the bottom edge — and a grain layer masked to the same geometry,
-so the texture is dense where the colour is saturated and the paper core stays
-clean. The core is where text sits.
+A **field** is clean paper with three stops of ink bleeding in from its edges
+— from the bottom-left corner, from the top-right, and a floor rising along the
+bottom edge — and a grain layer masked to the same geometry, so the texture is
+dense where the ink is deepest and the paper core stays clean. The core is
+where text sits.
 
 Every stop is anchored to a corner or an edge, never to a point inside the box.
 An interior anchor makes the same class read as three different things
@@ -256,25 +265,26 @@ depending on how the surface happens to be cut — a wide header and a tall
 column would light from different directions. `globals.css.test.js` asserts the
 anchors, and asserts that the grain mask names the same three gradients the
 background paints; the moment those drift apart the texture stops tracking the
-colour.
+depth.
 
-Colour and grain are **one axis, not two**. A field is painted by one state
+Depth and grain are **one axis, not two**. A field is painted by one state
 class, and that class moves both:
 
-| Class | Grain | Colour | Means |
+| Class | Grain | Depth | Means |
 | --- | --- | --- | --- |
-| `.field-unresolved` | `--grain-3` | hot + deep | Unattempted, unknown, or an agent still working |
-| `.field-partial` | `--grain-2` | warm + mid | Under way |
-| `.field-settled` | `--grain-0` | cool, faint | Mastered. Settled. |
+| `.field-unresolved` | `--grain-3` | deepest | Unattempted, unknown, or an agent still working |
+| `.field-partial` | `--grain-2` | half | Under way |
+| `.field-settled` | `--grain-0` | a breath | Mastered. Settled. |
 
 `src/lib/mastery.js` is the only place the pairing is written down. A
 component reads `grain` and `field` from `masteryState()` rather than choosing
 either itself, so the interface cannot say one thing with its texture and
-another with its colour.
+another with its depth.
 
-`.field-settled` is why the palette earns its place. `--grain-0` alone renders
-nothing at all, so an arrival used to look like a missing element. A settled
-field is still a surface — quiet, cool, unmistakably *finished*.
+`.field-settled` is why the stops go down to 2% rather than to nothing.
+`--grain-0` alone renders nothing at all, so an arrival used to look like a
+missing element. A settled field is still a surface — quiet, faint,
+unmistakably *finished*.
 
 ### Two forms
 
@@ -287,13 +297,14 @@ is sized to the object whose state it carries — not to the page it happens to
 sit on. A field that fills half a viewport is describing the viewport, and the
 viewport does not have a mastery.
 
-**A field mark — `.grain-mark`.** A small round mark: one flat tint, no
-geometry, no text. As many per screen as there are objects with a state. A
+**A field mark — `.grain-mark`.** A small round mark: one flat fill, no
+geometry, no text. Filled, half, empty — `--field-mark` moves further than the
+surface stops do, because 12px of 2% ink is nothing at all. As many per screen as there are objects with a state. A
 concept row, a queued item, an agent thinking beside a line of status text.
 This is the form to reach for first — the state sits on the thing that has it.
 
 **A flat wash — `.grain-wash`.** For several surfaces appearing at once, such
-as panel skeletons: the same state colour as a flat tint, because several
+as panel skeletons: the same state depth as a flat tint, because several
 radial gradients at once read as a texture pack rather than as a signal.
 
 ### Where a field goes
@@ -321,7 +332,7 @@ inventing one there is exactly the decoration this document exists to prevent.
 ### Text on a field
 
 **Inside a field, text is `--ink`.** `--ink-muted` clears 7:1 on paper and
-less than that on a tinted field, so it never sits on one; `--ink-faint` never
+less than that on an inked field, so it never sits on one; `--ink-faint` never
 carries text anywhere. Outside a field, secondary text stays muted, because
 there it genuinely is secondary.
 
@@ -338,9 +349,9 @@ stylesheet itself and fails if a stop is ever pushed past it.
   texture pack, not as a signal. Marks are exempt: they are identical to each
   other, so a column of them reads as a legend. When a page wants a second
   surface, one of the two becomes a mark.
-- **Grain and colour are state, never mood.** If you cannot name the state
+- **Grain and depth are state, never mood.** If you cannot name the state
   they encode, delete them.
-- **Never both.** A field's colour and its grain always come from the same
+- **Never both.** A field's depth and its grain always come from the same
   state. Setting `--grain` by hand next to a mismatched `.field-*` class is
   the one way to make the signature lie.
 
@@ -350,10 +361,10 @@ Motion is rare and it is functional.
 
 - **The settle.** When an agent finishes, or a learner picks a concept they
   have already mastered, its field travels to the new state over 600ms,
-  `cubic-bezier(0.16, 1, 0.3, 1)` — grain and colour together, heat draining
+  `cubic-bezier(0.16, 1, 0.3, 1)` — grain and depth together, the ink draining
   out of it as the noise clears. This is the only animation anyone should
-  remember. The stops are registered with `@property` so the colour can
-  actually interpolate; without that the field would jump.
+  remember. The stops are registered with `@property` so the fill can actually
+  interpolate; without that the field would jump.
 - **The drift.** While an agent works, the grain layer translates by a few
   pixels on a 8s loop. Slow enough to be felt, not watched.
 - Everything else — hover, focus, disclosure — is 120ms `ease-out` on opacity
@@ -393,8 +404,7 @@ Copy is design material. See also the voice rules in
 - Is there at most one field *surface*, and does it encode a real state?
 - Could a mark have carried that state instead, on the object that has it?
 - Does it carry a `.field-*` class? A field without one paints nothing.
-- Does anything use colour **outside** a field, other than the one mark?
-  Remove it.
+- Does anything use colour at all, other than the one mark? Remove it.
 - Is any text on a field muted rather than ink?
 - Is the reading column at or under 66 characters?
 - Does every focusable element show its focus ring?

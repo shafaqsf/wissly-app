@@ -189,6 +189,29 @@ body {
     radial-gradient(ellipse 120% 45% at 50% 100%, #000 0%, transparent 70%);
 }
 
+/* A field mark. Where a field surface says "this page is unresolved", a mark
+   says "this one row is" — the state sits on the object that has it rather
+   than on the edge of the screen.
+
+   Fixed size, fully round, one flat tint and no radial geometry. That is what
+   makes many-per-screen legible: a dozen radial fields down a list read as a
+   texture pack, a dozen identical marks read as a legend. A mark never holds
+   text, so it needs no paper core.
+
+   Pair it with `.grain` and set `--grain` from `masteryState()`, the same way
+   a field surface does. */
+.grain-mark {
+  display: inline-block;
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-round);
+  background-color: var(--color-paper);
+  background-image: linear-gradient(var(--field-far), var(--field-far));
+  transition: --field-far 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* A flat wash, no geometry. For surfaces that appear several at a time —
    panel skeletons — where several radial fields would read as texture
    instead of as signal. */

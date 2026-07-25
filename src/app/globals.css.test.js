@@ -155,6 +155,31 @@ describe('field geometry', () => {
   })
 })
 
+describe('the field mark', () => {
+  const mark = () => css.match(/\.grain-mark\s*\{([^}]*)\}/)?.[1] ?? ''
+
+  it('is fully round', () => {
+    expect(mark()).toMatch(/border-radius:\s*var\(--radius-round\);/)
+  })
+
+  /* A mark is what makes many-per-screen legible: a dozen radial fields down
+     a list read as a texture pack, a dozen identical marks read as a legend.
+     Give it geometry and it stops being a mark. */
+  it('carries no radial geometry', () => {
+    expect(geometry('.grain-mark')).toEqual([])
+  })
+
+  /* No paper core to protect the text, because a mark never holds text. The
+     rule against muted ink on a field is about surfaces, not marks. */
+  it('holds no text', () => {
+    const offenders = sourceFiles()
+      .filter((file) => file.endsWith('.jsx'))
+      .filter((file) => /<[a-z]+[^>]*grain-mark[^>]*>[^<\s]/.test(readFileSync(file, 'utf8')))
+
+    expect(offenders).toEqual([])
+  })
+})
+
 describe('the field palette', () => {
   it('defines all five field tokens', () => {
     for (const name of ['hot', 'deep', 'warm', 'mid', 'cool']) {
@@ -227,8 +252,9 @@ describe('colour containment', () => {
     expect(offenders).toEqual([])
   })
 
-  /* Every field carries a state class. A `.grain-field` without one paints
-     transparent stops and silently loses the signal it was there to give. */
+  /* Every field carries a state class. A `.grain-field` or `.grain-mark`
+     without one paints transparent stops and silently loses the signal it was
+     there to give. */
   it('never paints a field without a state', () => {
     const offenders = sourceFiles()
       .filter((file) => file.endsWith('.jsx'))
@@ -237,7 +263,7 @@ describe('colour containment', () => {
           .split('\n')
           .some(
             (line) =>
-              line.includes('grain-field') &&
+              (line.includes('grain-field') || line.includes('grain-mark')) &&
               !/field-(unresolved|partial|settled)|\$\{[a-z.]*field\}/i.test(line),
           ),
       )

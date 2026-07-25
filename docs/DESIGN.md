@@ -239,24 +239,47 @@ another with its colour.
 nothing at all, so an arrival used to look like a missing element. A settled
 field is still a surface — quiet, cool, unmistakably *finished*.
 
-A field is reserved for:
+### Two forms
 
-1. The agent's working state.
-2. Empty states — a surface with nothing on it yet is, definitionally,
+The state is one idea. It comes in two sizes, and choosing the wrong one is
+what made the earlier screens read as decoration.
+
+**A field surface — `.grain-field`.** Radial geometry, a paper core, holds
+text. One per viewport. It belongs to a whole screen or a whole panel, and it
+is sized to the object whose state it carries — not to the page it happens to
+sit on. A field that fills half a viewport is describing the viewport, and the
+viewport does not have a mastery.
+
+**A field mark — `.grain-mark`.** A small round mark: one flat tint, no
+geometry, no text. As many per screen as there are objects with a state. A
+concept row, a queued item, an agent thinking beside a line of status text.
+This is the form to reach for first — the state sits on the thing that has it.
+
+**A flat wash — `.grain-wash`.** For several surfaces appearing at once, such
+as panel skeletons: the same state colour as a flat tint, because several
+radial gradients at once read as a texture pack rather than as a signal.
+
+### Where a field goes
+
+1. On the object whose state it is — a concept, a queue item, an agent. Prefer
+   a mark.
+2. The agent's working state.
+3. Empty states — a surface with nothing on it yet is, definitionally,
    unresolved.
-3. The mastery field, where the state it carries is the whole point.
-4. A page header whose field reads the learner's position across the page.
-5. The signed-out frame — the one field carrying an account state rather than
+4. The signed-out frame — the one field carrying an account state rather than
    a knowledge state, and the one to challenge first if the rule ever needs
    tightening.
 
-**Beside a form, never behind one.** The auth screens put the field next to
-the reading column on desktop and above it on a phone. Never behind a table.
-Never as a button fill. Never as a page-wide wallpaper.
+**Not on a page header.** A header is a position on the page, not a state. A
+page-wide band was how the field ended up describing the furniture instead of
+the subject.
 
-A field that appears several at a time — panel skeletons — uses `.grain-wash`
-instead: the same state colour as a flat tint, no radial geometry, because
-several gradients at once read as a texture pack rather than as a signal.
+**Beside a form, never behind or below one.** Never behind a table. Never as a
+button fill. Never as a page-wide wallpaper. A form that reports its own
+progress uses a mark beside the text, not a surface under the button.
+
+Some screens carry no field at all. Settings has no state worth encoding, and
+inventing one there is exactly the decoration this document exists to prevent.
 
 ### Text on a field
 
@@ -274,9 +297,10 @@ stylesheet itself and fails if a stop is ever pushed past it.
 
 - **Grain never sits under body text above `--grain-2`.** Contrast is not
   negotiable against atmosphere.
-- **One field per viewport.** Two competing fields read as a texture pack, not
-  as a signal. When a page wants a second one, something has to give it up —
-  the dashboard header takes the field, so no panel on that page carries one.
+- **One field *surface* per viewport.** Two competing radial fields read as a
+  texture pack, not as a signal. Marks are exempt: they are identical to each
+  other, so a column of them reads as a legend. When a page wants a second
+  surface, one of the two becomes a mark.
 - **Grain and colour are state, never mood.** If you cannot name the state
   they encode, delete them.
 - **Never both.** A field's colour and its grain always come from the same
@@ -329,7 +353,8 @@ Copy is design material. See also the voice rules in
 
 ## Before you ship a screen
 
-- Is there exactly one field, and does it encode a real state?
+- Is there at most one field *surface*, and does it encode a real state?
+- Could a mark have carried that state instead, on the object that has it?
 - Does it carry a `.field-*` class? A field without one paints nothing.
 - Does anything use colour **outside** a field? Remove it.
 - Is any text on a field muted rather than ink?

@@ -1,6 +1,6 @@
 # wissly — the agent
 
-Status: agreed design, not yet implemented.
+Status: implemented in v0.11.0, except where marked as still open.
 Date: 2026-07-25.
 
 ## Why this document exists
@@ -70,7 +70,7 @@ that is a cheaper security argument than any prompt.
 | **Librarian** | Finds material, answers from it, always with an anchor | `search_sections`, `read_section`, `read_anchor` |
 | **Maker** | Turns sections into artefacts | `read_section`, `write_artefact` |
 | **Examiner** | Asks, grades, records evidence | `next_due`, `grade_answer`, `record_review` |
-| **Steward** | Organises: courses, renaming, archiving, deletion | `list_courses`, `move_material`, `rename`, `archive`, `delete` |
+| **Steward** | Acts for the learner: renames, generates | `search_sections`, `read_section`, `list_courses`, `rename_course`, `make_artefacts` |
 
 The floating bar talks to a **router**, which holds no tools of its own and
 hands off. A learner asking "what is a martingale" reaches the Librarian; "make
@@ -253,18 +253,33 @@ is rejected by the guardrail; a queued message survives a stopped run; an undo
 restores the row the action changed; a run interrupted mid-way resumes at its
 last completed tool call rather than repeating it.
 
-## Order of work
+## What shipped in v0.11.0
 
-1. **Runtime.** `@openai/agents` wired to OpenRouter, the validation layer
-   kept from `openrouter.js`, one agent with read-only tools, tested against a
-   fake model. Nothing user-facing.
-2. **Persistence.** Migration `005`, the four tables, RLS, the data access
+1. **Runtime.** `@openai/agents` on chat completions through OpenRouter,
+   tracing off, tested against a scripted model rather than the network.
+2. **Persistence.** Migration `005` — conversations, messages, agent_runs,
+   agent_actions — with `user_id` and four policies each, and the data access
    layer beside the existing modules in `src/lib/data/`.
-3. **The bar.** Floating, centred, both modes, streaming, queueing, and the
-   grain fix that makes the working state visible.
-4. **Autonomy.** The writing tools, `agent_actions`, undo, the archive.
+3. **The bar.** Floating, centred, both modes, queueing, the field as the
+   working state, and the contrast fix that makes the grain over it visible.
+4. **Autonomy, in its first form.** The Steward holds two writing tools —
+   `rename_course` and `make_artefacts` — and every call it makes writes an
+   `agent_actions` row carrying the payload that reverses it. Undo walks a run
+   newest-first, guarded so two clicks resolve to one.
 
-Steps 1 and 2 are independent and together are the first thing that runs.
+## Still open
+
+- **Streaming.** A turn runs to completion and the answer lands at once. The
+  rows are shaped for streaming — the assistant message exists at `running`
+  from the start — but nothing streams yet.
+- **The conversation list.** Renaming, pinning, archiving, restoring and
+  deleting exist as tested server actions with no interface on them. The bar
+  opens a fresh thread each time.
+- **The remaining agents.** Maker, Examiner and the handoff router. The
+  Steward covers the writing half of the Maker's job for one passage at a
+  time; grading and scheduling are untouched.
+- **The rest of the writing surface.** Moving material between courses,
+  archiving a source, emptying the archive.
 
 ## Out of scope
 

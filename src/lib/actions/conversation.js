@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 
 import { runTurn } from '@/lib/agent/run.js'
+import { describeUndo, undoRun } from '@/lib/agent/undo.js'
+import { actionsFor, runsFor } from '@/lib/data/agent-runs.js'
 import { requireUserId } from '@/lib/auth/user.js'
 import {
   appendMessage,
@@ -198,6 +200,40 @@ export async function deleteThreadAction({ id }) {
 
   try {
     return await deleteConversation(supabase, { id })
+  } catch (error) {
+    return { error: error.message }
+  }
+}
+
+/**
+ * Take back what the agent last changed.
+ *
+ * The learner does not know what a run is, so they do not have to name one:
+ * this finds the most recent run of the thread that actually changed something
+ * and reverses it. A run that only read has nothing to take back and is
+ * skipped rather than reported as a failure.
+ */
+export async function undoLastChangeAction({ conversationId }) {
+  const { supabase } = await client()
+
+  try {
+    const runs = await runsFor(supabase, { conversationId })
+
+    for (const run of runs) {
+      const actions = await actionsFor(supabase, { runId: run.id })
+      const outstanding = actions.filter((action) => action.undo && !action.undone_at)
+      if (outstanding.length === 0) continue
+
+      const result = await undoRun(supabase, { runId: run.id })
+      revalidatePath('/courses')
+      revalidatePath('/library')
+      revalidatePath('/review')
+      revalidatePath('/progress')
+
+      return { message: describeUndo(result), ...result }
+    }
+
+    return { message: describeUndo({ undone: [], failed: [] }), undone: [], failed: [] }
   } catch (error) {
     return { error: error.message }
   }

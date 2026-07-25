@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, MessageSquare, Square, Wand2, X } from 'lucide-react';
+import { ArrowUp, MessageSquare, Square, Undo2, Wand2, X } from 'lucide-react';
 
 import Transcript from '@/components/agent/transcript';
 
@@ -15,13 +15,13 @@ import Transcript from '@/components/agent/transcript';
    learner is choosing between.
 
    **Sending never takes the field away.** A message sent while the agent is
-   still working is queued and appears immediately, greyed by nothing — it is
-   marked in words, per DESIGN.md, because there is no colour to mark it with.
+   still working is queued and appears immediately, marked in words rather than
+   by a tint, because a queue is a status and status carries no hue.
 
-   **Grain is the working state and the only one.** While a run is in flight
-   the panel is a grain field at --grain-3 with the drift; when the answer
-   lands it settles to --grain-1 over 600ms. Pages behind the bar carry their
-   own field, so the bar tells them to stand down while it works: only one
+   **The field is the working state and the only one.** While a run is in
+   flight the transcript is `.field-unresolved` with the drift; when the answer
+   lands it becomes `.field-settled`. Pages behind the bar carry a field of
+   their own, so the bar tells them to stand down while it works: only one
    thing on a screen can be the unresolved thing. */
 
 const MODES = [
@@ -33,9 +33,11 @@ export default function AgentBar({
   messages = [],
   mode: initialMode = 'chat',
   working = false,
+  canUndo = false,
   onSend,
   onStop,
   onModeChange,
+  onUndo,
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState(initialMode);
@@ -76,6 +78,14 @@ export default function AgentBar({
     if (result?.error) setError(result.error);
   }
 
+  async function undo() {
+    setError(null);
+    const result = await onUndo?.();
+    // Undo reports in words either way: what came back, or what did not. A
+    // silent undo leaves the learner unsure whether it ran at all.
+    if (result?.error || result?.message) setError(result.error ?? result.message);
+  }
+
   function chooseMode(next) {
     setMode(next);
     onModeChange?.(next);
@@ -112,14 +122,29 @@ export default function AgentBar({
               <p className="font-mono text-label uppercase">
                 {working ? 'Working' : 'Your material'}
               </p>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close the agent"
-                className="flex size-11 items-center justify-center rounded-control"
-              >
-                <X size={20} strokeWidth={1.5} aria-hidden="true" />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Agent mode acts without asking at each step, so the way back
+                    has to be as reachable as the way forward. */}
+                {canUndo && !working ? (
+                  <button
+                    type="button"
+                    onClick={undo}
+                    className="flex min-h-11 items-center gap-2 rounded-control border border-rule px-3 font-mono text-label uppercase"
+                  >
+                    <Undo2 size={16} strokeWidth={1.5} aria-hidden="true" />
+                    Undo
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close the agent"
+                  className="flex size-11 items-center justify-center rounded-control"
+                >
+                  <X size={20} strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              </div>
             </header>
 
             <Transcript messages={messages} working={working} />

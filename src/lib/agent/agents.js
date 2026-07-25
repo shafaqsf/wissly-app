@@ -3,6 +3,7 @@ import 'server-only'
 import { Agent } from '@openai/agents'
 
 import { readOnlyTools } from './tools.js'
+import { writeTools } from './write-tools.js'
 
 /**
  * The agents.
@@ -106,4 +107,63 @@ export function createLibrarian({ supabase, model, passagesRead = () => 0 }) {
     tools: readOnlyTools(supabase),
     outputGuardrails: [anchorGuardrail(passagesRead)],
   })
+}
+
+export const STEWARD_INSTRUCTIONS = [
+  'You act on the learner’s own study material for wissly, on their behalf.',
+  '',
+  'Read before you write. Find the passage, then work on it — never generate',
+  'from a section you have not read, and never rename something you have not',
+  'looked up.',
+  '',
+  'Do what was asked and stop. If the request is ambiguous about how much —',
+  '"make some cards" — take the smallest reading of it and say what you did,',
+  'so the learner can ask for more. Guessing large is not helpful; it is',
+  'expensive, and it fills their review queue with work they did not choose.',
+  '',
+  'Every change you make can be undone by the learner, so say plainly what you',
+  'changed. Never describe a change you did not make.',
+  '',
+  CITATION_RULE,
+].join('\n')
+
+/**
+ * The Steward: acts for the learner.
+ *
+ * The reading tools come along with the writing ones, and not as a
+ * convenience: a write to a passage the agent never read is a write to a
+ * passage it invented.
+ *
+ * `runId` is required. An action that cannot be attributed to a run is one the
+ * learner cannot find in order to undo it.
+ */
+export function createSteward({
+  supabase,
+  model,
+  userId,
+  runId,
+  client,
+  passagesRead = () => 0,
+}) {
+  if (!runId) throw new Error('the steward needs a run to attribute its actions to')
+
+  return new Agent({
+    name: 'Steward',
+    instructions: STEWARD_INSTRUCTIONS,
+    model,
+    tools: [...readOnlyTools(supabase), ...writeTools(supabase, { userId, runId, client })],
+    outputGuardrails: [anchorGuardrail(passagesRead)],
+  })
+}
+
+/**
+ * The agent a mode gets.
+ *
+ * This function is the whole of the promise the mode switch makes. Chat mode
+ * cannot write because the agent it produces holds no tool that writes — not
+ * because a prompt asked it nicely, and not because the interface disabled a
+ * button.
+ */
+export function agentForMode({ mode, ...params }) {
+  return mode === 'agent' ? createSteward(params) : createLibrarian(params)
 }

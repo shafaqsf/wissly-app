@@ -8,6 +8,7 @@ import {
   openThreadAction,
   sendMessageAction,
   stopThreadAction,
+  undoLastChangeAction,
 } from '@/lib/actions/conversation';
 
 /* The bar's state, kept out of the bar itself.
@@ -71,6 +72,18 @@ export default function AgentDock({ conversation: initial = null, messages: init
     return {};
   }
 
+  // Only agent mode changes anything, so only agent mode has a way back to
+  // offer. Whether there is actually an outstanding change is the server's
+  // question, and it answers it when asked.
+  const canUndo = conversation?.mode === 'agent' && messages.length > 0;
+
+  async function undo() {
+    if (!conversation) return {};
+    const result = await undoLastChangeAction({ conversationId: conversation.id });
+    await refresh(conversation.id);
+    return result;
+  }
+
   async function stop() {
     if (!conversation) return;
     await stopThreadAction({ conversationId: conversation.id });
@@ -83,8 +96,10 @@ export default function AgentDock({ conversation: initial = null, messages: init
       messages={messages}
       mode={conversation?.mode ?? 'chat'}
       working={working}
+      canUndo={canUndo}
       onSend={send}
       onStop={stop}
+      onUndo={undo}
     />
   );
 }

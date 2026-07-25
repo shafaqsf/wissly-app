@@ -9,7 +9,8 @@ import {
   setMessageStatus,
 } from '../data/conversations.js'
 import { endRun, startRun } from '../data/agent-runs.js'
-import { citedSections, createLibrarian } from './agents.js'
+import { agentForMode, citedSections } from './agents.js'
+import { createOpenRouterClient } from './openrouter.js'
 import { configureAgentRuntime } from './runtime.js'
 
 /**
@@ -56,20 +57,15 @@ export async function runTurn({
   conversation,
   message,
   runAgent = sdkRun,
-  createAgent = createLibrarian,
+  createAgent = agentForMode,
   configure = configureAgentRuntime,
+  createClient = createOpenRouterClient,
 }) {
   const { model } = configure()
 
   // Counted as tool results arrive so the guardrail can ask, at the end,
   // whether an answer built on the material said where it came from.
   let passagesRead = 0
-
-  const agent = createAgent({
-    supabase,
-    model,
-    passagesRead: () => passagesRead,
-  })
 
   const answerRow = await appendMessage(supabase, {
     userId,
@@ -80,13 +76,29 @@ export async function runTurn({
     busy: false,
   })
 
+  // The run row comes before the agent, not after: in agent mode every action
+  // is attributed to a run, and an agent built without one would have nowhere
+  // to record what it changed — which is to say, nothing to undo.
   const runRow = await startRun(supabase, {
     userId,
     conversationId: conversation.id,
     messageId: answerRow.id,
-    agent: agent.name,
+    agent: conversation.mode === 'agent' ? 'Steward' : 'Librarian',
     model,
     mode: conversation.mode,
+  })
+
+  const agent = createAgent({
+    supabase,
+    model,
+    mode: conversation.mode,
+    userId,
+    runId: runRow.id,
+    // Artefact generation goes through the structured client, not the SDK: the
+    // format schemas and their repair loop already live there, and a second
+    // path to the same rows would drift from the first.
+    client: conversation.mode === 'agent' ? createClient() : null,
+    passagesRead: () => passagesRead,
   })
 
   const history = await messagesFor(supabase, { conversationId: conversation.id })

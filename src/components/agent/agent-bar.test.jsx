@@ -171,3 +171,35 @@ describe('the field the bar paints', () => {
     expect(container.querySelector('.grain-field')).toHaveClass('field-settled');
   });
 });
+
+describe('taking a change back', () => {
+  it('offers undo only when there is something to take back', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<AgentBar canUndo={false} />);
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
+
+    rerender(<AgentBar canUndo />);
+    expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
+  });
+
+  it('hides undo while the agent is still working', async () => {
+    const user = userEvent.setup();
+    render(<AgentBar canUndo working />);
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull();
+  });
+
+  it('says what came back, so a silent undo is never mistaken for none', async () => {
+    const user = userEvent.setup();
+    const onUndo = vi.fn().mockResolvedValue({ message: 'Took back 2 changes.' });
+    render(<AgentBar canUndo onUndo={onUndo} />);
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+    await user.click(screen.getByRole('button', { name: /undo/i }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Took back 2 changes.');
+  });
+});

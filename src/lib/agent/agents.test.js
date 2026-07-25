@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { fakeSupabase } from '../data/fake-supabase.js'
 import {
   LIBRARIAN_INSTRUCTIONS,
+  STEWARD_INSTRUCTIONS,
+  agentForMode,
   anchorGuardrail,
   citedSections,
   createLibrarian,
@@ -105,5 +107,51 @@ describe('the librarian', () => {
 
   it('is told the exact citation syntax the interface renders', () => {
     expect(LIBRARIAN_INSTRUCTIONS).toContain('[s:SECTION_ID]')
+  })
+})
+
+describe('the mode switch', () => {
+  it('gives chat mode an agent that holds nothing which writes', () => {
+    const agent = agentForMode({ mode: 'chat', supabase: fakeSupabase(), model: 'a/b' })
+
+    expect(agent.name).toBe('Librarian')
+    expect(agent.tools.map((definition) => definition.name)).not.toContain('rename_course')
+    expect(agent.tools.map((definition) => definition.name)).not.toContain('make_artefacts')
+  })
+
+  it('gives agent mode the writing tools as well as the reading ones', () => {
+    const agent = agentForMode({
+      mode: 'agent',
+      supabase: fakeSupabase(),
+      model: 'a/b',
+      userId: 'u1',
+      runId: 'r1',
+      client: {},
+    })
+
+    expect(agent.name).toBe('Steward')
+    expect(agent.tools.map((definition) => definition.name).sort()).toEqual([
+      'list_courses',
+      'make_artefacts',
+      'read_section',
+      'rename_course',
+      'search_sections',
+    ])
+  })
+
+  it('refuses to build a writing agent with no run to attribute actions to', () => {
+    expect(() =>
+      agentForMode({ mode: 'agent', supabase: fakeSupabase(), model: 'a/b', userId: 'u1' }),
+    ).toThrow(/run/i)
+  })
+
+  it('treats an unknown mode as chat, the one that cannot write', () => {
+    expect(agentForMode({ mode: 'root', supabase: fakeSupabase(), model: 'a/b' }).name).toBe(
+      'Librarian',
+    )
+  })
+
+  it('tells the steward to read before it writes', () => {
+    expect(STEWARD_INSTRUCTIONS).toMatch(/Read before you write/)
   })
 })

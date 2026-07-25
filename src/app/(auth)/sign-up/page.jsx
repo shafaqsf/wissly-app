@@ -22,7 +22,12 @@ export default async function SignUpPage() {
 
       <p className="border-rule border-t pt-6 text-body-s text-ink-muted">
         Already have an account?{' '}
-        <Link href="/sign-in" className="text-ink underline underline-offset-4">
+        {/* Rounded for the focus ring: an outline follows the element's own
+            corner, and nothing in this interface is square. */}
+        <Link
+          href="/sign-in"
+          className="rounded-control text-ink underline underline-offset-4"
+        >
           Sign in
         </Link>
         .

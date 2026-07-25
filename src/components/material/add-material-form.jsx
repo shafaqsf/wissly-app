@@ -83,7 +83,7 @@ export default function AddMaterialForm({ action, subjects = [], initialState = 
           name="file"
           type="file"
           accept="application/pdf"
-          className="min-h-11 font-body text-body-s text-ink"
+          className="min-h-11 rounded-control font-body text-body-s text-ink"
         />
         <p className="font-mono text-caption text-ink-muted">Up to 10 MB.</p>
       </div>

@@ -43,8 +43,10 @@ export default function Sidebar({
 
         <Link
           href="/dashboard"
+          // Rounded for the focus ring: an outline follows the element's own
+          // corner, so a control with no radius draws a square one.
           className={[
-            'mr-auto font-display text-title font-semibold lowercase',
+            'mr-auto rounded-control px-1 font-display text-title font-semibold lowercase',
             collapsed ? 'md:sr-only' : '',
           ].join(' ')}
         >

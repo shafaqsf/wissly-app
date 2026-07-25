@@ -34,6 +34,10 @@ export default function SummaryArtefact({ artefact }) {
               key={layer.key}
               className={[
                 'inline-flex min-h-11 cursor-pointer items-center rounded-control border px-4 font-mono text-label uppercase',
+                // The radio inside is `sr-only`, so the ring has to be drawn
+                // on the thing anyone can actually see. Same 2px ink at 2px
+                // offset as the interaction floor everywhere else.
+                'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink',
                 layer.key === layerKey
                   ? 'border-ink text-ink'
                   : 'border-rule text-ink-muted hover:text-ink',

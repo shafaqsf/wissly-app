@@ -7,6 +7,18 @@ import { multipleChoiceFixture } from '@/lib/artefact-fixtures'
 const { options, rationales } = multipleChoiceFixture.payload
 
 describe('MultipleChoiceArtefact', () => {
+  /* Chrome draws its own widget for a radio at `appearance: auto` and ignores
+     an author radius, so the focus outline came out square around a round
+     control. Drawing the control ourselves is what lets the ring follow it —
+     and empty ring / filled dot is the same legend the field marks use. */
+  it('draws its own round radio, so the focus ring is not a square', () => {
+    render(<MultipleChoiceArtefact artefact={multipleChoiceFixture} />)
+
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio).toHaveClass('appearance-none', 'rounded-round')
+    }
+  })
+
   it('offers the options as a named set of radios', () => {
     render(<MultipleChoiceArtefact artefact={multipleChoiceFixture} />)
 

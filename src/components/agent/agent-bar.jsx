@@ -170,7 +170,10 @@ export default function AgentBar({
               placeholder={
                 mode === 'agent' ? 'Tell the agent what to do' : 'Ask about your material'
               }
-              className="min-h-11 flex-1 resize-none bg-transparent py-2 text-body outline-none placeholder:text-ink-muted"
+              // The radius is here for the focus ring. An outline follows the
+              // element's own corner, so a square control draws a square ring
+              // inside a rounded bar — see "Shape" in docs/DESIGN.md.
+              className="min-h-11 flex-1 resize-none rounded-control bg-transparent px-2 py-2 text-body placeholder:text-ink-muted"
             />
 
             {working ? (

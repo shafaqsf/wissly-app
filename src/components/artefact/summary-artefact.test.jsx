@@ -5,6 +5,20 @@ import SummaryArtefact from './summary-artefact'
 import { summaryFixture } from '@/lib/artefact-fixtures'
 
 describe('SummaryArtefact', () => {
+  /* The radio is `sr-only`, so its own focus ring is invisible and the depth
+     switch had no visible focus state at all. The label it sits in is the
+     control anyone can see, so the label wears the ring — see "Interaction
+     floor" in docs/DESIGN.md. */
+  it('shows a focus ring on the label, since the radio itself is off screen', () => {
+    const { container } = render(<SummaryArtefact artefact={summaryFixture} />)
+
+    const labels = [...container.querySelectorAll('label')]
+    expect(labels.length).toBeGreaterThan(0)
+    for (const label of labels) {
+      expect(label.className).toMatch(/has-\[:focus-visible\]:outline/)
+    }
+  })
+
   it('opens at the shallowest layer', () => {
     render(<SummaryArtefact artefact={summaryFixture} />)
 

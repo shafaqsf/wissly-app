@@ -64,7 +64,9 @@ export default function ConceptMastery({ subject, concepts = [] }) {
                   onClick={() => setSelectedId(concept.id)}
                   aria-pressed={concept.id === selectedId}
                   aria-label={`${concept.name}, ${conceptState.label.toLowerCase()}`}
-                  className="flex min-h-11 w-full items-center justify-between gap-4 border-b border-rule py-3 text-left"
+                  // Rounded for the focus ring — the row itself reads as a
+                  // line either way, since only the bottom rule is drawn.
+                  className="flex min-h-11 w-full items-center justify-between gap-4 rounded-control border-b border-rule py-3 text-left"
                 >
                   <span className="flex items-center gap-3">
                     <span

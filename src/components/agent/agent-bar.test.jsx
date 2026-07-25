@@ -16,6 +16,23 @@ describe('the agent bar', () => {
     expect(screen.getByText(/answers come from your material/i)).toBeInTheDocument();
   });
 
+  /* The mark is who is speaking. It sits once, in the panel header, rather
+     than on every turn — a column of the same coloured mark would read as
+     texture, which is the one thing the design language will not have. */
+  it('wears the brand mark once the agent panel is open', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<AgentBar />);
+
+    expect(container.querySelector('[data-brand-mark]')).toBeNull();
+
+    await user.click(screen.getByLabelText(/ask about your material/i));
+
+    const marks = container.querySelectorAll('[data-brand-mark]');
+    expect(marks).toHaveLength(1);
+    // Decorative: the header already names the agent in words beside it.
+    expect(marks[0]).toHaveAttribute('alt', '');
+  });
+
   it('offers both modes and opens in the one that changes nothing', () => {
     render(<AgentBar />);
 

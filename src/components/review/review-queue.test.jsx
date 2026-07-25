@@ -23,6 +23,9 @@ describe('ReviewQueue', () => {
 
     const field = container.querySelector('.grain')
     expect(field).toHaveClass('grain-field')
+    // A card sized to its message, not a full-width band across the page.
+    expect(field).toHaveClass('rounded-surface')
+    expect(field).not.toHaveClass('min-h-64')
   })
 
   it('shows one artefact at a time, and says where you are', () => {

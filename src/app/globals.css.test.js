@@ -96,6 +96,90 @@ function fieldStates() {
   return states
 }
 
+describe('shape', () => {
+  /* Three steps, and only three. A radius that is written by hand somewhere in
+     a component is a fourth step nobody agreed to. */
+  it.each([
+    ['--radius-control', '8px'],
+    ['--radius-surface', '14px'],
+    ['--radius-round', '9999px'],
+  ])('defines %s as %s', (name, value) => {
+    expect(css).toMatch(new RegExp(`${name}:\\s*${value};`))
+  })
+
+  /* Tailwind turns the tokens into `rounded-control` / `rounded-surface` /
+     `rounded-round`. Naming the variable directly bypasses that and gives two
+     spellings for one idea, which is how the old stylesheet drifted. */
+  it('never names a radius token outside globals.css', () => {
+    const offenders = sourceFiles()
+      .filter((file) => !file.replace(/\\/g, '/').endsWith('src/app/globals.css'))
+      .filter((file) => readFileSync(file, 'utf8').includes('--radius-'))
+
+    expect(offenders).toEqual([])
+  })
+
+  /* The grain layer is an `inset: 0` pseudo-element. On a rounded surface it
+     paints square corners over the parent's rounded ones unless it is told to
+     follow them. */
+  it('lets the grain layer follow the corner it sits in', () => {
+    const layer = css.match(/\.grain::before\s*\{([^}]*)\}/)
+    expect(layer?.[1]).toMatch(/border-radius:\s*inherit;/)
+  })
+})
+
+/* Every `ellipse W% H% at X% Y%` in a rule, in the order it is painted. */
+function geometry(selector) {
+  const block = css.match(new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`))
+  if (!block) throw new Error(`No rule ${selector} in globals.css`)
+  return [...block[1].matchAll(/ellipse\s+([\d.]+%\s+[\d.]+%\s+at\s+[\d.]+%\s+[\d.]+%)/g)].map(
+    ([, shape]) => shape.replace(/\s+/g, ' '),
+  )
+}
+
+describe('field geometry', () => {
+  /* The light has to come from the same direction on every surface, or the
+     same class reads as three different things depending on how the box
+     happens to be cut. Corners, not arbitrary interior points. */
+  it('anchors every stop to an edge or a corner', () => {
+    expect(geometry('.grain-field').map((shape) => shape.split(' at ')[1])).toEqual([
+      '0% 100%',
+      '100% 0%',
+      '50% 100%',
+    ])
+  })
+
+  /* The mask exists so grain is dense where colour is saturated. The moment
+     it drifts from the background it stops tracking anything. */
+  it('masks the grain with exactly the gradients it paints', () => {
+    expect(geometry('.grain-field::before')).toEqual(geometry('.grain-field'))
+  })
+})
+
+describe('the field mark', () => {
+  const mark = () => css.match(/\.grain-mark\s*\{([^}]*)\}/)?.[1] ?? ''
+
+  it('is fully round', () => {
+    expect(mark()).toMatch(/border-radius:\s*var\(--radius-round\);/)
+  })
+
+  /* A mark is what makes many-per-screen legible: a dozen radial fields down
+     a list read as a texture pack, a dozen identical marks read as a legend.
+     Give it geometry and it stops being a mark. */
+  it('carries no radial geometry', () => {
+    expect(geometry('.grain-mark')).toEqual([])
+  })
+
+  /* No paper core to protect the text, because a mark never holds text. The
+     rule against muted ink on a field is about surfaces, not marks. */
+  it('holds no text', () => {
+    const offenders = sourceFiles()
+      .filter((file) => file.endsWith('.jsx'))
+      .filter((file) => /<[a-z]+[^>]*grain-mark[^>]*>[^<\s]/.test(readFileSync(file, 'utf8')))
+
+    expect(offenders).toEqual([])
+  })
+})
+
 describe('the field palette', () => {
   it('defines all five field tokens', () => {
     for (const name of ['hot', 'deep', 'warm', 'mid', 'cool']) {
@@ -168,8 +252,48 @@ describe('colour containment', () => {
     expect(offenders).toEqual([])
   })
 
-  /* Every field carries a state class. A `.grain-field` without one paints
-     transparent stops and silently loses the signal it was there to give. */
+  /* A header is a position on the page, not a state. A page-wide field band
+     is how the field ended up describing the furniture rather than the
+     subject — see "Where a field goes" in docs/DESIGN.md. */
+  it('never turns a header into a field', () => {
+    const offenders = sourceFiles()
+      .filter((file) => file.endsWith('.jsx'))
+      .filter((file) => /<header[^>]*grain-field/.test(readFileSync(file, 'utf8')))
+
+    expect(offenders).toEqual([])
+  })
+
+  /* The brand mark is the one coloured asset in the product, and it is a named
+     exception rather than a loophole — see "The mark" in docs/DESIGN.md. One
+     component owns the file; everything else composes that component, so the
+     exception cannot quietly become a habit. */
+  it('keeps the brand mark to the one component that owns it', () => {
+    const offenders = sourceFiles()
+      .filter((file) => !file.replace(/\\/g, '/').endsWith('components/brand/brand-mark.jsx'))
+      .filter((file) => readFileSync(file, 'utf8').includes('/brand/icon'))
+
+    expect(offenders).toEqual([])
+  })
+
+  /* Beside a form, never behind or below one. A form that reports its own
+     progress wears a mark next to the words; a surface under the submit button
+     is still a surface a learner is reading on. */
+  it('never puts a field surface inside a form', () => {
+    const offenders = sourceFiles()
+      .filter((file) => file.endsWith('.jsx'))
+      .filter((file) =>
+        readFileSync(file, 'utf8')
+          .split('<form')
+          .slice(1)
+          .some((rest) => rest.split('</form>')[0].includes('grain-field')),
+      )
+
+    expect(offenders).toEqual([])
+  })
+
+  /* Every field carries a state class. A `.grain-field` or `.grain-mark`
+     without one paints transparent stops and silently loses the signal it was
+     there to give. */
   it('never paints a field without a state', () => {
     const offenders = sourceFiles()
       .filter((file) => file.endsWith('.jsx'))
@@ -178,7 +302,7 @@ describe('colour containment', () => {
           .split('\n')
           .some(
             (line) =>
-              line.includes('grain-field') &&
+              (line.includes('grain-field') || line.includes('grain-mark')) &&
               !/field-(unresolved|partial|settled)|\$\{[a-z.]*field\}/i.test(line),
           ),
       )

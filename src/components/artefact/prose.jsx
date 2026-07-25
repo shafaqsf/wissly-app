@@ -139,7 +139,7 @@ export default function Prose({ text, className = '' }) {
           return (
             <pre
               key={index}
-              className="overflow-x-auto border border-rule bg-paper-sunk p-4"
+              className="overflow-x-auto rounded-surface border border-rule bg-paper-sunk p-4"
             >
               <code className="font-mono text-body-s text-ink">
                 {block.code.split('\n').map((line, lineIndex) => (

@@ -10,8 +10,8 @@ describe('ConceptMastery', () => {
       <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
     )
 
-    const fields = container.querySelectorAll('.grain')
-    // One grain field per viewport. This is it.
+    const fields = container.querySelectorAll('.grain-field')
+    // One field *surface* per viewport. This is it; the row marks are marks.
     expect(fields).toHaveLength(1)
     expect(fields[0]).toHaveStyle({ '--grain': 'var(--grain-2)' })
     expect(screen.getByRole('heading', { name: 'Linear algebra' })).toBeInTheDocument()
@@ -81,12 +81,52 @@ describe('ConceptMastery', () => {
       screen.getByRole('button', { name: 'Diagonalisation, untouched' }),
     )
 
-    const fields = container.querySelectorAll('.grain')
+    const fields = container.querySelectorAll('.grain-field')
     expect(fields).toHaveLength(1)
     expect(fields[0]).toHaveStyle({ '--grain': 'var(--grain-3)' })
     expect(
       screen.getByRole('heading', { name: 'Diagonalisation' }),
     ).toBeInTheDocument()
+  })
+
+  /* The state a concept is in belongs to that concept. A mark on its row puts
+     it there, which is the whole reason marks exist. */
+  it('marks every concept row with the state that concept is in', () => {
+    const { container } = render(
+      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
+    )
+
+    const marks = container.querySelectorAll('.grain-mark')
+    expect(marks).toHaveLength(conceptsFixture.length)
+    expect([...marks].map((mark) => mark.className)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('field-settled'),
+        expect.stringContaining('field-unresolved'),
+        expect.stringContaining('field-partial'),
+      ]),
+    )
+  })
+
+  /* Marks are decoration to a screen reader — the row already names its state
+     in the accessible name and in words beside it. */
+  it('hides its marks from assistive technology', () => {
+    const { container } = render(
+      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
+    )
+
+    for (const mark of container.querySelectorAll('.grain-mark')) {
+      expect(mark).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
+  it('rounds the field surface rather than banding the page', () => {
+    const { container } = render(
+      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
+    )
+
+    const field = container.querySelector('.grain-field')
+    expect(field).toHaveClass('rounded-surface')
+    expect(field).not.toHaveClass('min-h-64')
   })
 
   it('lets the learner step back out to the subject', async () => {

@@ -11,7 +11,9 @@ vi.mock('next/font/google', () => {
   }
 })
 
-import RootLayout from './layout'
+import RootLayout, { metadata } from './layout'
+
+import { MARK } from '@/components/brand/brand-mark'
 
 /* Browser extensions write their own attributes onto `<body>` before React
    hydrates — a password manager, a colour picker, a reader mode. React sees
@@ -31,5 +33,13 @@ describe('the root layout', () => {
 
     expect(html.type).toBe('html')
     expect(html.props.suppressHydrationWarning).toBeUndefined()
+  })
+
+  /* One file is the mark: the browser tab and the agent point at the same
+     asset, so the two can never drift apart. Declaring it here rather than
+     through the app/icon file convention is what keeps it to one copy. */
+  it('points the browser tab at the one brand mark', () => {
+    expect(metadata.icons.icon).toBe(MARK)
+    expect(metadata.icons.apple).toBe(MARK)
   })
 })

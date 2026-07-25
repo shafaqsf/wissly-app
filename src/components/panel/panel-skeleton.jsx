@@ -11,7 +11,7 @@ export default function PanelSkeleton({ title, wide = false }) {
       aria-label={title}
       aria-busy="true"
       className={[
-        'flex flex-col border border-rule bg-paper',
+        'flex flex-col overflow-hidden rounded-surface border border-rule bg-paper',
         wide ? 'md:col-span-2' : '',
       ].join(' ')}
     >

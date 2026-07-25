@@ -25,8 +25,9 @@ does not encode state, remove it.
 **The chrome has no colour. Colour exists only inside a field.**
 
 Every control, every glyph, every icon, every border is ink on paper. Hue
-appears in exactly one place — the grainy gradient described under
-[Grain](#grain) — where it encodes the same thing the grain encodes.
+appears in two places and no others: the grainy gradient described under
+[Grain](#grain), where it encodes the same thing the grain encodes, and
+[the mark](#the-mark), which is that gradient standing still.
 
 ### Ink and paper
 
@@ -126,9 +127,26 @@ component, 16 is the default gap.
 
 ## Shape
 
-- `--radius: 4px` on controls: buttons, inputs, chips.
-- `0` on structural surfaces: cards, panels, grain fields, dividers.
-- Fully round only on avatars and count badges.
+Soft, but calm. Three steps and no fourth.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--radius-control` | `8px` | Buttons, inputs, chips, nav items, citation marks |
+| `--radius-surface` | `14px` | Panels, field surfaces, the agent bar, popovers, cards |
+| `--radius-round` | `9999px` | Avatars, count badges, field marks |
+
+Reach for them as `rounded-control`, `rounded-surface`, `rounded-round`.
+**Never name a radius token inside a component.** Two spellings for one idea is
+how a shape system drifts, and `src/app/globals.css.test.js` fails on it.
+
+Two things stay square, and both for the same reason: they are page *edges*,
+not surfaces. The sidebar rail runs to the viewport edge, and so does the
+mobile top bar. A rounded corner there opens a gap onto nothing.
+
+Anything carrying `.grain` inherits its parent's radius, so the texture follows
+the corner rather than cutting across it. A square grain layer on a rounded
+panel is visible immediately, so the rule is enforced in the stylesheet rather
+than left to each caller.
 
 Hairlines are `1px solid var(--rule)`. There are no shadows anywhere. Depth
 is expressed by `--paper-sunk` and by grain, never by a blur.
@@ -142,6 +160,37 @@ is expressed by `--paper-sunk` and by grain, never by a blur.
 - Never the only carrier of meaning. Every icon-only control has an
   `aria-label`, and any icon that conveys state sits beside text.
 - Do not mix in another icon set, do not recolour, do not add a gradient.
+
+The mark below is not an icon and none of this applies to it.
+
+## The mark
+
+`public/brand/icon.png` — a flame, drawn in the field palette and grained:
+heat at its edges, depth behind it, a cool core. It is the browser tab icon and
+it is the agent's face, and it is **the one coloured thing in the product**.
+
+This is a named exception, and it earns that on the same grounds the colour
+rule exists. Hue is contained so it stays a signal rather than becoming
+decoration. The mark does not spend that signal — it *is* the signal, held
+still: the same three tints, the same texture, the same one idea the whole
+interface is built on. A mark in some other palette would make the exception
+arbitrary, and then it would be a loophole.
+
+What the exception does not license:
+
+- **One file, one owner.** `src/components/brand/brand-mark.jsx` names the
+  asset; everything else composes that component or reads its `MARK` export.
+  `src/app/globals.css.test.js` fails if a second file names the path.
+- **It is never given a state.** No `.field-*` class, no grain intensity, no
+  settle. It does not brighten when the agent works. It is identity, not state,
+  and the two must not be confused.
+- **It is never the only carrier of meaning.** It is decorative — `alt=""` —
+  and the words it sits beside do the work.
+- **It appears once per screen.** Repeating it down a transcript would put a
+  column of the same colour on the page, which reads as texture and is exactly
+  what [Grain](#grain) forbids.
+- **Nothing else follows it.** No coloured illustration, no coloured
+  spot art, no second brand asset. This is the exception, in the singular.
 
 ## Grain
 
@@ -191,10 +240,18 @@ Applied on a `::before` pseudo-element with `mix-blend-mode: multiply` and
 ### The field
 
 A **field** is clean paper with three colour stops bleeding in from its edges
-— heat near the left, depth from the top corner, a cool floor rising from
-below — and a grain layer masked to the same geometry, so the texture is dense
-where the colour is saturated and the paper core stays clean. The core is
-where text sits.
+— heat from the bottom-left corner, depth from the top-right, a cool floor
+rising along the bottom edge — and a grain layer masked to the same geometry,
+so the texture is dense where the colour is saturated and the paper core stays
+clean. The core is where text sits.
+
+Every stop is anchored to a corner or an edge, never to a point inside the box.
+An interior anchor makes the same class read as three different things
+depending on how the surface happens to be cut — a wide header and a tall
+column would light from different directions. `globals.css.test.js` asserts the
+anchors, and asserts that the grain mask names the same three gradients the
+background paints; the moment those drift apart the texture stops tracking the
+colour.
 
 Colour and grain are **one axis, not two**. A field is painted by one state
 class, and that class moves both:
@@ -214,24 +271,47 @@ another with its colour.
 nothing at all, so an arrival used to look like a missing element. A settled
 field is still a surface — quiet, cool, unmistakably *finished*.
 
-A field is reserved for:
+### Two forms
 
-1. The agent's working state.
-2. Empty states — a surface with nothing on it yet is, definitionally,
+The state is one idea. It comes in two sizes, and choosing the wrong one is
+what made the earlier screens read as decoration.
+
+**A field surface — `.grain-field`.** Radial geometry, a paper core, holds
+text. One per viewport. It belongs to a whole screen or a whole panel, and it
+is sized to the object whose state it carries — not to the page it happens to
+sit on. A field that fills half a viewport is describing the viewport, and the
+viewport does not have a mastery.
+
+**A field mark — `.grain-mark`.** A small round mark: one flat tint, no
+geometry, no text. As many per screen as there are objects with a state. A
+concept row, a queued item, an agent thinking beside a line of status text.
+This is the form to reach for first — the state sits on the thing that has it.
+
+**A flat wash — `.grain-wash`.** For several surfaces appearing at once, such
+as panel skeletons: the same state colour as a flat tint, because several
+radial gradients at once read as a texture pack rather than as a signal.
+
+### Where a field goes
+
+1. On the object whose state it is — a concept, a queue item, an agent. Prefer
+   a mark.
+2. The agent's working state.
+3. Empty states — a surface with nothing on it yet is, definitionally,
    unresolved.
-3. The mastery field, where the state it carries is the whole point.
-4. A page header whose field reads the learner's position across the page.
-5. The signed-out frame — the one field carrying an account state rather than
+4. The signed-out frame — the one field carrying an account state rather than
    a knowledge state, and the one to challenge first if the rule ever needs
    tightening.
 
-**Beside a form, never behind one.** The auth screens put the field next to
-the reading column on desktop and above it on a phone. Never behind a table.
-Never as a button fill. Never as a page-wide wallpaper.
+**Not on a page header.** A header is a position on the page, not a state. A
+page-wide band was how the field ended up describing the furniture instead of
+the subject.
 
-A field that appears several at a time — panel skeletons — uses `.grain-wash`
-instead: the same state colour as a flat tint, no radial geometry, because
-several gradients at once read as a texture pack rather than as a signal.
+**Beside a form, never behind or below one.** Never behind a table. Never as a
+button fill. Never as a page-wide wallpaper. A form that reports its own
+progress uses a mark beside the text, not a surface under the button.
+
+Some screens carry no field at all. Settings has no state worth encoding, and
+inventing one there is exactly the decoration this document exists to prevent.
 
 ### Text on a field
 
@@ -249,9 +329,10 @@ stylesheet itself and fails if a stop is ever pushed past it.
 
 - **Grain never sits under body text above `--grain-2`.** Contrast is not
   negotiable against atmosphere.
-- **One field per viewport.** Two competing fields read as a texture pack, not
-  as a signal. When a page wants a second one, something has to give it up —
-  the dashboard header takes the field, so no panel on that page carries one.
+- **One field *surface* per viewport.** Two competing radial fields read as a
+  texture pack, not as a signal. Marks are exempt: they are identical to each
+  other, so a column of them reads as a legend. When a page wants a second
+  surface, one of the two becomes a mark.
 - **Grain and colour are state, never mood.** If you cannot name the state
   they encode, delete them.
 - **Never both.** A field's colour and its grain always come from the same
@@ -304,9 +385,11 @@ Copy is design material. See also the voice rules in
 
 ## Before you ship a screen
 
-- Is there exactly one field, and does it encode a real state?
+- Is there at most one field *surface*, and does it encode a real state?
+- Could a mark have carried that state instead, on the object that has it?
 - Does it carry a `.field-*` class? A field without one paints nothing.
-- Does anything use colour **outside** a field? Remove it.
+- Does anything use colour **outside** a field, other than the one mark?
+  Remove it.
 - Is any text on a field muted rather than ink?
 - Is the reading column at or under 66 characters?
 - Does every focusable element show its focus ring?

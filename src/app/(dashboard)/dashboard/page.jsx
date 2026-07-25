@@ -44,6 +44,10 @@ async function SubjectsPanel() {
   );
 }
 
+/* The page's state, on the panel that reports it. The average across every
+   concept the learner has is what "how am I doing" means, and Today is the
+   panel that answers that question — so the mark goes here rather than on the
+   page header, which is a position and not a state. */
 async function DuePanel() {
   const supabase = await createClient();
   const [due, concepts] = await Promise.all([
@@ -52,9 +56,10 @@ async function DuePanel() {
   ]);
 
   const mastered = concepts.filter((concept) => concept.mastery >= MASTERED_AT).length;
+  const state = masteryState(averageMastery(concepts));
 
   return (
-    <Panel title="Today">
+    <Panel title="Today" mark={state}>
       <dl className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-4">
           <dt className="text-body-s text-ink-muted">Due now</dt>
@@ -71,31 +76,12 @@ async function DuePanel() {
   );
 }
 
-/* The page's one field, and the only thing on the dashboard that reads the
-   learner's whole position at once: the average across every concept they
-   have. It is a header, so it says where you are before it says anything
-   about what is due. */
-async function DashboardHeader() {
-  const supabase = await createClient();
-  const concepts = await listConceptMastery(supabase);
-  const state = masteryState(averageMastery(concepts));
-
+/* Ink on paper. The header used to be the page's field, which meant the one
+   coloured surface on the dashboard was describing a title block rather than
+   any state the learner has. The state moved to the Today panel. */
+function DashboardHeader() {
   return (
-    <header
-      className={`grain grain-field ${state.field} flex flex-col gap-2 px-6 py-10 md:px-10 md:py-14`}
-      style={{ '--grain': state.grain }}
-    >
-      <p className="font-mono text-label uppercase text-ink">Your work</p>
-      <h1 className="font-display text-display-l font-bold">Dashboard</h1>
-    </header>
-  );
-}
-
-/* The header before its concepts arrive. Same box, no field — an empty field
-   would claim a state the page has not read yet. */
-function DashboardHeaderSkeleton() {
-  return (
-    <header className="flex flex-col gap-2 px-6 py-10 md:px-10 md:py-14">
+    <header className="flex flex-col gap-2">
       <p className="font-mono text-label uppercase text-ink-muted">Your work</p>
       <h1 className="font-display text-display-l font-bold">Dashboard</h1>
     </header>
@@ -110,8 +96,6 @@ async function MaterialPanel() {
     <Panel
       title="Recent material"
       wide
-      // No field here. The header took the page's one field, and two would
-      // read as a texture pack rather than as a signal.
       empty={
         sources.length === 0
           ? 'Nothing yet. Add a page of notes in the library and wissly will read it.'
@@ -132,9 +116,7 @@ async function MaterialPanel() {
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
-      <Suspense fallback={<DashboardHeaderSkeleton />}>
-        <DashboardHeader />
-      </Suspense>
+      <DashboardHeader />
 
       <PanelGrid>
         <Suspense fallback={<PanelSkeleton title="Subjects" />}>

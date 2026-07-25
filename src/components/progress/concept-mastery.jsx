@@ -4,16 +4,17 @@ import { useState } from 'react';
 import { averageMastery, masteryState } from '@/lib/mastery';
 import { quietButtonClass } from '@/components/artefact/control';
 
-/* Progress, as one field.
+/* Progress, as one surface and a column of marks.
 
-   DESIGN.md allows exactly one field per viewport, and a list of concepts
-   wants one per row. The resolution: the field belongs to whatever the
-   learner is looking at — the subject to begin with, a single concept once
-   one is picked — and the list carries its states in words. The words and the
-   field say the same thing; only the field is a field.
+   DESIGN.md allows one field *surface* per viewport, and a list of concepts
+   wants a state per row. Marks are what resolve that: identical to each other,
+   so the column reads as a legend rather than as texture, and small enough
+   that the state sits on the concept that has it instead of on a band across
+   the page.
 
-   Picking a concept is therefore the settle, in the open: grain and colour
-   travel together to the new state over 600ms. */
+   The surface belongs to whatever the learner is looking at — the subject to
+   begin with, a single concept once one is picked. Picking a concept is the
+   settle, in the open: grain and colour travel together over 600ms. */
 export default function ConceptMastery({ subject, concepts = [] }) {
   const [selectedId, setSelectedId] = useState(null);
 
@@ -26,7 +27,7 @@ export default function ConceptMastery({ subject, concepts = [] }) {
     <div className="flex flex-col gap-8">
       <section
         aria-label="Mastery"
-        className={`grain grain-field ${state.field} flex min-h-64 flex-col items-center justify-center gap-2 px-6 py-12 text-center`}
+        className={`grain grain-field ${state.field} flex flex-col items-center justify-center gap-2 rounded-surface px-6 py-10 text-center`}
         style={{ '--grain': state.grain }}
       >
         <h2 className="font-display text-display-l font-bold">{heading}</h2>
@@ -58,9 +59,16 @@ export default function ConceptMastery({ subject, concepts = [] }) {
                   onClick={() => setSelectedId(concept.id)}
                   aria-pressed={concept.id === selectedId}
                   aria-label={`${concept.name}, ${conceptState.label.toLowerCase()}`}
-                  className="flex min-h-11 w-full items-baseline justify-between gap-4 border-b border-rule py-3 text-left"
+                  className="flex min-h-11 w-full items-center justify-between gap-4 border-b border-rule py-3 text-left"
                 >
-                  <span className="text-body">{concept.name}</span>
+                  <span className="flex items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className={`grain grain-mark ${conceptState.field}`}
+                      style={{ '--grain': conceptState.grain }}
+                    />
+                    <span className="text-body">{concept.name}</span>
+                  </span>
                   <span className="font-mono text-caption uppercase text-ink-muted">
                     {conceptState.label}
                   </span>

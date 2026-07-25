@@ -12,6 +12,26 @@ describe('a URL that is not a page', () => {
     )
   })
 
+  /* The whole viewport used to be the field, and it carried no --grain at all
+     — so it rendered at the ambient intensity while its own comment claimed
+     otherwise. It is now a card around the heading, at the intensity its state
+     class calls for, with the body copy on clean paper beside it. */
+  it('states the state it paints, and paints only the heading', () => {
+    const { container } = render(<NotFound />)
+
+    const field = container.querySelector('.grain-field')
+    expect(field).toHaveClass('field-unresolved')
+    expect(field).toHaveStyle({ '--grain': 'var(--grain-3)' })
+    expect(field).toHaveClass('rounded-surface')
+    expect(field).not.toBe(container.firstChild)
+  })
+
+  it('keeps muted ink off the field', () => {
+    const { container } = render(<NotFound />)
+
+    expect(container.querySelector('.grain-field .text-ink-muted')).toBeNull()
+  })
+
   it('offers the way back that a learner actually wants', () => {
     render(<NotFound />)
 

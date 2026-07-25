@@ -151,6 +151,46 @@ describe('Panel', () => {
 
     expect(container.querySelector('.grain')).toBeNull()
   })
+
+  it('rounds its surface and clips what it holds to the same corner', () => {
+    const { container } = render(<Panel title="Courses">content</Panel>)
+
+    expect(container.firstChild).toHaveClass('rounded-surface')
+    expect(container.firstChild).toHaveClass('overflow-hidden')
+  })
+
+  /* A panel that reports a state wears a mark, not a field. The mark sits in
+     the header beside the title, so the state belongs to the panel rather
+     than to the page it is on. */
+  it('wears a state mark in its header when given one', () => {
+    const { container } = render(
+      <Panel title="Today" mark={{ field: 'field-partial', grain: 'var(--grain-2)', label: 'In progress' }}>
+        content
+      </Panel>,
+    )
+
+    const mark = container.querySelector('.grain-mark')
+    expect(mark).toHaveClass('field-partial')
+    expect(mark).toHaveStyle({ '--grain': 'var(--grain-2)' })
+  })
+
+  /* A mark that only exists as a colour says nothing to a screen reader, and
+     nothing at all to anyone who cannot separate the three tints. */
+  it('names the state the mark carries', () => {
+    render(
+      <Panel title="Today" mark={{ field: 'field-partial', grain: 'var(--grain-2)', label: 'In progress' }}>
+        content
+      </Panel>,
+    )
+
+    expect(screen.getByText('In progress')).toBeInTheDocument()
+  })
+
+  it('wears no mark when it is not given one', () => {
+    const { container } = render(<Panel title="Courses">content</Panel>)
+
+    expect(container.querySelector('.grain-mark')).toBeNull()
+  })
 })
 
 describe('PanelSkeleton', () => {
@@ -167,6 +207,13 @@ describe('PanelSkeleton', () => {
     const grained = container.querySelector('.grain')
     expect(grained).not.toBeNull()
     expect(grained).toHaveStyle({ '--grain': 'var(--grain-3)' })
+  })
+
+  it('takes the same rounded surface as the panel it stands in for', () => {
+    const { container } = render(<PanelSkeleton title="Courses" />)
+
+    expect(container.firstChild).toHaveClass('rounded-surface')
+    expect(container.firstChild).toHaveClass('overflow-hidden')
   })
 })
 

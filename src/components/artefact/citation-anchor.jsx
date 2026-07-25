@@ -42,7 +42,7 @@ export default function CitationAnchor({ ordinal, anchor, passage }) {
       </sup>
 
       {open ? (
-        <span className="mt-3 mb-3 block max-w-measure border border-rule bg-paper-sunk px-4 py-3">
+        <span className="mt-3 mb-3 block max-w-measure rounded-surface border border-rule bg-paper-sunk px-4 py-3">
           <span className="block font-mono text-label uppercase text-ink-muted">
             Source {ordinal}
           </span>

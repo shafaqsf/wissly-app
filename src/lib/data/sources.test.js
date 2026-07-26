@@ -99,6 +99,43 @@ describe('storing a source', () => {
     expect(argsOf(remove, 'eq')).toEqual(['id', 'src-1'])
   })
 
+  it('defaults to not generated — the ordinary path is real material', async () => {
+    const supabase = fakeSupabase({
+      sources: { data: { id: 'src-1' }, error: null },
+      sections: { data: [{ id: 'sec-1' }], error: null },
+    })
+
+    await createSource(supabase, {
+      userId: 'user-1',
+      subjectId: 'sub-1',
+      kind: 'text',
+      title: 'Notes',
+      sections: [section(1, 'One')],
+    })
+
+    const [row] = argsOf(supabase.query('sources'), 'insert')
+    expect(row.generated).toBe(false)
+  })
+
+  it('marks a source drafted from the goal-course pipeline as generated', async () => {
+    const supabase = fakeSupabase({
+      sources: { data: { id: 'src-1' }, error: null },
+      sections: { data: [{ id: 'sec-1' }], error: null },
+    })
+
+    await createSource(supabase, {
+      userId: 'user-1',
+      subjectId: 'sub-1',
+      kind: 'text',
+      title: 'Drafted course',
+      sections: [section(1, 'One', { generated: true })],
+      generated: true,
+    })
+
+    const [row] = argsOf(supabase.query('sources'), 'insert')
+    expect(row.generated).toBe(true)
+  })
+
   it('falls back to a title rather than storing a blank one', async () => {
     const supabase = fakeSupabase({
       sources: { data: { id: 'src-1' }, error: null },

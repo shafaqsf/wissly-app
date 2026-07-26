@@ -8,16 +8,33 @@
  * nothing that already imports them from there has to change. */
 
 /**
- * An anchor is `{ page }` when the source was a PDF and `{ start, end,
- * heading? }` when it was pasted text. Both have to read as a place a person
- * can find again, so both get words rather than a raw offset.
+ * An anchor is `{ page }` when the source was a PDF, `{ start, end,
+ * heading? }` when it was pasted text, and `{ generated: true, heading? }`
+ * when the section was drafted by the agent from a stated goal rather than
+ * cut from anything the learner brought — see
+ * `src/lib/agent/course-from-goal.js`. The first two read as a place a
+ * person can find again; the third must never be worded as though it were
+ * one. Confidently implying a source that does not exist is the one failure
+ * this product cannot afford, so a generated anchor says so in the same
+ * words every time rather than being left to look like a passage citation
+ * that merely forgot its page number.
  */
 export function describeAnchor(anchor) {
   if (!anchor) return 'source unknown';
+  if (anchor.generated) {
+    return anchor.heading
+      ? `generated, not from your material — "${anchor.heading}"`
+      : 'generated, not from your material';
+  }
   if (anchor.page != null) return `page ${anchor.page}`;
 
   const range = `characters ${anchor.start}–${anchor.end}`;
   return anchor.heading ? `${anchor.heading}, ${range}` : range;
+}
+
+/** True when a passage was drafted by the agent rather than cut from source. */
+export function isGeneratedAnchor(anchor) {
+  return Boolean(anchor?.generated);
 }
 
 /**

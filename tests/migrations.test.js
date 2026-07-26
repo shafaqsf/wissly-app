@@ -19,6 +19,15 @@ const tables = [...all.matchAll(/create table if not exists public\.(\w+)/g)].ma
   (match) => match[1],
 )
 
+/**
+ * Tables with no `update` policy, on purpose. A row here is a judgement made
+ * once — wrong or stale, it is deleted and regenerated, never edited in
+ * place — so there is nothing for `update` to do, and (per migrations/
+ * README.md) an `update` policy with no work behind it is a trap, not a
+ * completeness requirement.
+ */
+const NO_UPDATE = new Set(['concept_links'])
+
 describe('migration files', () => {
   it('are numbered NNN_snake_case.sql', () => {
     expect(files.length).toBeGreaterThan(0)
@@ -39,6 +48,7 @@ describe('the schema', () => {
       'agent_actions',
       'agent_runs',
       'artefacts',
+      'concept_links',
       'concepts',
       'conversations',
       'messages',
@@ -69,6 +79,7 @@ describe('row level security', () => {
   it('gives every table a policy for all four commands', () => {
     for (const table of tables) {
       for (const command of ['select', 'insert', 'update', 'delete']) {
+        if (NO_UPDATE.has(table) && command === 'update') continue
         const policy = new RegExp(
           `on public\\.${table} for ${command}\\b`,
         )
@@ -79,7 +90,7 @@ describe('row level security', () => {
 
   it('scopes every policy to the owning user', () => {
     const policies = allPolicies()
-    expect(policies.length).toBe(tables.length * 4)
+    expect(policies.length).toBe(tables.length * 4 - NO_UPDATE.size)
     for (const policy of policies) {
       expect(policy).toContain('to authenticated')
       expect(policy).toContain('(select auth.uid()) = user_id')
@@ -88,7 +99,7 @@ describe('row level security', () => {
 
   it('gives every update policy both using and with check', () => {
     const updates = allPolicies().filter((policy) => / for update\b/.test(policy))
-    expect(updates.length).toBe(tables.length)
+    expect(updates.length).toBe(tables.length - NO_UPDATE.size)
     for (const policy of updates) {
       expect(policy).toMatch(/using \(\(select auth\.uid\(\)\) = user_id\)/)
       expect(policy).toMatch(/with check \(\(select auth\.uid\(\)\) = user_id\)/)

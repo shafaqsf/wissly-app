@@ -127,6 +127,81 @@ export const openQuestionFixture = {
   },
 };
 
+export const comparisonTableFixture = {
+  ...characteristic,
+  id: 'artefact-comparison-diagonalisable',
+  format: 'comparison_table',
+  payload: {
+    items: ['Diagonalisable matrix', 'Defective matrix'],
+    dimensions: ['Has n independent eigenvectors', 'Similar to a diagonal matrix'],
+    cells: [
+      {
+        item_index: 0,
+        dimension_index: 0,
+        value: 'Yes',
+        rationale: 'That is what diagonalisable means.',
+      },
+      {
+        item_index: 0,
+        dimension_index: 1,
+        value: 'Yes',
+        rationale: '$P^{-1}AP$ is diagonal for the matrix $P$ of eigenvectors.',
+      },
+      {
+        item_index: 1,
+        dimension_index: 0,
+        value: 'No',
+        rationale: 'A repeated eigenvalue can fall short of a full eigenspace.',
+      },
+      {
+        item_index: 1,
+        dimension_index: 1,
+        value: 'No',
+        rationale: 'No invertible $P$ can diagonalise it.',
+      },
+    ],
+  },
+};
+
+export const orderingFixture = {
+  ...characteristic,
+  id: 'artefact-ordering-eigenvalues',
+  format: 'ordering',
+  payload: {
+    prompt: 'Put the steps of finding a matrix’s eigenvalues in order.',
+    items: [
+      'Form $A - \\lambda I$',
+      'Take its determinant to get the characteristic polynomial',
+      'Solve $\\det(A - \\lambda I) = 0$ for $\\lambda$',
+      'Check each root against the original matrix',
+    ],
+    rationale: 'Each step needs the polynomial the step before it built.',
+  },
+};
+
+/* Composed rather than generated — see the note on the practice_exam schema
+   in src/lib/agent/formats.js. It has no section of its own; the tasks it
+   references keep their own anchors. */
+export const practiceExamFixture = {
+  subject_id,
+  id: 'artefact-exam-eigenvalues',
+  format: 'practice_exam',
+  section_id: null,
+  concept_id: null,
+  section_ordinal: null,
+  anchor: null,
+  passage: null,
+  payload: {
+    title: 'Eigenvalues and eigenvectors, timed',
+    instructions: 'Answer both questions in order. Ten minutes, no notes.',
+    time_limit_minutes: 10,
+    items: [
+      { artefact_id: 'artefact-flashcard-eigenvalue', format: 'flashcard' },
+      { artefact_id: 'artefact-choice-characteristic', format: 'multiple_choice' },
+    ],
+  },
+};
+
 /* The grade the agent returns for a free-text answer. Never stored on the
    artefact — see `gradeAnswer` in src/lib/agent/artefacts.js. */
 export const sampleGrade = {
@@ -144,6 +219,9 @@ export const artefactFixtures = {
   cloze: clozeFixture,
   multiple_choice: multipleChoiceFixture,
   open_question: openQuestionFixture,
+  comparison_table: comparisonTableFixture,
+  ordering: orderingFixture,
+  practice_exam: practiceExamFixture,
 };
 
 /* A day's review queue: recall formats only, one at a time. */

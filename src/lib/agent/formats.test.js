@@ -14,7 +14,7 @@ import {
 } from './formats.js'
 
 describe('FORMATS', () => {
-  it('is exactly the stage 1 catalogue, in the order the database enumerates it', () => {
+  it('is the whole catalogue, in the order the database enumerates it', () => {
     expect(FORMATS).toEqual([
       'summary',
       'glossary',
@@ -22,6 +22,9 @@ describe('FORMATS', () => {
       'cloze',
       'multiple_choice',
       'open_question',
+      'comparison_table',
+      'ordering',
+      'practice_exam',
     ])
   })
 
@@ -31,7 +34,10 @@ describe('FORMATS', () => {
 
   it('recognises a format name', () => {
     expect(isFormat('cloze')).toBe(true)
-    expect(isFormat('comparison_table')).toBe(false)
+    expect(isFormat('comparison_table')).toBe(true)
+    expect(isFormat('ordering')).toBe(true)
+    expect(isFormat('practice_exam')).toBe(true)
+    expect(isFormat('concept_map')).toBe(false)
     expect(isFormat(undefined)).toBe(false)
   })
 })
@@ -191,6 +197,154 @@ describe('validatePayload — open_question', () => {
   })
 })
 
+describe('validatePayload — comparison_table', () => {
+  const good = {
+    items: ['Mean', 'Median'],
+    dimensions: ['Sensitive to outliers', 'Always one of the data points'],
+    cells: [
+      { item_index: 0, dimension_index: 0, value: 'Yes', rationale: 'A single extreme value shifts it.' },
+      { item_index: 0, dimension_index: 1, value: 'No', rationale: 'It is an average, not a member.' },
+      { item_index: 1, dimension_index: 0, value: 'No', rationale: 'Only the middle rank matters.' },
+      { item_index: 1, dimension_index: 1, value: 'Usually', rationale: 'It is a data point for odd counts.' },
+    ],
+  }
+
+  it('accepts a complete grid of items by dimensions', () => {
+    expect(validatePayload('comparison_table', good).valid).toBe(true)
+  })
+
+  it('insists on at least two items, since one thing has nothing to compare against', () => {
+    expect(
+      validatePayload('comparison_table', { ...good, items: ['Mean'] }).valid,
+    ).toBe(false)
+  })
+
+  it('rejects a cell whose item_index points past the items', () => {
+    const result = validatePayload('comparison_table', {
+      ...good,
+      cells: [{ ...good.cells[0], item_index: 2 }, ...good.cells.slice(1)],
+    })
+    expect(result.errors).toContain(
+      'cells[0].item_index: expected an index into items (0..1), got 2',
+    )
+  })
+
+  it('rejects a cell whose dimension_index points past the dimensions', () => {
+    const result = validatePayload('comparison_table', {
+      ...good,
+      cells: [{ ...good.cells[0], dimension_index: 5 }, ...good.cells.slice(1)],
+    })
+    expect(result.errors).toContain(
+      'cells[0].dimension_index: expected an index into dimensions (0..1), got 5',
+    )
+  })
+
+  it('rejects a grid missing a cell', () => {
+    // Three items by two dimensions needs six cells; five leaves a gap. Both
+    // counts stay inside minItems/maxItems on `cells`, so this is the cross
+    // check catching what the schema alone cannot.
+    const result = validatePayload('comparison_table', {
+      items: ['Mean', 'Median', 'Mode'],
+      dimensions: good.dimensions,
+      cells: [
+        ...good.cells,
+        { item_index: 2, dimension_index: 0, value: 'No', rationale: 'The most frequent value is unmoved.' },
+      ],
+    })
+    expect(result.errors).toEqual([
+      'cells: expected one per (item, dimension) pair (6), got 5',
+    ])
+  })
+
+  it('rejects two cells claiming the same (item, dimension) pair', () => {
+    const result = validatePayload('comparison_table', {
+      ...good,
+      cells: [good.cells[0], good.cells[0], good.cells[2], good.cells[3]],
+    })
+    expect(result.errors).toContain('cells[1]: duplicate cell for item 0, dimension 0')
+  })
+})
+
+describe('validatePayload — ordering', () => {
+  const good = {
+    prompt: 'Put the steps of long division in order.',
+    items: ['Divide', 'Multiply', 'Subtract', 'Bring down the next digit'],
+    rationale: 'Each step operates on the remainder the previous one left behind.',
+  }
+
+  it('accepts a prompt, the items in their correct order and a rationale', () => {
+    expect(validatePayload('ordering', good).valid).toBe(true)
+  })
+
+  it('insists on at least three items, since two have only one order to get right', () => {
+    expect(
+      validatePayload('ordering', { ...good, items: ['Divide', 'Multiply'] }).valid,
+    ).toBe(false)
+  })
+
+  it('rejects duplicated items, which make the order unrecoverable', () => {
+    const result = validatePayload('ordering', {
+      ...good,
+      items: ['Divide', 'Divide', 'Subtract', 'Bring down the next digit'],
+    })
+    expect(result.errors).toEqual(['items: expected distinct items'])
+  })
+})
+
+describe('validatePayload — practice_exam', () => {
+  const good = {
+    title: 'Eigenvalues, timed',
+    instructions: 'Answer every question in order. Ten minutes, no notes.',
+    time_limit_minutes: 10,
+    items: [
+      { artefact_id: 'artefact-1', format: 'flashcard' },
+      { artefact_id: 'artefact-2', format: 'multiple_choice' },
+    ],
+  }
+
+  it('accepts a title, instructions, a time limit and the tasks it draws from', () => {
+    expect(validatePayload('practice_exam', good).valid).toBe(true)
+  })
+
+  it('insists on at least two items, since one question is not an exam', () => {
+    expect(
+      validatePayload('practice_exam', { ...good, items: [good.items[0]] }).valid,
+    ).toBe(false)
+  })
+
+  it('rejects an item format outside the answerable catalogue', () => {
+    const result = validatePayload('practice_exam', {
+      ...good,
+      items: [good.items[0], { artefact_id: 'artefact-3', format: 'summary' }],
+    })
+    expect(result.valid).toBe(false)
+  })
+
+  it('refuses to nest a practice exam inside itself', () => {
+    const result = validatePayload('practice_exam', {
+      ...good,
+      items: [good.items[0], { artefact_id: 'artefact-3', format: 'practice_exam' }],
+    })
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects a time limit of zero, since an exam has to take some time', () => {
+    expect(validatePayload('practice_exam', { ...good, time_limit_minutes: 0 }).valid).toBe(
+      false,
+    )
+  })
+
+  it('rejects the same task referenced twice', () => {
+    const result = validatePayload('practice_exam', {
+      ...good,
+      items: [good.items[0], good.items[0]],
+    })
+    expect(result.errors).toContain(
+      'items[1].artefact_id: duplicate reference to artefact-1',
+    )
+  })
+})
+
 describe('validatePayload — an unknown format', () => {
   it('is rejected rather than waved through', () => {
     expect(validatePayload('concept_map', {}).errors).toEqual([
@@ -200,9 +354,16 @@ describe('validatePayload — an unknown format', () => {
 })
 
 describe('reading and tasks', () => {
-  it('reads a summary and a glossary, and answers everything else', () => {
-    expect(READING_FORMATS).toEqual(['summary', 'glossary'])
-    expect(TASK_FORMATS).toEqual(['flashcard', 'cloze', 'multiple_choice', 'open_question'])
+  it('reads processed material and answers everything worth scoring', () => {
+    expect(READING_FORMATS).toEqual(['summary', 'glossary', 'comparison_table'])
+    expect(TASK_FORMATS).toEqual([
+      'flashcard',
+      'cloze',
+      'multiple_choice',
+      'open_question',
+      'ordering',
+      'practice_exam',
+    ])
   })
 
   it('splits the catalogue in two with nothing left over and nothing in both', () => {

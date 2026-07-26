@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import SummaryArtefact from './summary-artefact'
 import { summaryFixture } from '@/lib/artefact-fixtures'
 
@@ -61,6 +61,24 @@ describe('SummaryArtefact', () => {
     expect(
       screen.getByRole('button', { name: 'Source 1, page 12' }),
     ).toBeInTheDocument()
+  })
+
+  it('offers to listen when the browser can speak, reading the depth on screen', async () => {
+    vi.stubGlobal('speechSynthesis', { speak: vi.fn(), cancel: vi.fn() })
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        constructor(text) {
+          this.text = text
+        }
+      },
+    )
+
+    render(<SummaryArtefact artefact={summaryFixture} />)
+
+    expect(await screen.findByRole('button', { name: /listen/i })).toBeInTheDocument()
+
+    vi.unstubAllGlobals()
   })
 
   it('points the anchor back at the section on its course shelf', async () => {

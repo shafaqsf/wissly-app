@@ -49,6 +49,35 @@ export async function dueArtefacts(supabase, { subjectId, now = new Date(), limi
   }))
 }
 
+const REMINDER_COLUMNS = 'artefact_id, stability, due_at, last_reviewed_at'
+
+/** More due items than this is still one query, never a punishment either. */
+const REMINDER_LIMIT = 500
+
+/**
+ * What is due now, shaped for `decideReviewReminder` rather than for
+ * rendering: no payload, no section join, just the FSRS state each item
+ * needs to score its own recall. See `src/lib/notifications/review-reminder.js`.
+ */
+export async function dueScheduleItems(supabase, { now = new Date(), limit = REMINDER_LIMIT } = {}) {
+  const rows = unwrapList(
+    await supabase
+      .from('artefact_schedule')
+      .select(REMINDER_COLUMNS)
+      .lte('next_due_at', new Date(now).toISOString())
+      .order('next_due_at', { ascending: true })
+      .limit(limit),
+    'read your queue',
+  )
+
+  return rows.map((row) => ({
+    artefactId: row.artefact_id,
+    stability: row.stability == null ? null : Number(row.stability),
+    dueAt: row.due_at,
+    lastReviewedAt: row.last_reviewed_at,
+  }))
+}
+
 /** The FSRS state carried on a schedule row, or null for a first review. */
 export function fsrsState(row) {
   if (!row || row.stability == null) return null

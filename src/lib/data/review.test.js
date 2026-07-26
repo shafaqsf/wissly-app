@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { argsOf, fakeSupabase } from './fake-supabase.js'
-import { dueArtefacts, fsrsState, recordReview } from './review.js'
+import { dueArtefacts, dueScheduleItems, fsrsState, recordReview } from './review.js'
 
 const NOW = new Date('2026-07-25T09:00:00.000Z')
 
@@ -90,6 +90,47 @@ describe('the queue', () => {
     const [artefact] = await dueArtefacts(supabase, { now: NOW })
 
     expect(artefact.state).toBeNull()
+  })
+})
+
+describe('the due schedule, lean, for the reminder to reason about', () => {
+  it('asks for what is due now, without pulling in section content', async () => {
+    const supabase = fakeSupabase({ artefact_schedule: { data: [], error: null } })
+
+    await dueScheduleItems(supabase, { now: NOW })
+
+    const call = supabase.query('artefact_schedule')
+    expect(argsOf(call, 'lte')).toEqual(['next_due_at', NOW.toISOString()])
+    expect(argsOf(call, 'select')?.[0]).not.toMatch(/payload/)
+  })
+
+  it('shapes each row for the reminder decision, numbers coerced', async () => {
+    const supabase = fakeSupabase({
+      artefact_schedule: {
+        data: [
+          {
+            artefact_id: 'a1',
+            stability: '4.5',
+            due_at: '2026-07-20T09:00:00.000Z',
+            last_reviewed_at: '2026-07-15T09:00:00.000Z',
+          },
+          { artefact_id: 'a2', stability: null, due_at: null, last_reviewed_at: null },
+        ],
+        error: null,
+      },
+    })
+
+    const items = await dueScheduleItems(supabase, { now: NOW })
+
+    expect(items).toEqual([
+      {
+        artefactId: 'a1',
+        stability: 4.5,
+        dueAt: '2026-07-20T09:00:00.000Z',
+        lastReviewedAt: '2026-07-15T09:00:00.000Z',
+      },
+      { artefactId: 'a2', stability: null, dueAt: null, lastReviewedAt: null },
+    ])
   })
 })
 

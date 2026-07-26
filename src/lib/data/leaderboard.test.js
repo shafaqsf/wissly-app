@@ -8,7 +8,7 @@ import { subjectLeaderboard } from './leaderboard.js'
 /* The leaderboard reads across users, which no ordinary table policy in this
  * schema allows — it goes through `subject_leaderboard`, a `security
  * definer` RPC that only ever returns a count per member and only when the
- * caller is themselves a member. See migrations/007_collaboration.sql. */
+ * caller is themselves a member. See migrations/015_collaboration.sql. */
 
 describe('the leaderboard', () => {
   it('asks the definer function for one subject and ranks what it returns', async () => {

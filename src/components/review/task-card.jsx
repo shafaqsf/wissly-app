@@ -4,6 +4,8 @@ import ClozeArtefact from '@/components/artefact/cloze-artefact';
 import FlashcardArtefact from '@/components/artefact/flashcard-artefact';
 import MultipleChoiceArtefact from '@/components/artefact/multiple-choice-artefact';
 import OpenQuestionArtefact from '@/components/artefact/open-question-artefact';
+import OrderingArtefact from '@/components/artefact/ordering-artefact';
+import PracticeExamArtefact from '@/components/artefact/practice-exam-artefact';
 import { FORMAT_NAMES } from '@/components/task/task-types';
 
 /* One card in the mixed queue.
@@ -12,13 +14,15 @@ import { FORMAT_NAMES } from '@/components/task/task-types';
    product and its renderer, which meant no surface could offer anything the
    other five did not want. Due is the one place that genuinely does not know
    the type until the row arrives, so the switch lives here and covers the
-   four answerable formats only. */
+   answerable formats only. */
 
 const RENDERERS = {
   flashcard: FlashcardArtefact,
   cloze: ClozeArtefact,
   multiple_choice: MultipleChoiceArtefact,
   open_question: OpenQuestionArtefact,
+  ordering: OrderingArtefact,
+  practice_exam: PracticeExamArtefact,
 };
 
 export default function TaskCard({ artefact, onAnswered, onGrade, turned, onTurn }) {

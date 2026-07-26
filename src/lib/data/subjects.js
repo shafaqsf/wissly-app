@@ -7,7 +7,7 @@ import { unwrap, unwrapList } from './result.js'
  * client is per-request and asynchronous, and a module that reached for it
  * itself could not be tested without standing up a request. */
 
-const COLUMNS = 'id, title, user_id, is_public, created_at'
+const COLUMNS = 'id, title, user_id, is_public, created_at, exam_date'
 
 export async function listSubjects(supabase) {
   return unwrapList(
@@ -77,5 +77,26 @@ export async function setSubjectPublic(supabase, { id, isPublic }) {
       .select(COLUMNS)
       .single(),
     'change who can see this course',
+  )
+}
+
+/**
+ * Set or clear a course's exam date, so the countdown, the daily goal and the
+ * compressed review plan all have something to plan against. `examDate: null`
+ * clears it — a learner may decide not to sit the exam after all, and the
+ * course goes back to the default lookahead the daily goal uses without one.
+ *
+ * Like `setSubjectPublic`, this only ever reaches the owner's row: `subjects`
+ * keeps its owner-only `update` policy from 001, and nothing in 015 widens it.
+ */
+export async function setExamDate(supabase, { id, examDate }) {
+  return unwrap(
+    await supabase
+      .from('subjects')
+      .update({ exam_date: examDate || null })
+      .eq('id', id)
+      .select(COLUMNS)
+      .single(),
+    'set the exam date',
   )
 }

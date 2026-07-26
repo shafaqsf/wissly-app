@@ -1,4 +1,4 @@
--- 007_collaboration.sql
+-- 015_collaboration.sql
 --
 -- The first cross-user-visible rows in this schema. Three features, one
 -- shared risk: every predicate below decides whether a stranger can read

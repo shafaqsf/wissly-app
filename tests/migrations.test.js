@@ -19,7 +19,7 @@ const tables = [...all.matchAll(/create table if not exists public\.(\w+)/g)].ma
   (match) => match[1],
 )
 
-// 007 widens read access on the material a course is made of. `reviews`,
+// 015 widens read access on the material a course is made of. `reviews`,
 // `conversations`, `messages`, `agent_runs` and `agent_actions` stay owner-
 // only end to end — a share or a public flag never reaches personal review
 // history or the agent's transcript.
@@ -33,9 +33,15 @@ describe('migration files', () => {
     }
   })
 
-  it('are applied in ascending, gap-free order', () => {
-    const numbers = files.map((name) => Number(name.slice(0, 3))).sort((a, b) => a - b)
-    expect(numbers).toEqual(numbers.map((_, index) => index + 1))
+  // Ascending and unique, not gap-free. Order is what the database cares
+  // about, and a duplicate number is the failure that actually costs data —
+  // two files claiming 007 apply in an order nothing defines. A gap costs
+  // nothing: it is a number a sibling branch has already claimed and has yet
+  // to merge, and it closes on `main` when that branch lands.
+  it('are numbered in ascending order, with no number claimed twice', () => {
+    const numbers = [...files].sort().map((name) => Number(name.slice(0, 3)))
+    expect(numbers).toEqual([...numbers].sort((a, b) => a - b))
+    expect(new Set(numbers).size).toBe(numbers.length)
   })
 })
 
@@ -47,6 +53,7 @@ describe('the schema', () => {
       'artefacts',
       'concepts',
       'conversations',
+      'fsrs_weights',
       'messages',
       'reviews',
       'sections',

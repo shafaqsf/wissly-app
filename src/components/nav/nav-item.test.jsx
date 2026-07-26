@@ -69,6 +69,16 @@ describe('NavItem', () => {
     expect(link.className).toMatch(/bg-paper-sunk/)
   })
 
+  /* v0.15 loosened "no colour in the chrome" for a handful of deliberate
+     spots, and the active nav destination is one of them — see "Colour" in
+     docs/DESIGN.md. `--paper-sunk` stays so the row reads even without it. */
+  it('wears the accent on the current destination', () => {
+    usePathname.mockReturnValue('/courses')
+    render(<NavItem href="/courses" label="Courses" icon={BookOpen} />)
+
+    expect(screen.getByRole('link').className).toMatch(/text-accent/)
+  })
+
   it('keeps the 44px tap target floor', () => {
     render(<NavItem href="/courses" label="Courses" icon={BookOpen} collapsed />)
 

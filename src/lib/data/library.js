@@ -1,8 +1,8 @@
 import { DataError, unwrap, unwrapList } from './result.js'
 
 /* The public library is the read side of `subjects.is_public` (migrations/
- * 007): anyone, signed in or not, can see a public course through the
- * `select` policies 007 adds. Importing needs a session — it writes — and
+ * 015): anyone, signed in or not, can see a public course through the
+ * `select` policies 015 adds. Importing needs a session — it writes — and
  * is a plain client-side copy rather than a stored procedure: everything it
  * reads is already open under the public policies, and everything it writes
  * lands under the importer's own `user_id`, which every table's existing

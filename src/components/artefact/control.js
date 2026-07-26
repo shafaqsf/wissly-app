@@ -9,10 +9,13 @@ export const buttonClass =
 export const quietButtonClass =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-control border border-rule px-4 font-mono text-label uppercase text-ink-muted transition-opacity duration-[120ms] ease-out hover:text-ink disabled:opacity-40';
 
-/* The one filled control in the product: the button that commits an account.
-   Nothing else earns a solid fill, and nothing else should copy this. */
+/* The one filled control in the product: the primary call to action, such as
+   the button that commits an account. It is also the one control that wears
+   the accent — see "Colour" in docs/DESIGN.md, v0.15's deliberate loosening
+   of "no colour in the chrome". Nothing else earns a solid fill, and nothing
+   else should copy this. */
 export const filledButtonClass =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-ink px-6 font-mono text-label uppercase tracking-[0.08em] text-paper transition-opacity duration-[120ms] ease-out hover:opacity-80 disabled:opacity-60';
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-accent px-6 font-mono text-label uppercase tracking-[0.08em] text-paper transition-opacity duration-[120ms] ease-out hover:opacity-80 disabled:opacity-60';
 
 export const inputClass =
   'min-h-11 rounded-control border border-rule bg-paper px-3 text-body text-ink';

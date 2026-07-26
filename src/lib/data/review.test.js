@@ -2,6 +2,8 @@
 
 import { describe, expect, it } from 'vitest'
 
+import { scheduleReview } from '@/lib/review/fsrs.js'
+
 import { argsOf, fakeSupabase } from './fake-supabase.js'
 import { dueArtefacts, fsrsState, recordReview } from './review.js'
 
@@ -159,5 +161,42 @@ describe('recording a rating', () => {
       recordReview(supabase, { userId: 'user-1', artefactId: 'a1', rating: 7, now: NOW }),
     ).rejects.toThrow(/four buttons/)
     expect(supabase.calls).toHaveLength(0)
+  })
+
+  it('schedules on the published defaults when the learner has never fitted their own', async () => {
+    const supabase = fakeSupabase({
+      fsrs_weights: { data: null, error: null },
+      reviews: { data: { id: 'r1' }, error: null },
+    })
+
+    await recordReview(supabase, { userId: 'user-1', artefactId: 'a1', rating: 3, state: null, now: NOW })
+
+    const [row] = argsOf(supabase.query('reviews'), 'insert')
+    const withoutWeights = scheduleReview({ state: undefined, rating: 3, now: NOW })
+    expect(row.stability).toBeCloseTo(withoutWeights.stability, 10)
+  })
+
+  it("schedules on the learner's fitted weights once they have some", async () => {
+    const fitted = [
+      1, 1, 1, 1, 6, 1, 1, 0.3, 1.5, 0.2, 1, 1.5, 0.1, 1, 1, 0.5, 2,
+    ]
+    const supabase = fakeSupabase({
+      fsrs_weights: {
+        data: { weights: fitted, review_count: 80, loss: 0.3, fitted_at: NOW.toISOString() },
+        error: null,
+      },
+      reviews: { data: { id: 'r1' }, error: null },
+    })
+
+    await recordReview(supabase, { userId: 'user-1', artefactId: 'a1', rating: 3, state: null, now: NOW })
+
+    const [row] = argsOf(supabase.query('reviews'), 'insert')
+    const withFittedWeights = scheduleReview({ state: undefined, rating: 3, now: NOW, weights: fitted })
+    expect(row.stability).toBeCloseTo(withFittedWeights.stability, 10)
+    // Proof the fitted weights actually changed something, not just that the
+    // call was plumbed through: w2 (index 2, "good") differs from the
+    // published default here, so the resulting stability must differ too.
+    const withDefaults = scheduleReview({ state: undefined, rating: 3, now: NOW })
+    expect(row.stability).not.toBeCloseTo(withDefaults.stability, 5)
   })
 })

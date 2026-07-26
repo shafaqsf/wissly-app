@@ -53,7 +53,7 @@ export function SectionList({ sections = [] }) {
  *   concept open, and a link that lands on a closed row has shown nobody
  *   anything. An id this course does not have simply opens nothing.
  * @param {boolean} [props.canEdit] Whether the viewer may archive a source.
- *   A shared or public viewer reads under a `select` policy only — 007 never
+ *   A shared or public viewer reads under a `select` policy only — 015 never
  *   widens `delete`/`update` — so a form they could submit here would just
  *   fail in the database. Hiding it is the honest version of that.
  */

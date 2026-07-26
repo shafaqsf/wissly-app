@@ -33,7 +33,7 @@ describe('chooseFormat', () => {
     })
   })
 
-  it('constrains the answer to the six formats', async () => {
+  it('constrains the answer to the formats a section can be generated from', async () => {
     const client = stubClient({ format: 'cloze', reason: 'Key term.' })
     await chooseFormat({ client, section })
 
@@ -45,7 +45,17 @@ describe('chooseFormat', () => {
       'cloze',
       'multiple_choice',
       'open_question',
+      'comparison_table',
+      'ordering',
     ])
+  })
+
+  it('never offers practice_exam, which is composed rather than chosen', async () => {
+    const client = stubClient({ format: 'cloze', reason: 'Key term.' })
+    await chooseFormat({ client, section })
+
+    const { schema } = client.chatStructured.mock.calls[0][0]
+    expect(schema.properties.format.enum).not.toContain('practice_exam')
   })
 
   it('puts the section text in the prompt', async () => {
@@ -152,6 +162,46 @@ describe('generateArtefact', () => {
 
     expect(artefact.format).toBe('flashcard')
     expect(client.chatStructured).toHaveBeenCalledTimes(2)
+  })
+
+  it('generates a comparison table from one section', async () => {
+    const comparisonTable = {
+      items: ['Mean', 'Median'],
+      dimensions: ['Sensitive to outliers', 'Always one of the data points'],
+      cells: [
+        { item_index: 0, dimension_index: 0, value: 'Yes', rationale: 'An extreme value shifts it.' },
+        { item_index: 0, dimension_index: 1, value: 'No', rationale: 'It is an average, not a member.' },
+        { item_index: 1, dimension_index: 0, value: 'No', rationale: 'Only the middle rank matters.' },
+        { item_index: 1, dimension_index: 1, value: 'Usually', rationale: 'It is a data point for odd counts.' },
+      ],
+    }
+    const client = stubClient(comparisonTable)
+
+    const artefact = await generateArtefact({ client, section, format: 'comparison_table' })
+
+    expect(artefact.payload).toEqual(comparisonTable)
+  })
+
+  it('generates an ordering task from one section', async () => {
+    const ordering = {
+      prompt: 'Order the steps.',
+      items: ['First', 'Second', 'Third'],
+      rationale: 'Each step depends on the one before it.',
+    }
+    const client = stubClient(ordering)
+
+    const artefact = await generateArtefact({ client, section, format: 'ordering' })
+
+    expect(artefact.payload).toEqual(ordering)
+  })
+
+  it('refuses to generate a practice_exam from one section, before spending a call', async () => {
+    const client = stubClient(flashcard)
+
+    await expect(
+      generateArtefact({ client, section, format: 'practice_exam' }),
+    ).rejects.toThrow(/composed from existing artefacts/)
+    expect(client.chatStructured).not.toHaveBeenCalled()
   })
 })
 

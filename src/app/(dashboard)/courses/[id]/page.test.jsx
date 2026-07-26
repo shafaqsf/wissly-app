@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   courseById,
   currentUserId,
+  dailyGoalFor,
+  examPlanFor,
   listArtefacts,
   listConceptMastery,
   listShares,
@@ -13,6 +15,8 @@ const {
 } = vi.hoisted(() => ({
   courseById: vi.fn(),
   currentUserId: vi.fn(),
+  dailyGoalFor: vi.fn(),
+  examPlanFor: vi.fn(),
   listArtefacts: vi.fn(),
   listConceptMastery: vi.fn(),
   listShares: vi.fn(),
@@ -31,6 +35,8 @@ vi.mock('@/lib/data/concepts', () => ({ listConceptMastery }))
 vi.mock('@/lib/data/artefacts', () => ({ listArtefacts }))
 vi.mock('@/lib/data/shares', () => ({ listShares }))
 vi.mock('@/lib/data/leaderboard', () => ({ subjectLeaderboard }))
+vi.mock('@/lib/data/daily-goal', () => ({ dailyGoalFor }))
+vi.mock('@/lib/data/exam-plan', () => ({ examPlanFor }))
 vi.mock('next/navigation', () => ({ notFound }))
 vi.mock('@/lib/actions/material', () => ({ addMaterialAction: vi.fn() }))
 vi.mock('@/lib/actions/course', () => ({
@@ -38,6 +44,7 @@ vi.mock('@/lib/actions/course', () => ({
   archiveSourceAction: vi.fn(),
   restoreReadingAction: vi.fn(),
   restoreSourceAction: vi.fn(),
+  setExamDateAction: vi.fn(),
 }))
 vi.mock('@/lib/actions/share', () => ({
   revokeShareAction: vi.fn(),
@@ -97,6 +104,15 @@ function stock() {
     }
     return [reading]
   })
+  dailyGoalFor.mockResolvedValue({
+    subjectId: 'course-1',
+    subjectTitle: 'Optics',
+    examDate: null,
+    target: 0,
+    remaining: 0,
+    horizonDays: 7,
+  })
+  examPlanFor.mockResolvedValue(null)
 }
 
 const page = (searchParams = {}) =>
@@ -245,6 +261,41 @@ describe('the course shelf', () => {
     expect(screen.getByLabelText(/share with/i)).toBeInTheDocument()
   })
 
+  it('shows the pace panel, reading only this course’s goal', async () => {
+    render(await page())
+
+    expect(screen.getByRole('region', { name: 'Exam' })).toBeInTheDocument()
+    expect(dailyGoalFor).toHaveBeenCalledWith({}, { subjectId: 'course-1' })
+  })
+
+  it('only asks for a compressed plan once an exam date exists', async () => {
+    render(await page())
+
+    expect(examPlanFor).not.toHaveBeenCalled()
+  })
+
+  it('asks for the compressed plan once an exam date is set', async () => {
+    dailyGoalFor.mockResolvedValue({
+      subjectId: 'course-1',
+      subjectTitle: 'Optics',
+      examDate: '2026-08-10',
+      target: 2,
+      remaining: 1,
+      horizonDays: 15,
+    })
+    examPlanFor.mockResolvedValue({
+      subjectId: 'course-1',
+      subjectTitle: 'Optics',
+      examDate: '2026-08-10',
+      days: [{ date: '2026-07-26', count: 2, artefactIds: ['a1', 'a2'] }],
+    })
+
+    render(await page())
+
+    expect(examPlanFor).toHaveBeenCalledWith({}, { subjectId: 'course-1' })
+    expect(screen.getByText('2 reviews')).toBeInTheDocument()
+  })
+
   /* Nothing is generated on upload, so a new course is empty — and an empty
      state that only reports emptiness wastes the one screen a learner sees. */
   it('says what the next step is when the shelf is empty', async () => {
@@ -263,6 +314,22 @@ describe('the course shelf', () => {
     expect(
       screen.getByText(/Summaries and glossary entries you generate land here/),
     ).toBeInTheDocument()
+
+    /* task item 7 in v0.15: the material shelf's empty state carries an
+       illustration, not only a sentence. */
+    expect(document.querySelector('svg[data-empty-illustration]')).toBeInTheDocument()
+  })
+
+  /* task item 6 in v0.15: a course wears the same tag on its own header that
+     it wears on the shelf in /courses, so the two never disagree. */
+  it('wears its own accent tag beside the "Course" label', async () => {
+    const { container } = render(await page())
+
+    const dot = container.querySelector('header span[style*="background-color"]')
+    expect(dot).toBeInTheDocument()
+    // jsdom canonicalises an inline colour to rgb() when it serialises the
+    // style attribute back out, whatever notation courseAccent wrote it in.
+    expect(dot.getAttribute('style')).toMatch(/rgb\(/)
   })
 })
 
@@ -300,10 +367,23 @@ describe('a viewer who does not own the course', () => {
     expect(screen.queryByRole('region', { name: 'Archive' })).toBeNull()
   })
 
+  /* The Exam panel writes `subjects.exam_date`, and the pace it reports comes
+     from `artefact_schedule` and `reviews` — neither of which migration 015
+     widens for a share. A shared reader would get a form they cannot submit
+     over numbers that are not theirs, so the panel does not open for them. */
+  it('is not offered the exam panel, which writes and reads owner-only rows', async () => {
+    render(await page())
+
+    expect(screen.queryByRole('region', { name: 'Exam' })).toBeNull()
+    expect(screen.queryByLabelText('Exam date')).toBeNull()
+  })
+
   it('never asks the database for what only an owner may see', async () => {
     await page()
 
     expect(listShares).not.toHaveBeenCalled()
+    expect(dailyGoalFor).not.toHaveBeenCalled()
+    expect(examPlanFor).not.toHaveBeenCalled()
   })
 
   it('cannot archive a source or a piece of reading', async () => {

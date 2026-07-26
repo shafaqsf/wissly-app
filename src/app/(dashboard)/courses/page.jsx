@@ -1,8 +1,10 @@
 import Link from 'next/link';
 
 import CreateCourseForm from '@/components/course/create-course-form';
+import EmptyState from '@/components/empty/empty-state';
 import Panel from '@/components/panel/panel';
 import { createCourseAction } from '@/lib/actions/course';
+import { courseAccent } from '@/lib/course-accent';
 import { listCourses } from '@/lib/data/courses';
 import { createClient } from '@/lib/supabase/server';
 
@@ -45,9 +47,12 @@ export default async function CoursesPage() {
       <Panel
         title="Your courses"
         empty={
-          courses.length === 0
-            ? 'Name your first course above. Its shelf opens empty, and the material goes in there.'
-            : undefined
+          courses.length === 0 ? (
+            <EmptyState variant="shelf">
+              Name your first course above. Its shelf opens empty, and the
+              material goes in there.
+            </EmptyState>
+          ) : undefined
         }
       >
         <ul className="motion-stagger flex flex-col gap-3">
@@ -55,12 +60,21 @@ export default async function CoursesPage() {
             <li key={course.id}>
               {/* The lift darkens a hairline, so the row has to have one —
                   see "Motion" in docs/DESIGN.md. A row with a transparent
-                  border would rise and say nothing. */}
+                  border would rise and say nothing. The tag is the course's
+                  own accent — task item 6 in v0.15 — derived from its id so
+                  the same course always wears the same colour. */}
               <Link
                 href={`/courses/${course.id}`}
                 className="motion-lift flex min-h-11 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 rounded-control border border-rule px-4 py-3"
               >
-                <span className="text-body">{course.title}</span>
+                <span className="flex items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="size-2.5 shrink-0 rounded-round"
+                    style={{ backgroundColor: courseAccent(course.id) }}
+                  />
+                  <span className="text-body">{course.title}</span>
+                </span>
                 <span className="font-mono text-caption uppercase text-ink-muted">
                   {count(course.sources, 'source')} · {course.settled} of{' '}
                   {count(course.concepts, 'concept')} settled

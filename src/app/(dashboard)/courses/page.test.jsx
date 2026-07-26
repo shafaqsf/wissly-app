@@ -104,4 +104,32 @@ describe('the courses page', () => {
       '/library',
     )
   })
+
+  /* Course tags — task item 6 in v0.15 — give every course its own stable
+     colour, derived from its id, so a shelf of courses is scannable by
+     colour as well as by name. */
+  it('tags every course with its own stable accent colour', async () => {
+    listCourses.mockResolvedValue([
+      { id: 'sub-1', title: 'Optics', sources: 2, concepts: 12, settled: 3 },
+      { id: 'sub-2', title: 'Algebra', sources: 1, concepts: 4, settled: 4 },
+    ])
+
+    const { container } = render(await CoursesPage())
+
+    const [first, second] = container.querySelectorAll('a[href^="/courses/"] span[style]')
+    expect(first).toHaveAttribute('style')
+    // jsdom (like a real browser) canonicalises an inline colour to rgb()
+    // when it serialises the style attribute back out, whatever notation
+    // courseAccent wrote it in — the assertion follows that, not the source.
+    expect(first.getAttribute('style')).toMatch(/background-color: rgb\(/)
+    expect(second.getAttribute('style')).not.toBe(first.getAttribute('style'))
+  })
+
+  it('shows an illustration beside the invitation when there is no course yet', async () => {
+    listCourses.mockResolvedValue([])
+
+    const { container } = render(await CoursesPage())
+
+    expect(container.querySelector('svg[data-empty-illustration]')).toBeInTheDocument()
+  })
 })

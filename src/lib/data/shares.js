@@ -1,7 +1,7 @@
 import { unwrap, unwrapList } from './result.js'
 
 /* Sharing is read-only, by design: a share grants `view`, and that is the
- * only `access_level` `subject_shares` allows (migrations/007). Nothing here
+ * only `access_level` `subject_shares` allows (migrations/015). Nothing here
  * needs to say that out loud per call — the schema already refuses anything
  * else.
  *
@@ -49,7 +49,7 @@ export async function listSharedWithMe(supabase) {
 
 /**
  * End a share. RLS lets either the owner revoke it or the recipient leave it
- * (migrations/007) — this function does not know or care which one is
+ * (migrations/015) — this function does not know or care which one is
  * calling; the database is the one place that check has to hold.
  */
 export async function revokeShare(supabase, { id }) {

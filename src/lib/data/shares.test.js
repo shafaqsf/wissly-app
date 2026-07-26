@@ -7,7 +7,7 @@ import { listShares, listSharedWithMe, revokeShare, shareCourseByEmail } from '.
 
 /* `shareCourseByEmail` and the leaderboard both cross into another user's
  * data, so both are RPCs backed by a `security definer` function rather than
- * a plain table query — see migrations/007_collaboration.sql. Everything
+ * a plain table query — see migrations/015_collaboration.sql. Everything
  * else here is an ordinary read or delete against `subject_shares`, gated by
  * its own RLS. */
 

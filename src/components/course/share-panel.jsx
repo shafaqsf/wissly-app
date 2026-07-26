@@ -5,7 +5,7 @@ import { useActionState } from 'react';
 import { buttonClass, inputClass, quietButtonClass } from '@/components/artefact/control';
 
 /* Read-only, by name as much as by policy: there is no level to pick here
-   because subject_shares only ever means `view` (migrations/007). Widening
+   because subject_shares only ever means `view` (migrations/015). Widening
    that later is an additive schema change; a select box here that promised
    more than the database grants would not be. */
 

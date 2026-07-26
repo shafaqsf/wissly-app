@@ -1,7 +1,7 @@
 import { unwrapList } from './result.js'
 
 /* Ranking members of a shared course means reading how many reviews someone
- * else logged, and `reviews` RLS is never widened for it (migrations/007) —
+ * else logged, and `reviews` RLS is never widened for it (migrations/015) —
  * a learner's review history is not course material. `subject_leaderboard`
  * is a `security definer` function instead: it returns a count per member,
  * never a row, and only for people who already share the course with the

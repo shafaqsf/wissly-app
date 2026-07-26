@@ -49,52 +49,23 @@ describe('the model picker', () => {
     expect(onChange).toHaveBeenCalledWith('deepseek/deepseek-v4-pro');
   });
 
-  /* A curated list of three goes stale and the catalogue has hundreds. */
-  it('takes any OpenRouter model id from a field of its own', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<ModelPicker model="" onChange={onChange} />);
-
-    expect(screen.queryByLabelText(/model id/i)).toBeNull();
-
-    await user.selectOptions(screen.getByLabelText(/which model answers/i), 'other');
-    await user.type(screen.getByLabelText(/model id/i), 'mistralai/mistral-large');
-    await user.click(screen.getByRole('button', { name: /use this model/i }));
-
-    expect(onChange).toHaveBeenCalledWith('mistralai/mistral-large');
-  });
-
-  it('says what an id looks like rather than sending one that cannot work', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<ModelPicker model="" onChange={onChange} />);
-
-    await user.selectOptions(screen.getByLabelText(/which model answers/i), 'other');
-    await user.type(screen.getByLabelText(/model id/i), 'not an id');
-    await user.click(screen.getByRole('button', { name: /use this model/i }));
-
-    expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByRole('status')).toHaveTextContent(/vendor\/model/i);
-  });
-
-  /* Status is carried by words and by the one 2px ink rule nothing else has —
-     never by a colour. See "No status colours" in docs/DESIGN.md. */
-  it('rules its own paragraph when it refuses an id, and paints nothing', async () => {
-    const user = userEvent.setup();
+  /* The free field is gone on purpose. The three are the offer, and a text box
+     taking any of OpenRouter's hundreds made the choice look larger than the
+     one the product actually supports — nothing here has been tried against a
+     model outside the three. `OPENROUTER_MODEL` still decides the default, so
+     the escape hatch exists; it is configuration, not a control. */
+  it('offers no way to type an id of its own', () => {
     render(<ModelPicker model="" />);
 
-    await user.selectOptions(screen.getByLabelText(/which model answers/i), 'other');
-    await user.type(screen.getByLabelText(/model id/i), 'nope');
-    await user.click(screen.getByRole('button', { name: /use this model/i }));
+    const options = [...screen.getByLabelText(/which model answers/i).options];
 
-    const message = screen.getByRole('status');
-    expect(message.className).toMatch(/border-l-2/);
-    expect(message.className).toMatch(/border-l-ink/);
-    expect(message.className).not.toMatch(/red|green|bg-/);
+    expect(options.map((option) => option.value)).not.toContain('other');
+    expect(screen.queryByLabelText(/model id/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /use this model/i })).toBeNull();
   });
 
-  /* A model chosen from the free field is still the model in force, so it has
-     to be readable in the dropdown rather than vanish behind "Other". */
+  /* A default set outside the three is still the model in force, so it has to
+     be readable in the dropdown rather than silently read as something else. */
   it('keeps an uncurated id visible once it is in force', () => {
     render(<ModelPicker model="mistralai/mistral-large" />);
 

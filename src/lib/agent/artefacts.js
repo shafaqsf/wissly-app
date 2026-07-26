@@ -38,6 +38,16 @@ const SYSTEM_PROMPT = [
   'Reply with JSON only.',
 ].join(' ')
 
+/**
+ * Every format `chooseFormat` may pick, less `practice_exam`. A practice exam
+ * is assembled from artefacts that already exist — see the note on its
+ * schema in formats.js — so there is no single section it could be chosen
+ * for, and no honest way for a model looking at one section's text to fill
+ * in the artefact ids the format requires. `compose_practice_exam` in
+ * write-tools.js is the only thing that produces one.
+ */
+const CHOOSABLE_FORMATS = FORMATS.filter((format) => format !== 'practice_exam')
+
 const CHOOSE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -45,7 +55,7 @@ const CHOOSE_SCHEMA = {
   properties: {
     format: {
       type: 'string',
-      enum: [...FORMATS],
+      enum: CHOOSABLE_FORMATS,
       description: 'the format this section deserves',
     },
     reason: {
@@ -63,6 +73,8 @@ const FORMAT_GUIDANCE = [
   `- cloze: one term carries the section, and the sentence still reads with it replaced by ${CLOZE_BLANK}.`,
   '- multiple_choice: the section invites a confusion worth confronting, so the distractors can be reasoned.',
   '- open_question: the section asks for an explanation that a single term would not prove.',
+  '- comparison_table: the section sets two to four things side by side, and the contrast is the point.',
+  '- ordering: the section describes steps or a sequence where the order itself is what has to be recalled.',
 ].join('\n')
 
 /** The section as the model sees it, anchor included so citations stay honest. */
@@ -134,6 +146,15 @@ export async function generateArtefact({
 
   const schema = PAYLOAD_SCHEMAS[chosen]
   if (!schema) throw new TypeError(`unknown artefact format "${chosen}"`)
+
+  // practice_exam references artefacts that already exist; a model looking
+  // at one section has no real ids to put in `items` and would have to
+  // invent them. See the schema's own note in formats.js.
+  if (chosen === 'practice_exam') {
+    throw new TypeError(
+      'practice_exam is composed from existing artefacts, not generated from one section — use compose_practice_exam instead',
+    )
+  }
 
   const payload = await client.chatStructured({
     ...params,

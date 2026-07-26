@@ -1,18 +1,26 @@
 import SignOutButton from '@/components/auth/sign-out-button';
+import WeightFitPanel from '@/components/settings/weight-fit-panel';
+import { reviewLogFor, weightsFor } from '@/lib/data/fsrs-weights.js';
+import { MIN_REVIEWS_TO_FIT } from '@/lib/review/fit-weights.js';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = {
   title: 'Settings — wissly',
 };
 
-/* There is one setting worth the name so far — which account this is — and
-   the one action that belongs beside it. A page that listed switches nobody
-   has built would be a promise, not a screen; when a real preference exists,
-   it goes here. */
+/* There used to be one setting worth the name — which account this is — and
+   the one action beside it. Now there are two: review scheduling is a real
+   preference, because it is the one place in the product a learner can act
+   on their own review history rather than just read it. */
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const email = data?.claims?.email ?? null;
+
+  const [existing, reviews] = await Promise.all([
+    weightsFor(supabase),
+    reviewLogFor(supabase),
+  ]);
 
   return (
     <div className="flex flex-col gap-16">
@@ -42,6 +50,18 @@ export default async function SettingsPage() {
             back.
           </p>
         </div>
+      </section>
+
+      <section aria-label="Review scheduling" className="flex flex-col gap-6">
+        <h2 className="font-display text-heading font-semibold">
+          Review scheduling
+        </h2>
+
+        <WeightFitPanel
+          existing={existing}
+          reviewCount={reviews.length}
+          minReviews={MIN_REVIEWS_TO_FIT}
+        />
       </section>
     </div>
   );

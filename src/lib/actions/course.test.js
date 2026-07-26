@@ -11,6 +11,7 @@ const {
   restoreArtefact,
   restoreSource,
   revalidatePath,
+  setExamDate,
 } = vi.hoisted(() => ({
   archiveArtefact: vi.fn(),
   archiveSource: vi.fn(),
@@ -22,6 +23,7 @@ const {
   restoreArtefact: vi.fn(),
   restoreSource: vi.fn(),
   revalidatePath: vi.fn(),
+  setExamDate: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server.js', () => ({ createClient: vi.fn(async () => ({})) }))
@@ -29,6 +31,7 @@ vi.mock('@/lib/auth/user.js', () => ({ requireUserId }))
 vi.mock('@/lib/data/courses.js', () => ({ createCourse }))
 vi.mock('@/lib/data/sources.js', () => ({ archiveSource, restoreSource }))
 vi.mock('@/lib/data/artefacts.js', () => ({ archiveArtefact, restoreArtefact }))
+vi.mock('@/lib/data/subjects.js', () => ({ setExamDate }))
 vi.mock('next/cache', () => ({ revalidatePath }))
 vi.mock('next/navigation', () => ({ redirect }))
 
@@ -38,6 +41,7 @@ import {
   createCourseAction,
   restoreReadingAction,
   restoreSourceAction,
+  setExamDateAction,
 } from './course.js'
 
 function form(fields) {
@@ -63,6 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   requireUserId.mockResolvedValue('user-1')
   createCourse.mockResolvedValue({ id: 'course-1', title: 'Optics' })
+  setExamDate.mockResolvedValue({ id: 'course-1', title: 'Optics', exam_date: '2026-09-01' })
 })
 
 describe('creating a course', () => {
@@ -124,5 +129,43 @@ describe('archiving and restoring', () => {
     await archiveSourceAction(form({ courseId: 'course-1' }))
 
     expect(archiveSource).not.toHaveBeenCalled()
+  })
+})
+
+describe('setting an exam date', () => {
+  it('writes the date and refreshes the course and the dashboard', async () => {
+    const state = await setExamDateAction(
+      {},
+      form({ courseId: 'course-1', examDate: '2026-09-01' }),
+    )
+
+    expect(setExamDate).toHaveBeenCalledWith({}, { id: 'course-1', examDate: '2026-09-01' })
+    expect(revalidatePath).toHaveBeenCalledWith('/courses/course-1')
+    expect(revalidatePath).toHaveBeenCalledWith('/dashboard')
+    expect(state).toEqual({ message: null })
+  })
+
+  it('clears the date when the field is left blank', async () => {
+    await setExamDateAction({}, form({ courseId: 'course-1', examDate: '' }))
+
+    expect(setExamDate).toHaveBeenCalledWith({}, { id: 'course-1', examDate: '' })
+  })
+
+  it('refuses to write without a course to attach the date to', async () => {
+    const state = await setExamDateAction({}, form({ examDate: '2026-09-01' }))
+
+    expect(state).toEqual({ message: 'Missing course.' })
+    expect(setExamDate).not.toHaveBeenCalled()
+  })
+
+  it('says what went wrong instead of failing silently', async () => {
+    setExamDate.mockRejectedValue(new Error('permission denied'))
+
+    const state = await setExamDateAction(
+      {},
+      form({ courseId: 'course-1', examDate: '2026-09-01' }),
+    )
+
+    expect(state).toEqual({ message: 'permission denied' })
   })
 })

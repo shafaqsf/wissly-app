@@ -96,6 +96,14 @@ describe('the results surface', () => {
     expect(screen.getByText(/Nothing matches “cauchy”/)).toBeInTheDocument();
   });
 
+  /* task item 7 in v0.15: an empty search result carries a small
+     illustration beside the sentence that already explains it. */
+  it('draws an illustration beside a search that found nothing', () => {
+    const { container } = render(<SearchResults query="cauchy" results={[]} />);
+
+    expect(container.querySelector('svg[data-empty-illustration]')).toBeInTheDocument();
+  });
+
   it('invites a search when nothing has been typed', () => {
     render(<SearchResults query="" results={[]} />);
 

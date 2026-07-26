@@ -99,7 +99,10 @@ describe('storing a source', () => {
     expect(argsOf(remove, 'eq')).toEqual(['id', 'src-1'])
   })
 
-  it('defaults to not generated — the ordinary path is real material', async () => {
+  /* The ordinary path — pasting text, uploading a PDF or a deck — has
+     neither of the two columns the later source kinds added: nowhere else it
+     came from, and nothing drafted about it. */
+  it('leaves both origin and generated at their ordinary defaults', async () => {
     const supabase = fakeSupabase({
       sources: { data: { id: 'src-1' }, error: null },
       sections: { data: [{ id: 'sec-1' }], error: null },
@@ -114,7 +117,27 @@ describe('storing a source', () => {
     })
 
     const [row] = argsOf(supabase.query('sources'), 'insert')
+    expect(row.origin).toBeNull()
     expect(row.generated).toBe(false)
+  })
+
+  it('stores where a web link came from', async () => {
+    const supabase = fakeSupabase({
+      sources: { data: { id: 'src-1' }, error: null },
+      sections: { data: [{ id: 'sec-1' }], error: null },
+    })
+
+    await createSource(supabase, {
+      userId: 'user-1',
+      subjectId: 'sub-1',
+      kind: 'url',
+      title: 'An article',
+      origin: 'https://example.com/article',
+      sections: [section(1, 'One')],
+    })
+
+    const [row] = argsOf(supabase.query('sources'), 'insert')
+    expect(row.origin).toBe('https://example.com/article')
   })
 
   it('marks a source drafted from the goal-course pipeline as generated', async () => {

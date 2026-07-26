@@ -25,6 +25,7 @@ function mockPanels(factory) {
     WeakestPanel: factory('Weakest'),
     CoursesPanel: factory('Courses'),
     RecentlyPanel: factory('Recently'),
+    StreakPanel: factory('Streak'),
     WeekPanel: factory('This week'),
     EffortPanel: factory('Effort'),
   }));
@@ -36,6 +37,7 @@ const ORDER = [
   'Weakest',
   'Courses',
   'Recently',
+  'Streak',
   'This week',
   'Effort',
 ];
@@ -49,6 +51,9 @@ describe('the dashboard', () => {
     render(<DashboardPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+
+    /* The hero on this page — task item 4 in v0.15 — wears the accent. */
+    expect(screen.getByText('Today')).toHaveClass('text-accent');
 
     const named = screen
       .getAllByRole('region')

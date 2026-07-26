@@ -171,7 +171,7 @@ function asArtefact(row) {
 }
 
 /**
- * The workbench, read: the four answered formats.
+ * The workbench, read: the answered formats.
  *
  * Reading and tasks are two lists over one table, and the split is the one the
  * four areas are built on. A tool that blurred it would let "archive my
@@ -417,8 +417,7 @@ export const READ_ONLY_TOOLS = [
   },
   {
     name: 'list_tasks',
-    description:
-      'List the learner’s tasks — flashcards, cloze, multiple choice and open questions. Filter by course, source, section or one type. Use this before generating, so you can see what already exists.',
+    description: `List the learner’s tasks — ${TASK_FORMATS.join(', ')}. Filter by course, source, section or one type. Use this before generating, so you can see what already exists, and before compose_practice_exam, to choose which tasks to include.`,
     parameters: z.object({
       subjectId: z.string().nullable().describe('The course, or null for all of them.'),
       sourceId: z.string().nullable().describe('Only tasks from this source, or null.'),
@@ -426,7 +425,7 @@ export const READ_ONLY_TOOLS = [
       format: z
         .string()
         .nullable()
-        .describe('One of flashcard, cloze, multiple_choice, open_question, or null for all four.'),
+        .describe(`One of ${TASK_FORMATS.join(', ')}, or null for all of them.`),
       archived: z.boolean().describe('true to list the archive instead.'),
     }),
     run: (supabase, input) => listTasks(supabase, input),

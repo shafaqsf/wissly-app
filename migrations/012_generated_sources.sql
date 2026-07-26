@@ -1,4 +1,4 @@
--- 008_generated_sources.sql
+-- 012_generated_sources.sql
 --
 -- Autonomous course-build from a stated goal (see
 -- src/lib/agent/course-from-goal.js) drafts sections from the model's own

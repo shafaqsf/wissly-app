@@ -8,16 +8,19 @@
  * nothing that already imports them from there has to change. */
 
 /**
- * An anchor is `{ page }` when the source was a PDF, `{ start, end,
- * heading? }` when it was pasted text, and `{ generated: true, heading? }`
- * when the section was drafted by the agent from a stated goal rather than
- * cut from anything the learner brought — see
- * `src/lib/agent/course-from-goal.js`. The first two read as a place a
- * person can find again; the third must never be worded as though it were
- * one. Confidently implying a source that does not exist is the one failure
- * this product cannot afford, so a generated anchor says so in the same
- * words every time rather than being left to look like a passage citation
- * that merely forgot its page number.
+ * An anchor is `{ page }` for a PDF, `{ slide }` for a slide deck, or
+ * `{ start, end, heading? }` for anything ingested like pasted text — pasted
+ * text itself, a web link once it is reduced to readable prose, or a photo
+ * once it is transcribed. All of those read as a place a person can find
+ * again, so all of them get words rather than a raw offset.
+ *
+ * `{ generated: true, heading? }` is the one that does not: the section was
+ * drafted by the agent from a stated goal rather than cut from anything the
+ * learner brought — see `src/lib/agent/course-from-goal.js`. It must never be
+ * worded as though it were a place. Confidently implying a source that does
+ * not exist is the one failure this product cannot afford, so a generated
+ * anchor says so in the same words every time rather than being left to look
+ * like a passage citation that merely forgot its page number.
  */
 export function describeAnchor(anchor) {
   if (!anchor) return 'source unknown';
@@ -27,6 +30,7 @@ export function describeAnchor(anchor) {
       : 'generated, not from your material';
   }
   if (anchor.page != null) return `page ${anchor.page}`;
+  if (anchor.slide != null) return `slide ${anchor.slide}`;
 
   const range = `characters ${anchor.start}–${anchor.end}`;
   return anchor.heading ? `${anchor.heading}, ${range}` : range;

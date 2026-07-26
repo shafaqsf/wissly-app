@@ -1,4 +1,4 @@
--- 007_socratic_mode.sql
+-- 011_socratic_mode.sql
 --
 -- Socratic tutor mode joins chat and agent as a third value `mode` may take.
 -- It answers with guiding questions instead of answers, grounded in the same

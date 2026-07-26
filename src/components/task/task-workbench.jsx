@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import { buttonClass, quietButtonClass } from '@/components/artefact/control';
+import EmptyState from '@/components/empty/empty-state';
 import BulkBar from './bulk-bar';
 import ExportButtons from './export-buttons';
 import FlashcardStack from './flashcard-stack';
@@ -181,12 +182,21 @@ function Empty({ type, archived, filtered }) {
     );
   }
 
+  if (filtered) {
+    return (
+      <p className="max-w-measure text-body">
+        {`No ${type.label.toLowerCase()} under this filter. Widen it, or write one against this part of your material.`}
+      </p>
+    );
+  }
+
+  // The first thing a new course meets, since nothing is generated on
+  // upload — task item 7 in v0.15 gives it an illustration, not only a
+  // sentence.
   return (
-    <p className="max-w-measure text-body">
-      {filtered
-        ? `No ${type.label.toLowerCase()} under this filter. Widen it, or write one against this part of your material.`
-        : `No ${type.label.toLowerCase()} yet. Write one yourself — it costs nothing — or generate a set from your material.`}
-    </p>
+    <EmptyState variant="tasks">
+      {`No ${type.label.toLowerCase()} yet. Write one yourself — it costs nothing — or generate a set from your material.`}
+    </EmptyState>
   );
 }
 

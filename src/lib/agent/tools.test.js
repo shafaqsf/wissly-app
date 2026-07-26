@@ -156,7 +156,7 @@ describe('listSources', () => {
 })
 
 describe('listTasks', () => {
-  it('reads only the four answered formats', async () => {
+  it('reads only the answered formats', async () => {
     const supabase = fakeSupabase({ artefacts: { data: [], error: null } })
 
     await listTasks(supabase, { subjectId: 'sub1' })
@@ -166,6 +166,8 @@ describe('listTasks', () => {
       'flashcard',
       'multiple_choice',
       'open_question',
+      'ordering',
+      'practice_exam',
     ])
   })
 
@@ -191,6 +193,7 @@ describe('listReading', () => {
     await listReading(supabase, { subjectId: 'sub1' })
 
     expect(argsOf(supabase.query('artefacts'), 'in')[1].sort()).toEqual([
+      'comparison_table',
       'glossary',
       'summary',
     ])

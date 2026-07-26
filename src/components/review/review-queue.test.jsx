@@ -29,6 +29,9 @@ describe('ReviewQueue', () => {
     // A card sized to its message, not a tinted band across the page.
     expect(container.querySelector('.grain, .grain-field')).toBeNull()
     expect(container.firstChild).toHaveClass('rounded-surface', 'border', 'border-rule')
+
+    // task item 7 in v0.15: an illustration beside the invitation.
+    expect(container.querySelector('svg[data-empty-illustration]')).toBeInTheDocument()
   })
 
   it('shows one task at a time, and says where you are', () => {

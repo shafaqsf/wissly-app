@@ -136,6 +136,25 @@ describe('ConceptMastery', () => {
     expect(container.querySelector('.grain-field, .grain-wash')).toBeNull()
   })
 
+  /* The mastery gradient — task item 5 in v0.15 — is a colour layer beside
+     the mark, never a replacement for it. Every mark keeps its grain and its
+     fill and now also carries the mastery colour for that same state. */
+  it('carries the mastery gradient colour beside every mark, without losing the mark', () => {
+    const { container } = render(
+      <ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />,
+    );
+
+    const marks = container.querySelectorAll('.grain-mark');
+    expect(marks.length).toBeGreaterThan(0);
+
+    for (const mark of marks) {
+      expect(mark).toHaveClass('mastery-gradient');
+      expect(mark.style.getPropertyValue('--mastery-color')).toMatch(
+        /^var\(--color-mastery-(low|mid|high)\)$/,
+      );
+    }
+  });
+
   it('lets the learner step back out to the subject', async () => {
     const user = userEvent.setup()
     render(<ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />)

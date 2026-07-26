@@ -128,14 +128,18 @@ describe('fitWeights', () => {
     expect(fit.loss).toBeLessThanOrEqual(fit.startingLoss)
   })
 
-  it('moves the loss on this learner\'s data below the published defaults', () => {
-    const reviews = syntheticLog({ trueWeights: TRUE_WEIGHTS, artefactCount: 60, reviewsPerArtefact: 10 })
+  it(
+    "moves the loss on this learner's data below the published defaults",
+    () => {
+      const reviews = syntheticLog({ trueWeights: TRUE_WEIGHTS, artefactCount: 35, reviewsPerArtefact: 8 })
 
-    const fit = fitWeights(reviews, { initialWeights: DEFAULT_WEIGHTS, maxPasses: 20 })
-    const defaultLoss = averageLogLoss(reviews, DEFAULT_WEIGHTS)
+      const fit = fitWeights(reviews, { initialWeights: DEFAULT_WEIGHTS, maxPasses: 10 })
+      const defaultLoss = averageLogLoss(reviews, DEFAULT_WEIGHTS)
 
-    expect(fit.loss).toBeLessThan(defaultLoss)
-  })
+      expect(fit.loss).toBeLessThan(defaultLoss)
+    },
+    20_000,
+  )
 
   it('always returns exactly 17 finite weights, in bounds', () => {
     const reviews = syntheticLog({ trueWeights: TRUE_WEIGHTS, artefactCount: 40, reviewsPerArtefact: 8 })

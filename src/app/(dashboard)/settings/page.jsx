@@ -1,14 +1,15 @@
 import SignOutButton from '@/components/auth/sign-out-button';
+import WeeklyReportPreview from '@/components/settings/weekly-report-preview';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = {
   title: 'Settings — wissly',
 };
 
-/* There is one setting worth the name so far — which account this is — and
-   the one action that belongs beside it. A page that listed switches nobody
-   has built would be a promise, not a screen; when a real preference exists,
-   it goes here. */
+/* The account, and the one preview worth showing: what a weekly email would
+   say if delivery existed. A page that listed switches nobody has built
+   would be a promise, not a screen; when a real preference exists, it goes
+   here. */
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -42,6 +43,17 @@ export default async function SettingsPage() {
             back.
           </p>
         </div>
+      </section>
+
+      <section aria-label="Weekly report" className="flex flex-col gap-6">
+        <h2 className="font-display text-heading font-semibold">Weekly report</h2>
+        <p className="max-w-measure text-body-s text-ink-muted">
+          A summary of reviews done, mastery, your streak and what is coming
+          due — the same report a weekly email would carry. Delivery is not
+          built yet, so this writes the report to the server log instead of
+          sending it.
+        </p>
+        <WeeklyReportPreview />
       </section>
     </div>
   );

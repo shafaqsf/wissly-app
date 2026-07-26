@@ -1,22 +1,33 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { courseById, listArtefacts, listConceptMastery, listSourcesWithSections, notFound } =
-  vi.hoisted(() => ({
-    courseById: vi.fn(),
-    listArtefacts: vi.fn(),
-    listConceptMastery: vi.fn(),
-    listSourcesWithSections: vi.fn(),
-    notFound: vi.fn(() => {
-      throw new Error('NEXT_NOT_FOUND')
-    }),
-  }))
+const {
+  courseById,
+  dailyGoalFor,
+  examPlanFor,
+  listArtefacts,
+  listConceptMastery,
+  listSourcesWithSections,
+  notFound,
+} = vi.hoisted(() => ({
+  courseById: vi.fn(),
+  dailyGoalFor: vi.fn(),
+  examPlanFor: vi.fn(),
+  listArtefacts: vi.fn(),
+  listConceptMastery: vi.fn(),
+  listSourcesWithSections: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error('NEXT_NOT_FOUND')
+  }),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({})) }))
 vi.mock('@/lib/data/courses', () => ({ courseById }))
 vi.mock('@/lib/data/sources', () => ({ listSourcesWithSections }))
 vi.mock('@/lib/data/concepts', () => ({ listConceptMastery }))
 vi.mock('@/lib/data/artefacts', () => ({ listArtefacts }))
+vi.mock('@/lib/data/daily-goal', () => ({ dailyGoalFor }))
+vi.mock('@/lib/data/exam-plan', () => ({ examPlanFor }))
 vi.mock('next/navigation', () => ({ notFound }))
 vi.mock('@/lib/actions/material', () => ({ addMaterialAction: vi.fn() }))
 vi.mock('@/lib/actions/course', () => ({
@@ -24,6 +35,7 @@ vi.mock('@/lib/actions/course', () => ({
   archiveSourceAction: vi.fn(),
   restoreReadingAction: vi.fn(),
   restoreSourceAction: vi.fn(),
+  setExamDateAction: vi.fn(),
 }))
 
 import CoursePage from './page'
@@ -66,6 +78,15 @@ function stock() {
     }
     return [reading]
   })
+  dailyGoalFor.mockResolvedValue({
+    subjectId: 'course-1',
+    subjectTitle: 'Optics',
+    examDate: null,
+    target: 0,
+    remaining: 0,
+    horizonDays: 7,
+  })
+  examPlanFor.mockResolvedValue(null)
 }
 
 const page = (searchParams = {}) =>
@@ -204,6 +225,41 @@ describe('the course shelf', () => {
     render(await page())
 
     expect(screen.getByRole('button', { name: 'Export reading' })).toBeInTheDocument()
+  })
+
+  it('shows the pace panel, reading only this course’s goal', async () => {
+    render(await page())
+
+    expect(screen.getByRole('region', { name: 'Exam' })).toBeInTheDocument()
+    expect(dailyGoalFor).toHaveBeenCalledWith({}, { subjectId: 'course-1' })
+  })
+
+  it('only asks for a compressed plan once an exam date exists', async () => {
+    render(await page())
+
+    expect(examPlanFor).not.toHaveBeenCalled()
+  })
+
+  it('asks for the compressed plan once an exam date is set', async () => {
+    dailyGoalFor.mockResolvedValue({
+      subjectId: 'course-1',
+      subjectTitle: 'Optics',
+      examDate: '2026-08-10',
+      target: 2,
+      remaining: 1,
+      horizonDays: 15,
+    })
+    examPlanFor.mockResolvedValue({
+      subjectId: 'course-1',
+      subjectTitle: 'Optics',
+      examDate: '2026-08-10',
+      days: [{ date: '2026-07-26', count: 2, artefactIds: ['a1', 'a2'] }],
+    })
+
+    render(await page())
+
+    expect(examPlanFor).toHaveBeenCalledWith({}, { subjectId: 'course-1' })
+    expect(screen.getByText('2 reviews')).toBeInTheDocument()
   })
 
   /* Nothing is generated on upload, so a new course is empty — and an empty

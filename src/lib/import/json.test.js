@@ -107,6 +107,80 @@ describe('importBundle', () => {
     })
   })
 
+  /* Full fidelity is the whole point of the JSON export, and a source kind
+     the importer does not recognise is exactly where that quietly stops
+     being true: coercing a deck or a web link back to `text` loses what the
+     material actually is, and the anchor beside it — a slide number — then
+     describes a kind the row no longer claims. */
+  it.each(['pdf', 'pptx', 'url', 'image', 'text'])(
+    'keeps a %s source the kind it was exported as',
+    async (kind) => {
+      const supabase = supabaseFor()
+
+      await importBundle(supabase, {
+        userId: 'u1',
+        bundle: {
+          ...bundle,
+          courses: [
+            {
+              ...bundle.courses[0],
+              sources: [{ ...bundle.courses[0].sources[0], kind }],
+            },
+          ],
+        },
+      })
+
+      const [sourceRow] = argsOf(supabase.query('sources'), 'insert')
+      expect(sourceRow.kind).toBe(kind)
+    },
+  )
+
+  it('refuses a source kind the database would reject anyway', async () => {
+    const supabase = supabaseFor()
+
+    await importBundle(supabase, {
+      userId: 'u1',
+      bundle: {
+        ...bundle,
+        courses: [
+          {
+            ...bundle.courses[0],
+            sources: [{ ...bundle.courses[0].sources[0], kind: 'wingdings' }],
+          },
+        ],
+      },
+    })
+
+    const [sourceRow] = argsOf(supabase.query('sources'), 'insert')
+    expect(sourceRow.kind).toBe('text')
+  })
+
+  it('carries the address a web link was imported from', async () => {
+    const supabase = supabaseFor()
+
+    await importBundle(supabase, {
+      userId: 'u1',
+      bundle: {
+        ...bundle,
+        courses: [
+          {
+            ...bundle.courses[0],
+            sources: [
+              {
+                ...bundle.courses[0].sources[0],
+                kind: 'url',
+                origin: 'https://example.com/article',
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const [sourceRow] = argsOf(supabase.query('sources'), 'insert')
+    expect(sourceRow.origin).toBe('https://example.com/article')
+  })
+
   it('preserves the concept’s term and definition, remapped onto the new section', async () => {
     const supabase = supabaseFor()
 

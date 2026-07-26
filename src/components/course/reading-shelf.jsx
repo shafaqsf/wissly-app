@@ -1,3 +1,4 @@
+import ComparisonTableArtefact from '@/components/artefact/comparison-table-artefact';
 import { quietButtonClass } from '@/components/artefact/control';
 import GlossaryArtefact from '@/components/artefact/glossary-artefact';
 import SummaryArtefact from '@/components/artefact/summary-artefact';
@@ -15,12 +16,14 @@ import { isReadingFormat } from '@/lib/agent/formats';
 const RENDERERS = {
   summary: SummaryArtefact,
   glossary: GlossaryArtefact,
+  comparison_table: ComparisonTableArtefact,
 };
 
 /** What to call one of these in a button, in the learner's words. */
 const NAMES = {
   summary: 'this summary',
   glossary: 'this glossary entry',
+  comparison_table: 'this comparison',
 };
 
 export default function ReadingShelf({ courseId, artefacts = [], archiveAction }) {

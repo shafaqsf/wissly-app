@@ -12,8 +12,29 @@
   --color-ink: #000000;
 
   /* There is no field palette. A field is ink, diluted — see "Colour" in
-     docs/DESIGN.md. `globals.css.test.js` fails on any hue in any source
-     file, so the rule cannot quietly come back one component at a time. */
+     docs/DESIGN.md. `globals.css.test.js` fails on any hue inside a
+     `.field-*` fill, so the rule cannot quietly come back one component at a
+     time. */
+
+  /* Accent — a small, deliberate palette for the chrome. "No colour in the
+     chrome" held from v0.9 to v0.14; the maintainer has deliberately loosened
+     it for a more SaaS-friendly surface — see "Colour" in docs/DESIGN.md.
+     Loosened is not open: this is the whole palette, it is defined once,
+     here, and `globals.css.test.js` fails on a hue anywhere in the
+     stylesheet that is not one of these six values. Reach for it as
+     `bg-accent`, `text-accent`, `border-accent-deep`, and so on — the same
+     way every other token in this block already becomes a class. */
+  --color-accent: #4f46e5;
+  --color-accent-soft: #eef2ff;
+  --color-accent-deep: #3730a3;
+
+  /* Mastery gradient — red toward green, a second colour layer beside the
+     mark and never inside it. It reads the same three tiers
+     `masteryState()` already names; see src/lib/mastery.js and ".mastery-
+     gradient" below. */
+  --color-mastery-low: #dc2626;
+  --color-mastery-mid: #d97706;
+  --color-mastery-high: #16a34a;
 
   /* Type */
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
@@ -174,6 +195,33 @@ body {
   background-color: var(--color-paper);
   background-image: linear-gradient(var(--field-mark), var(--field-mark));
   transition: --field-mark var(--motion-settle) var(--motion-settle-curve);
+}
+
+/* --- The mastery gradient ---------------------------------------------
+   A second, deliberate colour layer beside the mark — never inside it, and
+   never a replacement for it. The mark still carries the state in its grain
+   and its fill; this is a faster read for a sighted learner scanning a
+   column, drawn as a 6px dot at the mark's own corner rather than as a
+   surface of its own. Pair it with `.grain-mark` and set `--mastery-color`
+   from `masteryState()`, the same way `--grain` is set. */
+.mastery-gradient {
+  position: relative;
+}
+
+.mastery-gradient::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-round);
+  /* The three stops are never all shown at once — a mark carries one
+     mastery colour, chosen by the component from `masteryState().color`,
+     which is always one of these three. Naming all three here, once, is
+     what keeps that colour from being invented per component. */
+  background-color: var(--mastery-color, var(--color-mastery-low));
+  border: 1px solid var(--color-paper);
 }
 
 /* The drift: an agent is still working. */

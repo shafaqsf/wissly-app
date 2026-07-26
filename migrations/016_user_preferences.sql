@@ -1,4 +1,4 @@
--- 007_user_preferences.sql
+-- 016_user_preferences.sql
 --
 -- Settings needed somewhere to live. One row per learner, keyed on the id
 -- itself rather than a surrogate — a preference belongs to exactly one

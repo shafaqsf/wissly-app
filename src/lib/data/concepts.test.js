@@ -7,6 +7,7 @@ import {
   conceptNameFor,
   createConceptsForSections,
   listConceptMastery,
+  weakestConcepts,
 } from './concepts.js'
 
 describe('naming a concept', () => {
@@ -132,5 +133,60 @@ describe('mastery per concept', () => {
 
     await expect(listConceptMastery(supabase, { subjectId: 'sub-1' })).resolves.toEqual([])
     expect(supabase.query('concept_mastery')).toBeUndefined()
+  })
+})
+
+describe('the weakest concepts', () => {
+  it('ranks worst first, and includes a concept nobody has touched at all', async () => {
+    const supabase = fakeSupabase({
+      concepts: {
+        data: [
+          { id: 'c1', subject_id: 'sub-1', term: 'Untouched' },
+          { id: 'c2', subject_id: 'sub-1', term: 'Half there' },
+          { id: 'c3', subject_id: 'sub-1', term: 'Nearly settled' },
+        ],
+        error: null,
+      },
+      concept_mastery: {
+        data: [
+          { concept_id: 'c2', mastery: '0.4' },
+          { concept_id: 'c3', mastery: '0.85' },
+        ],
+        error: null,
+      },
+    })
+
+    const weakest = await weakestConcepts(supabase, { subjectId: 'sub-1' })
+
+    expect(weakest.map((concept) => concept.name)).toEqual([
+      'Untouched',
+      'Half there',
+      'Nearly settled',
+    ])
+  })
+
+  it('leaves out a concept that is already mastered', async () => {
+    const supabase = fakeSupabase({
+      concepts: { data: [{ id: 'c1', subject_id: 'sub-1', term: 'Settled' }], error: null },
+      concept_mastery: { data: [{ concept_id: 'c1', mastery: '0.95' }], error: null },
+    })
+
+    const weakest = await weakestConcepts(supabase, { subjectId: 'sub-1' })
+
+    expect(weakest).toEqual([])
+  })
+
+  it('caps the list at the limit', async () => {
+    const supabase = fakeSupabase({
+      concepts: {
+        data: Array.from({ length: 5 }, (_, i) => ({ id: `c${i}`, subject_id: 'sub-1', term: `C${i}` })),
+        error: null,
+      },
+      concept_mastery: { data: [], error: null },
+    })
+
+    const weakest = await weakestConcepts(supabase, { subjectId: 'sub-1', limit: 2 })
+
+    expect(weakest).toHaveLength(2)
   })
 })

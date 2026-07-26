@@ -14,6 +14,7 @@ import { listConceptMastery } from '@/lib/data/concepts';
 import { listConversations } from '@/lib/data/conversations';
 import { listCourses } from '@/lib/data/courses';
 import { listSources } from '@/lib/data/sources';
+import { streakFor } from '@/lib/data/streak';
 import { masteryState } from '@/lib/mastery';
 import { createClient } from '@/lib/supabase/server';
 
@@ -203,8 +204,8 @@ export async function WeakestPanel() {
                 <span className="flex items-center gap-3">
                   <span
                     aria-hidden="true"
-                    className={`grain grain-mark ${state.field}`}
-                    style={{ '--grain': state.grain }}
+                    className={`grain grain-mark mastery-gradient ${state.field}`}
+                    style={{ '--grain': state.grain, '--mastery-color': state.color }}
                   />
                   <span className="text-body-s">{concept.name}</span>
                 </span>
@@ -342,6 +343,64 @@ const TASK_TITLES = {
   multiple_choice: 'Multiple choice',
   open_question: 'Open questions',
 };
+
+/* --- Streak ------------------------------------------------------------- */
+
+/**
+ * How many days in a row you have shown up, in a real number.
+ *
+ * `README.md` bans a progress bar and a percentage everywhere else in
+ * the product, on the grounds that mastery has no meaningful "how far along"
+ * to report. A streak is a different kind of number: it is not a fraction of
+ * anything, it is a count of days, and it is exactly the kind of fact this
+ * document keeps out of *mastery* without meaning to keep it out of
+ * *motivation*. This panel and Exam on the course page are where that
+ * distinction is drawn — the mark stays the only way progress is shown, the
+ * streak stays the only place a bare count is.
+ */
+export async function StreakPanel() {
+  const supabase = await createClient();
+  const { days, milestone } = await streakFor(supabase);
+
+  if (days === 0) {
+    return (
+      <Panel
+        title="Streak"
+        action={
+          <Link href="/tasks/due" className={actionClass}>
+            Start a round
+          </Link>
+        }
+      >
+        <p className="max-w-measure text-body-s text-ink-muted">
+          No streak yet. Review something today to start one.
+        </p>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title="Streak">
+      <p className="font-display text-heading font-semibold">
+        <span
+          aria-hidden="true"
+          className="motion-count"
+          data-count=""
+          style={{ '--motion-count-value': days }}
+        />
+        <span aria-hidden="true"> {days === 1 ? 'day' : 'days'} streak</span>
+        <span className="sr-only">{plural(days, 'day')} streak</span>
+      </p>
+      {milestone ? (
+        <p className="font-mono text-caption uppercase text-ink-muted">
+          {milestone}-day milestone reached
+        </p>
+      ) : (
+        <p className="font-mono text-caption uppercase text-ink-muted">Keep it going</p>
+      )}
+    </Panel>
+  );
+}
 
 /* --- This week -------------------------------------------------------- */
 

@@ -3,6 +3,7 @@ import 'server-only'
 import { randomUUID } from 'crypto'
 
 import { unwrap, unwrapList } from '../data/result.js'
+import { isSourceKind } from '../data/sources.js'
 
 /* The other half of the round trip: a bundle in the shape
  * `src/lib/data/export.js` produces, written back as new rows under the
@@ -72,9 +73,16 @@ async function importCourse(supabase, { userId, course, now, summary }) {
           id: sourceId,
           user_id: userId,
           subject_id: subjectId,
-          kind: source.kind === 'pdf' ? 'pdf' : 'text',
+          // Every kind the constraint accepts survives the round trip. Only
+          // a value the database would reject outright falls back to `text`
+          // — a bundle hand-edited, or written by a newer wissly than this
+          // one. Coercing a deck or a link to `text` would lose what the
+          // material is and leave its sections carrying a slide number the
+          // row no longer claims.
+          kind: isSourceKind(source.kind) ? source.kind : 'text',
           title: source.title || 'Untitled',
           raw_text: source.raw_text ?? null,
+          origin: source.origin ?? null,
           archived_at: source.archived_at ?? null,
         })
         .select('id')

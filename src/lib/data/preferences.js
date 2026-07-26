@@ -4,7 +4,7 @@ import { unwrap } from './result.js'
 /* One row per learner, one preference in it so far: which model generation
  * reaches for when nothing more specific was chosen. See
  * `src/lib/agent/models.js` for the three tiers `resolveModel` checks, and
- * migration 007 for the table and its policies.
+ * migration 016 for the table and its policies.
  *
  * The settings page offers a curated few models, not a free field — the same
  * decision the per-message picker already made, and for the same reason: a

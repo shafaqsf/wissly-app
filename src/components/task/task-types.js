@@ -25,6 +25,13 @@ export const TASK_TYPES = Object.freeze([
     label: 'Open questions',
     one: 'Open question',
   },
+  { slug: 'ordering', format: 'ordering', label: 'Ordering', one: 'Ordering' },
+  {
+    slug: 'practice-exams',
+    format: 'practice_exam',
+    label: 'Practice exams',
+    one: 'Practice exam',
+  },
 ].sort((a, b) => TASK_FORMATS.indexOf(a.format) - TASK_FORMATS.indexOf(b.format)))
 
 export function typeBySlug(slug) {

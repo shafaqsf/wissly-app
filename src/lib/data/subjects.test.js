@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { argsOf, fakeSupabase } from './fake-supabase.js'
-import { createSubject, listSubjects, subjectByTitle } from './subjects.js'
+import { createSubject, listSubjects, setExamDate, subjectByTitle } from './subjects.js'
 
 describe('listing subjects', () => {
   it('returns them newest first', async () => {
@@ -90,5 +90,29 @@ describe('finding a subject by title', () => {
     const supabase = fakeSupabase({ subjects: { data: null, error: null } })
 
     await expect(subjectByTitle(supabase, { title: 'Optics' })).resolves.toBeNull()
+  })
+})
+
+describe('setting an exam date', () => {
+  it('writes the date onto the course', async () => {
+    const supabase = fakeSupabase({
+      subjects: { data: { id: 's1', title: 'Optics', exam_date: '2026-09-01' }, error: null },
+    })
+
+    const subject = await setExamDate(supabase, { id: 's1', examDate: '2026-09-01' })
+
+    expect(subject).toEqual({ id: 's1', title: 'Optics', exam_date: '2026-09-01' })
+    expect(argsOf(supabase.query('subjects'), 'update')).toEqual([{ exam_date: '2026-09-01' }])
+    expect(argsOf(supabase.query('subjects'), 'eq')).toEqual(['id', 's1'])
+  })
+
+  it('clears the date rather than storing an empty string', async () => {
+    const supabase = fakeSupabase({
+      subjects: { data: { id: 's1', title: 'Optics', exam_date: null }, error: null },
+    })
+
+    await setExamDate(supabase, { id: 's1', examDate: '' })
+
+    expect(argsOf(supabase.query('subjects'), 'update')).toEqual([{ exam_date: null }])
   })
 })

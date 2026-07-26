@@ -7,7 +7,7 @@ import { unwrap, unwrapList } from './result.js'
  * client is per-request and asynchronous, and a module that reached for it
  * itself could not be tested without standing up a request. */
 
-const COLUMNS = 'id, title, created_at'
+const COLUMNS = 'id, title, created_at, exam_date'
 
 export async function listSubjects(supabase) {
   return unwrapList(
@@ -61,4 +61,22 @@ export async function subjectByTitle(supabase, { title }) {
 /** The subject with this title, created if it is not there yet. */
 export async function subjectForTitle(supabase, { userId, title }) {
   return (await subjectByTitle(supabase, { title })) ?? createSubject(supabase, { userId, title })
+}
+
+/**
+ * Set or clear a course's exam date, so the countdown, the daily goal and the
+ * compressed review plan all have something to plan against. `examDate: null`
+ * clears it — a learner may decide not to sit the exam after all, and the
+ * course goes back to the default lookahead the daily goal uses without one.
+ */
+export async function setExamDate(supabase, { id, examDate }) {
+  return unwrap(
+    await supabase
+      .from('subjects')
+      .update({ exam_date: examDate || null })
+      .eq('id', id)
+      .select(COLUMNS)
+      .single(),
+    'set the exam date',
+  )
 }

@@ -1,24 +1,35 @@
 import SignOutButton from '@/components/auth/sign-out-button';
 import ExportImportPanel from '@/components/settings/export-import-panel';
 import ModelPreferenceForm from '@/components/settings/model-preference-form';
+import WeightFitPanel from '@/components/settings/weight-fit-panel';
 import { exportDataAction, importDataAction } from '@/lib/actions/export.js';
 import { updateDefaultModelAction } from '@/lib/actions/settings.js';
+import { reviewLogFor, weightsFor } from '@/lib/data/fsrs-weights.js';
 import { getPreferences } from '@/lib/data/preferences.js';
+import { MIN_REVIEWS_TO_FIT } from '@/lib/review/fit-weights.js';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = {
   title: 'Settings — wissly',
 };
 
-/* Four things worth the name so far: which account this is, which model
-   generation reaches for, carrying data out and back in, and what to expect
-   from the queue offline. A page that listed switches nobody has built would
-   be a promise, not a screen; when a real preference exists, it goes here. */
+/* There used to be one setting worth the name — which account this is — and
+   the one action beside it. Now there are five: which model generation reaches
+   for, review scheduling fitted from a learner's own history, carrying data
+   out and back in, and what to expect from the queue offline. Each earns its
+   place by being something a learner can act on; a page that listed switches
+   nobody has built would be a promise, not a screen. When a real preference
+   exists, it goes here. */
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const email = data?.claims?.email ?? null;
   const preferences = await getPreferences(supabase);
+
+  const [existing, reviews] = await Promise.all([
+    weightsFor(supabase),
+    reviewLogFor(supabase),
+  ]);
 
   return (
     <div className="flex flex-col gap-16">
@@ -55,6 +66,18 @@ export default async function SettingsPage() {
         <ModelPreferenceForm
           defaultModel={preferences.default_model ?? ''}
           action={updateDefaultModelAction}
+        />
+      </section>
+
+      <section aria-label="Review scheduling" className="flex flex-col gap-6">
+        <h2 className="font-display text-heading font-semibold">
+          Review scheduling
+        </h2>
+
+        <WeightFitPanel
+          existing={existing}
+          reviewCount={reviews.length}
+          minReviews={MIN_REVIEWS_TO_FIT}
         />
       </section>
 

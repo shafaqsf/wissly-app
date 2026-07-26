@@ -81,7 +81,7 @@ is enforced twice — the tools return the anchor alongside the content so the
 model cannot lose it, and an output guardrail rejects an answer that cites the
 material without one.
 
-## Two modes
+## Three modes
 
 The distinction the learner sees is not "which model" but **who acts**.
 
@@ -89,13 +89,21 @@ The distinction the learner sees is not "which model" but **who acts**.
 writes nothing except its own messages. Every tool it holds is read-only, so
 this is a property of the wiring, not a promise.
 
+**Socratic** (v0.21.0) holds exactly the same read-only tools as Chat —
+`TOOLS_BY_ROLE.Tutor` is built from the same `READING` list `TOOLS_BY_ROLE.
+Librarian` is, so the two can never drift apart by one tool being added to
+one and not the other. Where Chat answers, the Tutor asks a guiding question
+instead, grounded in a search of the same material. The guardrail that
+requires a citation applies to it identically: a question built on a passage
+it just read still has to name that passage.
+
 **Agent** acts. It has the writing tools, and it works through a task without
 asking at each step: add this PDF, generate cards for every section, drop the
 duplicates, schedule them.
 
 Switching modes mid-conversation is allowed and is recorded per message. A
 conversation is not "a chat" or "an agent run" — it is a thread through which
-both happened, and the transcript says which.
+all three happened, and the transcript says which.
 
 ## What the agent may do without asking
 
@@ -281,8 +289,47 @@ last completed tool call rather than repeating it.
 - **The rest of the writing surface.** Moving material between courses,
   archiving a source, emptying the archive.
 
+## What v0.21.0 added
+
+Six capabilities on top of the runtime above, all built from tools the
+existing structural guarantee already covers rather than a new permission
+model:
+
+1. **Voice.** `src/lib/agent/voice.js` wraps the browser-native
+   `SpeechRecognition` and `SpeechSynthesis` — no external account, no
+   network call of its own. The bar hides the control entirely on a browser
+   that ships neither.
+2. **The Socratic Tutor**, above.
+3. **Teach-back grading.** `grade_explanation` judges a live explanation
+   against a concept's own section — no pre-written `model_answer` to compare
+   to, unlike `grade_answer`. It needs the structured client but writes
+   nothing, so it lives in `READ_ONLY_TOOLS` with `needsClient: true` rather
+   than in the writing surface: every mode holds it, including Chat and the
+   Tutor. Every point the grade makes must cite a section it was actually
+   given; a fabricated citation fails the call rather than reaching the
+   learner.
+4. **`suggest_learning_plan`** composes what is due, `detect_gaps`' own
+   report, and ungenerated sections into a session-by-session suggestion —
+   pure composition in `plan.js`, read-only, never a write.
+5. **`build_course_from_goal`** drafts a course from a stated goal instead of
+   uploaded material, through the *same* `createSource` /
+   `createConceptsForSections` / `generateArtefact` pipeline ingestion uses.
+   The one deliberate difference: every section it makes carries
+   `{generated: true}` in its anchor instead of a page or a character range,
+   and `sources.generated` says so at the shelf level too. The citation UI
+   reads that shape and renders "Generated" rather than "Source N" — the
+   product's citation guarantee is that a fabricated passage must never be
+   indistinguishable from a real one, and this is the one honest way to keep
+   it.
+6. **`detect_gaps`** surfaces `gapConcepts` — mastery that is demonstrably
+   weak, not merely unattempted — as a tool the agent can offer as a
+   suggestion ("want more practice on this?"). Accepting it is a separate
+   `make_artefacts` call through the ordinary write path; nothing here writes
+   on its own.
+
 ## Out of scope
 
-Voice, multi-user conversations, agent-initiated messages without a learner
+Multi-user conversations, agent-initiated messages without a learner
 present, and any tool that reaches outside wissly — no web search, no email,
-no calendar. The agent works from your material. That is the product.
+no calendar. The agent works from your material, or from what it is
+transparently told to draft in the absence of any. That is the product.

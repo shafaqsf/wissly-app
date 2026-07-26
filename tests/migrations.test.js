@@ -42,6 +42,7 @@ describe('the schema', () => {
       'concepts',
       'conversations',
       'messages',
+      'notifications',
       'reviews',
       'sections',
       'sources',

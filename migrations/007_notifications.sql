@@ -27,6 +27,11 @@ create table if not exists public.notifications (
   read_at timestamptz
 );
 
+-- Every table since 001 carries a plain index on its `user_id` foreign key;
+-- this is that one.
+create index if not exists notifications_user_id_idx
+  on public.notifications (user_id);
+
 -- The bell asks two questions: how many are unread, and what are the most
 -- recent. A partial index answers the first without scanning read history;
 -- the second is the same column ordered the other way, which the plain index

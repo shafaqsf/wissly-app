@@ -1,6 +1,7 @@
 import { scheduleReview } from '@/lib/review/fsrs.js'
 
 import { withSections } from './artefacts.js'
+import { weightsFor } from './fsrs-weights.js'
 import { unwrap, unwrapList } from './result.js'
 
 /* The queue, and what happens after a rating.
@@ -83,13 +84,26 @@ export async function scheduleFor(supabase, { artefactId }) {
  * The scheduler decides when; this only writes down what it decided. The row
  * is appended, never updated — the history is what lets the mastery view
  * distinguish "got it right once" from "gets it right".
+ *
+ * Which weights the scheduler uses is looked up here, not chosen by the
+ * caller: a learner with a fitted vector in `fsrs_weights` schedules on it,
+ * everyone else schedules on the published FSRS-4.5 defaults `fsrs.js`
+ * already falls back to when `weights` is `undefined`. `fsrs.js` itself never
+ * learns any of this — it stays a pure function of state, rating and
+ * whatever weight vector it is handed.
  */
 export async function recordReview(supabase, { userId, artefactId, rating, state, now = new Date() }) {
   if (![1, 2, 3, 4].includes(Number(rating))) {
     throw new Error('A rating is one of the four buttons, nothing else.')
   }
 
-  const next = scheduleReview({ state: state ?? undefined, rating: Number(rating), now })
+  const fitted = await weightsFor(supabase)
+  const next = scheduleReview({
+    state: state ?? undefined,
+    rating: Number(rating),
+    now,
+    weights: fitted?.weights,
+  })
 
   return unwrap(
     await supabase

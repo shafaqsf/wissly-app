@@ -3,19 +3,33 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { argsOf, fakeSupabase } from '../data/fake-supabase.js'
+
+// The SDK's `tool()` wraps `execute` behind `invoke(runContext, input,
+// details)`, expects a JSON *string* and needs a run context to call it —
+// plumbing that belongs to `agents.test.js`, which already exercises real
+// agents end to end. What is under test here is this module's own binder
+// logic (`readOnlyTools`'s `needsClient` branch), so `tool()` is stubbed to
+// hand the options straight back, the same shape every other test in this
+// file already reads off `READ_ONLY_TOOLS` directly.
+vi.mock('@openai/agents', () => ({ tool: (options) => options }))
+
 import {
   READ_ONLY_TOOLS,
+  detectGaps,
   dueTasks,
+  gradeExplanationTool,
   listCourses,
   listReading,
   listSources,
   listTasks,
+  readOnlyTools,
   readSection,
   searchEverything,
   searchSections,
+  suggestLearningPlan,
 } from './tools.js'
 
 describe('searchSections', () => {
@@ -221,10 +235,167 @@ describe('searchEverything', () => {
   })
 })
 
+describe('detectGaps', () => {
+  it('reads the gap report and nothing else', async () => {
+    const supabase = fakeSupabase({
+      concepts: { data: [{ id: 'c1', subject_id: 'sub1', term: 'Martingales', section_id: 's1' }], error: null },
+      concept_mastery: { data: [{ concept_id: 'c1', mastery: 0.3 }], error: null },
+      sections: { data: [{ id: 's1', source_id: 'src1', ordinal: 2 }], error: null },
+      sources: { data: [{ id: 'src1', title: 'Probability' }], error: null },
+    })
+
+    const gaps = await detectGaps(supabase, { subjectId: 'sub1' })
+
+    expect(gaps).toEqual([
+      {
+        id: 'c1',
+        subjectId: 'sub1',
+        name: 'Martingales',
+        mastery: 0.3,
+        sectionOrdinal: 2,
+        source: { id: 'src1', title: 'Probability' },
+      },
+    ])
+  })
+
+  it('refuses the wrong identity before it reads a single row', async () => {
+    const privileged = { supabaseKey: 'sb_secret_abc', from: () => {
+      throw new Error('too late')
+    } }
+
+    await expect(detectGaps(privileged, { subjectId: 'sub1' })).rejects.toThrow(/as the learner/i)
+  })
+})
+
+describe('suggestLearningPlan', () => {
+  it('composes what is due, the gap report and ungenerated sections into a plan', async () => {
+    const supabase = fakeSupabase({
+      sources: { data: [{ id: 'src1', subject_id: 'sub1', kind: 'text', title: 'Probability' }], error: null },
+      // Queried twice — once building the shelf, once by `withSections` for
+      // the one artefact already made — so both calls get the full list.
+      sections: {
+        data: [
+          { id: 's1', source_id: 'src1', ordinal: 1, content: 'a', anchor: null },
+          { id: 's2', source_id: 'src1', ordinal: 2, content: 'b', anchor: null },
+        ],
+        error: null,
+      },
+      artefacts: { data: [{ id: 'a1', subject_id: 'sub1', section_id: 's1', format: 'flashcard', payload: {}, origin: 'agent' }], error: null },
+      artefact_schedule: { data: [], error: null },
+      concepts: { data: [], error: null },
+      concept_mastery: { data: [], error: null },
+    })
+
+    const plan = await suggestLearningPlan(supabase, { subjectId: 'sub1', sessionSize: 10 })
+
+    // s1 already has an artefact; only s2 is ungenerated material.
+    expect(plan.totals.ungenerated).toBe(1)
+    expect(plan.sessions[0].items.some((item) => item.kind === 'new' && item.sectionId === 's2')).toBe(true)
+  })
+
+  it('refuses the wrong identity before it reads a single row', async () => {
+    const privileged = { supabaseKey: 'sb_secret_abc', from: () => {
+      throw new Error('too late')
+    } }
+
+    await expect(suggestLearningPlan(privileged, { subjectId: 'sub1' })).rejects.toThrow(/as the learner/i)
+  })
+})
+
+describe('gradeExplanationTool', () => {
+  it('grades a teach-back explanation against the concept’s own section', async () => {
+    const supabase = fakeSupabase({
+      concepts: {
+        data: { id: 'c1', subject_id: 'sub1', term: 'Martingales', definition: null, section_id: 's1' },
+        error: null,
+      },
+      sections: {
+        data: {
+          id: 's1',
+          ordinal: 4,
+          content: 'A martingale is a fair game.',
+          anchor: { page: 12 },
+          sources: { id: 'src1', title: 'Probability', subject_id: 'sub1' },
+        },
+        error: null,
+      },
+    })
+    const grade = {
+      covered: [{ point: 'Called it a fair game.', section_id: 's1' }],
+      gaps: [],
+      wrong: [],
+      feedback: 'Solid.',
+    }
+    const client = { chatStructured: async () => grade }
+
+    await expect(
+      gradeExplanationTool(supabase, { conceptId: 'c1', explanation: 'It is a fair game.', client }),
+    ).resolves.toEqual(grade)
+  })
+
+  it('says so plainly when the concept is not the learner’s', async () => {
+    const supabase = fakeSupabase({ concepts: { data: null, error: null } })
+
+    await expect(
+      gradeExplanationTool(supabase, { conceptId: 'nope', explanation: 'x', client: {} }),
+    ).rejects.toThrow(/not found/i)
+  })
+
+  it('refuses the wrong identity before it reads a single row', async () => {
+    const privileged = { supabaseKey: 'sb_secret_abc', from: () => {
+      throw new Error('the query was built, which is already too late')
+    } }
+
+    await expect(
+      gradeExplanationTool(privileged, { conceptId: 'c1', explanation: 'x', client: {} }),
+    ).rejects.toThrow(/as the learner/i)
+  })
+})
+
+describe('readOnlyTools', () => {
+  it('hands the structured client to a tool that declares it needs one', async () => {
+    const supabase = fakeSupabase({
+      concepts: {
+        data: { id: 'c1', subject_id: 'sub1', term: 'Martingales', definition: null, section_id: 's1' },
+        error: null,
+      },
+      sections: {
+        data: {
+          id: 's1',
+          ordinal: 4,
+          content: 'A martingale is a fair game.',
+          anchor: { page: 12 },
+          sources: { id: 'src1', title: 'Probability', subject_id: 'sub1' },
+        },
+        error: null,
+      },
+    })
+    const grade = { covered: [], gaps: [], wrong: [], feedback: 'ok' }
+    const client = { chatStructured: async () => grade }
+
+    const bound = readOnlyTools(supabase, { client }).find((t) => t.name === 'grade_explanation')
+
+    await expect(
+      bound.execute({ conceptId: 'c1', explanation: 'It is a fair game.' }),
+    ).resolves.toEqual(grade)
+  })
+
+  it('never hands the client to a tool that does not ask for one', async () => {
+    const supabase = fakeSupabase({ subjects: { data: [], error: null } })
+    const client = { chatStructured: async () => { throw new Error('must not be called') } }
+
+    const bound = readOnlyTools(supabase, { client }).find((t) => t.name === 'list_courses')
+
+    await expect(bound.execute({})).resolves.toEqual([])
+  })
+})
+
 describe('READ_ONLY_TOOLS', () => {
   it('is what chat mode holds, and none of it writes', () => {
     expect(READ_ONLY_TOOLS.map((definition) => definition.name).sort()).toEqual([
+      'detect_gaps',
       'due_tasks',
+      'grade_explanation',
       'list_courses',
       'list_reading',
       'list_sources',
@@ -232,6 +403,7 @@ describe('READ_ONLY_TOOLS', () => {
       'read_section',
       'search_everything',
       'search_sections',
+      'suggest_learning_plan',
     ])
   })
 

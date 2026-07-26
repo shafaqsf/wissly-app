@@ -64,14 +64,28 @@ describe('listing shares as the owner', () => {
   it('lists who a course has been shared with, newest first', async () => {
     const supabase = fakeSupabase({
       subject_shares: {
-        data: [{ id: 'sh-1', shared_with_user_id: 'user-2', created_at: '2026-01-02' }],
+        data: [
+          {
+            id: 'sh-1',
+            shared_with_user_id: 'user-2',
+            invitee_email: 'friend@example.com',
+            created_at: '2026-01-02',
+          },
+        ],
         error: null,
       },
     })
 
     const shares = await listShares(supabase, { subjectId: 'course-1' })
 
-    expect(shares).toEqual([{ id: 'sh-1', shared_with_user_id: 'user-2', created_at: '2026-01-02' }])
+    expect(shares).toEqual([
+      {
+        id: 'sh-1',
+        shared_with_user_id: 'user-2',
+        invitee_email: 'friend@example.com',
+        created_at: '2026-01-02',
+      },
+    ])
     expect(argsOf(supabase.query('subject_shares'), 'eq')).toEqual(['subject_id', 'course-1'])
     expect(argsOf(supabase.query('subject_shares'), 'order')).toEqual([
       'created_at',

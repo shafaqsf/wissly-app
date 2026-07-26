@@ -29,7 +29,7 @@ export async function listShares(supabase, { subjectId }) {
   return unwrapList(
     await supabase
       .from('subject_shares')
-      .select('id, shared_with_user_id, created_at')
+      .select('id, shared_with_user_id, invitee_email, created_at')
       .eq('subject_id', subjectId)
       .order('created_at', { ascending: false }),
     'list who this course is shared with',

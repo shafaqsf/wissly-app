@@ -136,6 +136,17 @@ describe('subject_shares', () => {
     expect(body).toMatch(/unique \(subject_id, shared_with_user_id\)/)
   })
 
+  it('keeps the invitee email so the owner can see who they shared with', () => {
+    const body = tableBody('subject_shares')
+    expect(body).toMatch(/invitee_email text not null/)
+    // subject_shares carries no policy that reads auth.users, so this can
+    // only ever be filled in by the definer function, from the row it just
+    // matched — never from the caller's raw input.
+    const fn = functionBody('share_subject_by_email')
+    expect(fn).toMatch(/select id, email into invitee, invitee_actual_email/)
+    expect(fn).toMatch(/values \(caller, target_subject_id, invitee, invitee_actual_email\)/)
+  })
+
   it('is read-only: access_level only ever means view', () => {
     const body = tableBody('subject_shares')
     expect(body).toMatch(/access_level text not null default 'view' check \(access_level in \('view'\)\)/)

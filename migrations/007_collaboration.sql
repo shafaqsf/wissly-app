@@ -56,6 +56,14 @@ create table if not exists public.subject_shares (
   user_id uuid not null references auth.users (id) on delete cascade,
   subject_id uuid not null references public.subjects (id) on delete cascade,
   shared_with_user_id uuid not null references auth.users (id) on delete cascade,
+  -- Denormalised from `auth.users.email` at the moment `share_subject_by_email`
+  -- inserts the row. `subject_shares` carries no policy that could read
+  -- `auth.users` itself, so without a copy the owner who typed this address
+  -- could not be shown it again — the row would say "shared with
+  -- <some uuid>" forever. The owner already knows the address; this is not
+  -- new information reaching them, only the same information surviving past
+  -- the moment they typed it.
+  invitee_email text not null,
   access_level text not null default 'view' check (access_level in ('view')),
   created_at timestamptz not null default now(),
   constraint subject_shares_not_self check (user_id <> shared_with_user_id),
@@ -270,6 +278,7 @@ as $$
 declare
   caller uuid := auth.uid();
   invitee uuid;
+  invitee_actual_email text;
   result public.subject_shares;
 begin
   if caller is null then
@@ -283,7 +292,7 @@ begin
     raise exception 'Only the course owner can share it.';
   end if;
 
-  select id into invitee
+  select id, email into invitee, invitee_actual_email
   from auth.users
   where lower(email) = lower(trim(invitee_email))
   limit 1;
@@ -296,8 +305,8 @@ begin
     raise exception 'You already have access to your own course.';
   end if;
 
-  insert into public.subject_shares (user_id, subject_id, shared_with_user_id)
-  values (caller, target_subject_id, invitee)
+  insert into public.subject_shares (user_id, subject_id, shared_with_user_id, invitee_email)
+  values (caller, target_subject_id, invitee, invitee_actual_email)
   on conflict (subject_id, shared_with_user_id) do update
     set access_level = excluded.access_level
   returning * into result;

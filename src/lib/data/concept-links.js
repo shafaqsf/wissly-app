@@ -1,7 +1,7 @@
 import { unwrapList } from './result.js'
 
 /* "See also" — a pair of concepts an agent judged related, and why. Stored
- * once per unordered pair (see migrations/007_concept_links.sql), so a
+ * once per unordered pair (see migrations/013_concept_links.sql), so a
  * caller asking "what does concept X relate to" has to look on both sides of
  * every row: X may have been written as `concept_id` or as
  * `related_concept_id`, depending on which side of the pair happened to be

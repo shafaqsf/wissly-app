@@ -8,13 +8,16 @@
  * nothing that already imports them from there has to change. */
 
 /**
- * An anchor is `{ page }` when the source was a PDF and `{ start, end,
- * heading? }` when it was pasted text. Both have to read as a place a person
- * can find again, so both get words rather than a raw offset.
+ * An anchor is `{ page }` for a PDF, `{ slide }` for a slide deck, or
+ * `{ start, end, heading? }` for anything ingested like pasted text — pasted
+ * text itself, a web link once it is reduced to readable prose, or a photo
+ * once it is transcribed. All three read as a place a person can find again,
+ * so all three get words rather than a raw offset.
  */
 export function describeAnchor(anchor) {
   if (!anchor) return 'source unknown';
   if (anchor.page != null) return `page ${anchor.page}`;
+  if (anchor.slide != null) return `slide ${anchor.slide}`;
 
   const range = `characters ${anchor.start}–${anchor.end}`;
   return anchor.heading ? `${anchor.heading}, ${range}` : range;

@@ -1,17 +1,25 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getClaims } = vi.hoisted(() => ({ getClaims: vi.fn() }))
+const { getClaims, reviewLogFor, weightsFor } = vi.hoisted(() => ({
+  getClaims: vi.fn(),
+  reviewLogFor: vi.fn(),
+  weightsFor: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ auth: { getClaims } })),
 }))
 vi.mock('@/lib/auth/actions.js', () => ({ signOut: vi.fn() }))
+vi.mock('@/lib/data/fsrs-weights.js', () => ({ reviewLogFor, weightsFor }))
+vi.mock('@/lib/actions/fsrs-weights.js', () => ({ recomputeWeightsAction: vi.fn() }))
 
 import SettingsPage from './page'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  reviewLogFor.mockResolvedValue([])
+  weightsFor.mockResolvedValue(null)
 })
 
 describe('the settings page', () => {
@@ -45,5 +53,19 @@ describe('the settings page', () => {
 
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(screen.getByText('No address on this account')).toBeInTheDocument()
+  })
+
+  it('is where recomputing your FSRS weights lives', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null })
+    reviewLogFor.mockResolvedValue(Array(12).fill({ artefact_id: 'a', rating: 3, reviewed_at: 'x' }))
+
+    render(await SettingsPage())
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Review scheduling' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /recompute my weights/i }),
+    ).toBeInTheDocument()
   })
 })

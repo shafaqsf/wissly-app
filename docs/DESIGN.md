@@ -21,8 +21,14 @@ wrong.
 
 ## Colour
 
-**There is no colour. The product is ink on paper, and the only exception is
-[the mark](#the-mark).**
+**"No colour in the chrome" held from v0.9 through v0.14: the product was ink
+on paper, and the only exception was [the mark](#the-mark). As of v0.15 the
+maintainer has deliberately loosened that rule, for a more SaaS-friendly
+chrome — the light, white base is unchanged and stays in scope; hue is what
+moved.** This section describes the rule as it now stands. Where the two
+disagreed, the old text would have been wrong the moment this shipped, so it
+is rewritten here rather than left to drift — see the principle at the top of
+`AGENTS.md`: fix the document in the same change that breaks its rule.
 
 The field used to carry hue: a heat and a depth and a cool floor, bleeding in
 from three edges. It was meant to be the one place colour meant something, and
@@ -34,13 +40,56 @@ it.
 Then it was ink at a dilution instead of a hue, which was better and still
 wrong: grey behind a paragraph is a background, and a background reads as
 chrome no matter what it was meant to encode. So a field is not a surface at
-all now. See [The field](#the-field).
+all now. See [The field](#the-field). **None of that changes in v0.15.** The
+field is still ink, diluted, and nothing else — the loosening is scoped to the
+chrome around it, deliberately, because the field's whole legibility depends
+on being read as a ratio rather than a status light, and a hue would turn it
+into one.
 
-Every control, every glyph, every icon, every border, every mark is drawn in
-the same ink. There is no `--color-field-*` token, and
-`src/app/globals.css.test.js` fails on any hue in any source file: a hex whose
-three channels are not equal, anywhere, is the rule coming back one component
-at a time.
+**What did change: a short, named accent palette, defined once, applied with
+restraint.** Six tokens, all of them in `src/app/globals.css`, and nothing
+else in the product may define a hue. This is not "colour is fine now" — it is
+"colour comes from this list, and nowhere else, and dark mode is still out of
+scope." `src/app/globals.css.test.js` still fails on a hue that is not one of
+these six values, in `globals.css` or in any component; the shape of the
+enforcement survived even though what it enforces did not.
+
+### The accent palette
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--color-accent` | `#4F46E5` | The one filled control (primary CTA), the active nav destination, dashboard eyebrows |
+| `--color-accent-soft` | `#EEF2FF` | A tint behind the accent, never behind body text |
+| `--color-accent-deep` | `#3730A3` | Reserved for a pressed or emphasised accent state |
+| `--color-mastery-low` | `#DC2626` | The mastery gradient, untouched tier — see [The mastery gradient](#the-mastery-gradient) |
+| `--color-mastery-mid` | `#D97706` | The mastery gradient, in-progress tier |
+| `--color-mastery-high` | `#16A34A` | The mastery gradient, mastered tier |
+
+Reach for the accent tokens as Tailwind classes — `bg-accent`, `text-accent`,
+`border-accent-deep` — the same way `--color-ink` already becomes `text-ink`.
+A component never writes a hex; `globals.css` is the only file allowed to name
+one literally, because it is the one place the palette is defined.
+
+Where the accent is used today, and nowhere else without a reason as good as
+one of these:
+
+- **The one filled control.** `filledButtonClass` in
+  `src/components/artefact/control.js` — the primary call to action, such as
+  the button that commits an account.
+- **The active nav destination.** `src/components/nav/nav-item.jsx` keeps
+  `--paper-sunk` under the current item and adds the accent to its text and
+  icon, so the row is still legible to anyone who cannot tell the accent from
+  ink.
+- **Dashboard and course headers.** The eyebrow line above a page's `h1` —
+  "Today", "Course" — wears the accent. The heading itself stays ink; one
+  hero, one hue, once per screen.
+- **Course tags.** See [Course tags](#course-tags).
+
+Everywhere else — body text, panels, tables, forms, the sidebar rail, every
+icon that is not sitting on the current nav item — stays ink on paper. This is
+"add tasteful accent colour", not "repaint the product": if you are reaching
+for the accent a third time on one screen, that is the signal to stop and
+re-read this section.
 
 ### Ink and paper
 
@@ -63,20 +112,44 @@ Contrast against `--paper`: `--ink` 21:1, `--ink-muted` 7.0:1, `--ink-faint`
 | `--field-mark` | ink 100% | ink 45% | ink 0% |
 
 One fill, three values, far enough apart to tell at 12px: filled, half, empty.
-That is the whole palette of the product. `globals.css.test.js` asserts the
-three values stay separated, because dilutions two points apart are three
-shades of nothing.
+That is the whole palette of the field — the field never draws from the
+accent or mastery tokens, and `globals.css.test.js` fails if a `.field-*`
+fill ever names one. `globals.css.test.js` also asserts the three values stay
+separated, because dilutions two points apart are three shades of nothing.
+
+### The mastery gradient
+
+A second, deliberate colour layer beside the mark — task item 5 in v0.15 —
+and it sits *beside* the mark, never inside it and never in place of it. The
+mark still carries grain and fill exactly as before; nothing about "no bar, no
+percentage, no second progress display" changes. What is new is a 6px dot at
+the mark's own corner, drawn from `masteryState().color` in `src/lib/
+mastery.js`: `--color-mastery-low` while untouched, `--color-mastery-mid`
+under way, `--color-mastery-high` once mastered. It reads the same three
+tiers as a scale from red toward green, which is a faster read for a sighted
+learner scanning a column than grain alone, without asking the mark to say
+anything it did not already say.
+
+This is not the status colour the next section forbids: the field's depth
+still never means "whether something went well", and the gradient still never
+appears on an error or a success message. It means exactly one thing —
+*how much of this is resolved* — the same thing the grain and the fill already
+mean, in a third register a sighted learner can read faster.
 
 ### No dark mode
 
 The identity is dark ink on white paper. A dark inversion would break the
 grain metaphor — noise on black reads as static, not as uncertainty. Do not
-add a `prefers-color-scheme: dark` block.
+add a `prefers-color-scheme: dark` block. This did not change in v0.15:
+the accent palette lives on the same white paper, and `globals.css.test.js`
+still fails on `prefers-color-scheme: dark`.
 
 ### No status colours
 
 No red for errors, no green for success. A field's depth says *how resolved
-this is*, never *whether something went well*. Status is carried by three
+this is*, never *whether something went well*, and the mastery gradient above
+does not change that — it is a mastery scale, not a status light, and it never
+appears on a failure or a success message. Status is still carried by three
 things that work without hue:
 
 - **Words.** "Lesson not saved. Check your connection and try again."
@@ -92,6 +165,27 @@ transcript — and `panel.test.jsx` holds that shape.
 
 This is stricter than accessibility requires, and it is the constraint that
 keeps the interface recognisable.
+
+### Course tags
+
+Every course gets a stable tag colour — task item 6 in v0.15 — a small dot on
+its row in `/courses` and beside the "Course" label on its own page. The two
+always agree, because both call the same function:
+`courseAccent(course.id)` in `src/lib/course-accent.js`.
+
+The colour is *derived*, not *chosen*, and that is what keeps it inside "a
+defined palette" rather than "anything goes": the id picks a hue, but
+saturation and lightness are fixed for every course at the same values, so a
+shelf of ten courses reads as one product's ten tags rather than ten
+different apps. `courseAccent` computes an `hsl()` string at request time
+rather than writing a literal, which is also why it never shows up in
+`globals.css.test.js`'s hex scan — the constraint is enforced in the one
+function that computes the colour, not by pattern-matching the output of it
+afterwards.
+
+A course tag is identity, the way [the mark](#the-mark) is identity: it says
+*which course this is*, never a state, and it is never the only thing that
+says so — the title sits right beside it, every time.
 
 ## Type
 
@@ -177,25 +271,36 @@ is expressed by `--paper-sunk`, never by a blur.
 [Lucide](https://lucide.dev), and nothing else.
 
 - 24px grid, 1.5px stroke, `stroke="currentColor"`, never filled.
-- Monochrome. An icon inherits the ink colour of its context.
+- Monochrome — one colour per icon, inherited from its context via
+  `currentColor`, and never a gradient or a second hue on one glyph. As of
+  v0.15 that inherited colour is occasionally the accent rather than ink: the
+  icon on the current nav destination is the one place this happens, because
+  it inherits the same `text-accent` its label wears. Nowhere else does an
+  icon reach for a colour on its own.
 - Never the only carrier of meaning. Every icon-only control has an
   `aria-label`, and any icon that conveys state sits beside text.
-- Do not mix in another icon set, do not recolour, do not add a gradient.
+- Do not mix in another icon set, do not recolour by hand, do not add a
+  gradient to a Lucide glyph.
 
-The mark below is not an icon and none of this applies to it.
+The mark below, and the empty-state illustrations further down, are not icons
+and none of this applies to them.
 
 ## The mark
 
 `public/brand/icon.png` — a flame, grained, with heat at its edges and a cool
-core. It is the browser tab icon and it is the agent's face, and it is **the
-one coloured thing in the product**.
+core. It is the browser tab icon and it is the agent's face, and **through
+v0.14 it was the one coloured thing in the product.**
 
-It was once the field palette standing still. The field has no palette any
-more, and the mark is better for it: hue no longer means one thing on a
-progress surface and another on the tab icon, because it means exactly one
-thing now — *this is wissly*. One object in the whole interface is allowed a
-hue, and that object is identity, never state. That is a rule you can hold in
-one hand, which is more than the old one could claim.
+As of v0.15 that is no longer true — see [Colour](#colour) — and this section
+says so rather than leaving the old claim standing. What is still true, and is
+the part of the old rule worth keeping: the mark is the one *photographic*
+exception, the only asset in the product that is an image rather than a flat
+token from the palette above, and it is still identity, never state. Every
+other hue in the product — the accent, the mastery gradient, a course tag, an
+empty-state illustration's one accent shape — is a value from the six tokens
+in [The accent palette](#the-accent-palette), applied to a flat shape a
+component draws. The mark is none of that: it is a fixed picture, and
+`brand-mark.jsx` is still the only component allowed to name its path.
 
 What the exception does not license:
 
@@ -215,8 +320,12 @@ What the exception does not license:
   the sidebar brand row, the agent panel header, the sign-in column and the
   404 card — the last two because neither renders inside the frame, so nothing
   else on those screens says which product this is.
-- **Nothing else follows it.** No coloured illustration, no coloured
-  spot art, no second brand asset. This is the exception, in the singular.
+- **Nothing else follows it as a second brand asset.** No second flame, no
+  photographic spot art, no coloured illustration standing in for the product
+  itself. An empty-state illustration is not this: it names a moment ("no
+  courses yet"), never the product, and it is a line drawing built from the
+  accent tokens rather than a second image — see
+  [Empty states](#empty-states).
 
 ## Grain
 
@@ -457,6 +566,38 @@ Copy is design material. See also the voice rules in
 - Name things the way a learner would: "course", "lesson", "progress" — never
   "entity", "record", "run" in user-facing text.
 
+## Empty states
+
+An empty list is not a failure and it is not the end of the sentence — task
+item 7 in v0.15. "Empty states are an invitation to act, not an apology for
+emptiness" (see [Writing](#writing)) still holds; as of v0.15 the sentence
+gets a small illustration beside it, the way [a mark](#the-field) sits beside
+the word that names its state rather than instead of it.
+
+`src/components/empty/empty-state.jsx` is the one component that composes
+this: a line drawing from `illustrations.jsx`, `aria-hidden`, beside a
+`text-ink-muted` paragraph a caller still has to write. It never stands alone
+— a screen reader gets nothing from the picture, only from the sentence next
+to it — and a caller that has nothing to say should not reach for it just to
+fill space.
+
+Four variants exist today, one per emptied list: `shelf` (courses, and a
+course's own material), `search` (no results), `tasks` (nothing written yet
+under a type) and `queue` (nothing due). Each is one ink line drawing —
+`stroke="currentColor"`, no fill on the line itself — plus exactly one small
+accent shape, using the same restraint [Icons](#icons) asks of a Lucide
+glyph. This is the third named exception to "no colour in the chrome," after
+the mark and the accent palette itself, and it follows the same discipline:
+one file draws them, nothing improvises a new one inline, and the accent
+shape is never the only thing distinguishing one illustration from another —
+the line drawing itself always does that first.
+
+Not every empty list gets one. A filtered view that found nothing, or an
+archive with nothing archived, still says so in a sentence alone — the
+illustration marks the *first* empty state a learner meets on a surface, not
+every possible empty state on it, the same way a field mark exists for a
+state worth naming rather than for every state that could technically occur.
+
 ## Before you ship a screen
 
 - Does anything paint a background? Anything at all behind text — a tint, a
@@ -464,7 +605,9 @@ Copy is design material. See also the voice rules in
 - Does every mark encode a real state, on the object that has it, beside a word
   that names it?
 - Does it carry a `.field-*` class? A mark without one paints nothing.
-- Does anything use colour at all, other than the one mark? Remove it.
+- Does anything use a hue that is not one of the six tokens in
+  [The accent palette](#the-accent-palette), the mark, or a course tag? Remove
+  it — the chrome has a defined palette now, not an open one.
 - Is any text on a field muted rather than ink?
 - Is the reading column at or under 66 characters?
 - Does every focusable element show its focus ring, and is that ring round?

@@ -7,6 +7,7 @@ import { requireUserId } from '@/lib/auth/user.js'
 import { archiveArtefact, restoreArtefact } from '@/lib/data/artefacts.js'
 import { createCourse } from '@/lib/data/courses.js'
 import { archiveSource, restoreSource } from '@/lib/data/sources.js'
+import { setExamDate } from '@/lib/data/subjects.js'
 import { createClient } from '@/lib/supabase/server.js'
 
 /* What the course surfaces call.
@@ -87,4 +88,32 @@ export async function archiveReadingAction(formData) {
 
 export async function restoreReadingAction(formData) {
   return shelf(formData, restoreArtefact)
+}
+
+/**
+ * Set or clear the date a course is being prepared for. The countdown, the
+ * daily goal and the compressed review plan all read it back the moment the
+ * page revalidates, so nothing here is cached beyond that.
+ */
+export async function setExamDateAction(previousState, formData) {
+  const courseId = String(formData.get('courseId') ?? '').trim()
+  const examDate = String(formData.get('examDate') ?? '').trim()
+
+  if (!courseId) {
+    return { message: 'Missing course.' }
+  }
+
+  const supabase = await createClient()
+  await requireUserId(supabase)
+
+  try {
+    await setExamDate(supabase, { id: courseId, examDate })
+  } catch (error) {
+    return { message: error.message }
+  }
+
+  revalidatePath(`/courses/${courseId}`)
+  revalidatePath('/dashboard')
+
+  return { message: null }
 }

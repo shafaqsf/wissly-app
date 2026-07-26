@@ -1,3 +1,4 @@
+import { MASTERED_AT } from '../mastery.js'
 import { unwrap, unwrapList } from './result.js'
 
 /* A concept is a named idea a learner is trying to hold. It is the unit
@@ -89,6 +90,25 @@ export async function listConceptMastery(supabase, { subjectId } = {}) {
     name: concept.term,
     mastery: byConcept.get(concept.id) ?? 0,
   }))
+}
+
+/**
+ * The concepts furthest from mastered, ranked worst first.
+ *
+ * Deliberately wider than the gap report (`gapConcepts` in agent-runs.js),
+ * which only names a concept that has been answered and answered wrongly.
+ * This includes a concept nobody has touched at all — mastery 0 either
+ * way — because "where should I look next" is a bigger question than "what
+ * have I gotten wrong so far", and a learner staring at an empty gap report
+ * still needs to know where the material itself is thin.
+ */
+export async function weakestConcepts(supabase, { subjectId, limit = 10 } = {}) {
+  const concepts = await listConceptMastery(supabase, { subjectId })
+
+  return [...concepts]
+    .filter((concept) => concept.mastery < MASTERED_AT)
+    .sort((a, b) => a.mastery - b.mastery)
+    .slice(0, limit)
 }
 
 export async function conceptById(supabase, { id }) {

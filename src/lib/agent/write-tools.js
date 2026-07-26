@@ -19,7 +19,7 @@ import { fsrsState, recordReview, scheduleFor } from '../data/review.js'
 import { archiveSource, restoreSource } from '../data/sources.js'
 import { addMaterial as addMaterialToLibrary } from '../material/add-material.js'
 import { generateArtefact, gradeAnswer } from './artefacts.js'
-import { FORMATS, isFormat, validatePayload } from './formats.js'
+import { FORMATS, TASK_FORMATS, isFormat, isTaskFormat, validatePayload } from './formats.js'
 import { assertLearnerClient } from './guard.js'
 import { navigationIntent } from './navigation.js'
 import { readSection } from './tools.js'
@@ -63,6 +63,9 @@ const MAX_ARTEFACTS = 6
 
 /** One bulk call must not be able to touch the whole library. */
 const MAX_IDS = 200
+
+/** A practice exam is a mini test, not the whole review queue in one sitting. */
+const MAX_EXAM_ITEMS = 20
 
 function ids(list) {
   const named = [...new Set((list ?? []).map(String).filter(Boolean))]
@@ -256,7 +259,12 @@ export async function makeArtefacts(
   assertLearnerClient(supabase)
 
   if (format != null && !isFormat(format)) {
-    throw new Error(`"${format}" is not an artefact format. There are six: ${FORMATS.join(', ')}.`)
+    throw new Error(`"${format}" is not an artefact format. There are ${FORMATS.length}: ${FORMATS.join(', ')}.`)
+  }
+  if (format === 'practice_exam') {
+    throw new Error(
+      'A practice exam is composed from tasks that already exist, not generated from one passage — use compose_practice_exam instead.',
+    )
   }
 
   const passage = await readSection(supabase, { sectionId })
@@ -337,6 +345,92 @@ export async function writeArtefact(
   })
 
   return { artefact_id: stored.id, format: stored.format }
+}
+
+/**
+ * Assemble a practice exam from tasks that already exist.
+ *
+ * No model call: `practice_exam` references artefacts rather than holding
+ * question content of its own, so writing one is a read of what is being
+ * referenced followed by an insert, not a generation. The format of each
+ * item is read back from the row itself rather than trusted from the
+ * caller, so the payload cannot claim an item is a flashcard when it is
+ * really a summary.
+ */
+export async function composePracticeExam(
+  supabase,
+  {
+    userId,
+    runId,
+    subjectId,
+    ids: list,
+    title,
+    instructions,
+    timeLimitMinutes,
+    record = recordAction,
+  },
+) {
+  assertLearnerClient(supabase)
+
+  const named = ids(list)
+  if (named.length < 2) {
+    throw new Error('An exam needs at least two questions.')
+  }
+  if (named.length > MAX_EXAM_ITEMS) {
+    throw new Error(`That is ${named.length} questions. Do at most ${MAX_EXAM_ITEMS} in one exam.`)
+  }
+
+  const rows = unwrapList(
+    await supabase.from('artefacts').select('id, format').in('id', named),
+    'read the tasks you named',
+  )
+  const byId = new Map(rows.map((row) => [row.id, row]))
+
+  const missing = named.filter((id) => !byId.has(id))
+  if (missing.length > 0) {
+    throw new Error(`These were not found: ${missing.join(', ')}.`)
+  }
+
+  const items = named.map((id) => {
+    const row = byId.get(id)
+    if (!isTaskFormat(row.format) || row.format === 'practice_exam') {
+      throw new Error(
+        `"${id}" is a ${row.format}, which cannot be part of a practice exam. The answerable formats are ${TASK_FORMATS.filter((format) => format !== 'practice_exam').join(', ')}.`,
+      )
+    }
+    return { artefact_id: id, format: row.format }
+  })
+
+  const payload = {
+    title: String(title ?? '').trim(),
+    instructions: String(instructions ?? '').trim(),
+    time_limit_minutes: Math.round(Number(timeLimitMinutes)),
+    items,
+  }
+
+  const { valid, errors } = validatePayload('practice_exam', payload)
+  if (!valid) throw new Error(`That exam is unusable: ${errors.join('; ')}`)
+
+  const stored = await createArtefact(supabase, {
+    userId,
+    subjectId,
+    format: 'practice_exam',
+    payload,
+    origin: 'agent',
+  })
+
+  await record(supabase, {
+    userId,
+    runId,
+    tool: 'compose_practice_exam',
+    args: { subjectId, ids: named, title: payload.title },
+    result: { id: stored.id, items: items.length },
+    // Retracting an insert the agent made a moment ago. The referenced tasks
+    // are untouched — this only removes the exam that pointed at them.
+    undo: { kind: 'remove_artefacts', ids: [stored.id] },
+  })
+
+  return { artefact_id: stored.id, format: stored.format, items: items.length }
 }
 
 export async function editArtefact(
@@ -771,13 +865,27 @@ export const WRITE_TOOLS = [
   },
   {
     name: 'make_artefacts',
-    description: `Generate from one passage of the learner’s material — a task (flashcard, cloze, multiple_choice, open_question) or reading (summary, glossary). Pass a format to choose, or omit it to let the format follow the passage. At most ${MAX_ARTEFACTS} per call, and each one is a model call the learner pays for. Check list_tasks first so you do not make a second copy of what is already there.`,
+    description: `Generate from one passage of the learner’s material — a task (flashcard, cloze, multiple_choice, open_question, ordering) or reading (summary, glossary, comparison_table). Pass a format to choose, or omit it to let the format follow the passage. practice_exam is not a valid format here — use compose_practice_exam instead, it draws from tasks that already exist. At most ${MAX_ARTEFACTS} per call, and each one is a model call the learner pays for. Check list_tasks first so you do not make a second copy of what is already there.`,
     parameters: z.object({
       sectionId: z.string().describe('The passage to generate from.'),
-      format: nullableId(`One of ${FORMATS.join(', ')}, or null to let the passage decide.`),
+      format: nullableId(`One of ${FORMATS.filter((format) => format !== 'practice_exam').join(', ')}, or null to let the passage decide.`),
       count: z.number().describe(`How many to make, 1 to ${MAX_ARTEFACTS}.`),
     }),
     run: (supabase, input) => makeArtefacts(supabase, input),
+  },
+  {
+    name: 'compose_practice_exam',
+    description: `Assemble a timed practice exam from tasks that already exist (${TASK_FORMATS.filter((format) => format !== 'practice_exam').join(', ')}) — no model call, and no new question content, it only references what is already there. Use list_tasks or due_tasks first to choose which tasks to include, in the order the learner should see them.`,
+    parameters: z.object({
+      subjectId: z.string().describe('The course the exam belongs to.'),
+      ids: z
+        .array(z.string())
+        .describe('The existing tasks to include, in the order the learner should answer them.'),
+      title: z.string().describe('What to call the exam.'),
+      instructions: z.string().describe('What the learner is asked to do, and how it is scored.'),
+      timeLimitMinutes: z.number().describe('How long the learner has, in minutes.'),
+    }),
+    run: (supabase, input) => composePracticeExam(supabase, input),
   },
   {
     name: 'write_artefact',

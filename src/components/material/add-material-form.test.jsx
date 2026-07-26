@@ -26,13 +26,36 @@ describe('the add material form', () => {
     expect(field).toHaveValue('course-1')
   })
 
-  it('still takes a title, pasted text or a PDF', () => {
+  it('still takes a title, pasted text or a file', () => {
     render(<AddMaterialForm action={noop} courseId="course-1" />)
 
     expect(screen.getByLabelText('What is it called')).toBeInTheDocument()
     expect(screen.getByLabelText('Paste the text')).toBeInTheDocument()
-    expect(screen.getByLabelText('Or choose a PDF')).toBeInTheDocument()
+    expect(screen.getByLabelText('Or choose a PDF, a slide deck or a photo')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add material' })).toBeInTheDocument()
+  })
+
+  it('also takes a link, as an alternative to text or a file', () => {
+    render(<AddMaterialForm action={noop} courseId="course-1" />)
+
+    const field = screen.getByLabelText('Or paste a link');
+    expect(field).toHaveAttribute('type', 'url');
+  })
+
+  it('accepts a pdf, a pptx and a photo in the same file field', () => {
+    const { container } = render(<AddMaterialForm action={noop} courseId="course-1" />)
+
+    const field = container.querySelector('input[name="file"]');
+    expect(field.accept).toContain('application/pdf');
+    expect(field.accept).toContain('.pptx');
+    expect(field.accept).toContain('image/*');
+  })
+
+  it('offers to explain PDF diagrams as an opt-in, unchecked by default', () => {
+    render(<AddMaterialForm action={noop} courseId="course-1" />)
+
+    const checkbox = screen.getByRole('checkbox', { name: /explain the diagrams/i });
+    expect(checkbox).not.toBeChecked();
   })
 
   it('says what adding material does now, which is not generating', () => {

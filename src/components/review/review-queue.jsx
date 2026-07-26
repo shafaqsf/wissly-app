@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
 
+import EmptyState from '@/components/empty/empty-state';
 import RatingButtons from './rating-buttons';
 import TaskCard from './task-card';
 import { useReviewKeys } from './keys';
@@ -59,17 +60,21 @@ export default function ReviewQueue({ artefacts = [], onRate, onGrade }) {
 
   if (artefacts.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-6 rounded-surface border border-rule px-6 py-12">
-        <p className="max-w-measure text-body">
-          Nothing is due right now. Write a card yourself, or generate some from
-          your material.
-        </p>
-        <Link
-          href="/tasks/flashcards"
-          className="inline-flex min-h-11 items-center rounded-control border border-ink px-4 font-mono text-label uppercase text-ink"
+      <div className="rounded-surface border border-rule px-6 py-12">
+        <EmptyState
+          variant="queue"
+          action={
+            <Link
+              href="/tasks/flashcards"
+              className="inline-flex min-h-11 items-center rounded-control border border-ink px-4 font-mono text-label uppercase text-ink"
+            >
+              Write your first card
+            </Link>
+          }
         >
-          Write your first card
-        </Link>
+          Nothing is due right now. Write a card yourself, or generate some
+          from your material.
+        </EmptyState>
       </div>
     );
   }

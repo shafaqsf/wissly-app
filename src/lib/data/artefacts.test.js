@@ -26,10 +26,13 @@ describe('the two kinds of artefact', () => {
     expect(overlap).toEqual([])
     expect([...UNDERSTANDING_FORMATS, ...RECALL_FORMATS].sort()).toEqual([
       'cloze',
+      'comparison_table',
       'flashcard',
       'glossary',
       'multiple_choice',
       'open_question',
+      'ordering',
+      'practice_exam',
       'summary',
     ])
   })

@@ -46,6 +46,7 @@ describe('the schema', () => {
       'sections',
       'sources',
       'subjects',
+      'user_preferences',
     ])
   })
 

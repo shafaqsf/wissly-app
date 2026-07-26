@@ -70,12 +70,19 @@ export function curatedModel(id) {
 /**
  * The model this message gets.
  *
+ * Three tiers, checked in order: what this message chose, the learner's
+ * stored preference (Settings → Model), and finally the environment. Each
+ * tier is skipped rather than trusted blindly — a blank string falls through
+ * exactly like an absent one, and a malformed id at any tier is refused
+ * rather than sent to the provider.
+ *
  * @param {object} params
  * @param {string|null} [params.chosen] what the bar sent, if anything
+ * @param {string|null} [params.preferred] the learner's stored default model
  * @param {Record<string, string|undefined>} [params.env]
  * @returns {string}
  */
-export function resolveModel({ chosen, env = process.env } = {}) {
+export function resolveModel({ chosen, preferred, env = process.env } = {}) {
   const wanted = String(chosen ?? '').trim()
 
   if (wanted !== '') {
@@ -85,6 +92,17 @@ export function resolveModel({ chosen, env = process.env } = {}) {
       )
     }
     return wanted
+  }
+
+  const stored = String(preferred ?? '').trim()
+
+  if (stored !== '') {
+    if (!isModelId(stored)) {
+      throw new Error(
+        `"${stored}" is not an OpenRouter model id. They are written vendor/model, like anthropic/claude-sonnet-5.`,
+      )
+    }
+    return stored
   }
 
   const fallback = String(env[DEFAULT_MODEL_ENV] ?? '').trim()

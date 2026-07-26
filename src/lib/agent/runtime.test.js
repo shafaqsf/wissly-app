@@ -95,7 +95,21 @@ describe('configureAgentRuntime', () => {
 
     expect(configureAgentRuntime({ env, ...sdk })).toEqual({
       model: 'anthropic/claude-opus-5',
+      apiKey: 'sk-or-test',
+      siteUrl: 'https://wissly.test',
+      siteName: 'wissly',
     })
+  })
+
+  it('returns the rest of the config too, so a second client can be built for generation', () => {
+    const sdk = stubs()
+
+    const config = configureAgentRuntime({
+      env: { OPENROUTER_API_KEY: 'sk-or-test', OPENROUTER_MODEL: 'm' },
+      ...sdk,
+    })
+
+    expect(config).toEqual({ model: 'm', apiKey: 'sk-or-test', siteUrl: undefined, siteName: undefined })
   })
 
   it('refuses to configure anything without a key', () => {

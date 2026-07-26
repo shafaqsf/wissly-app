@@ -21,6 +21,7 @@ import {
   setMessageStatus,
   setPinned,
 } from '@/lib/data/conversations.js'
+import { getPreferences } from '@/lib/data/preferences.js'
 import { createClient } from '@/lib/supabase/server.js'
 
 /* The bar's other half.
@@ -150,13 +151,19 @@ export async function sendMessageAction({ conversationId, content, mode, model }
 
     if (busy) return { message: stored, queued: true }
 
-    let turn = await runTurn({ supabase, userId, conversation, message: stored })
+    // Read once per send, not once per turn drained: it does not change
+    // mid-queue, and a preference that changed after this send started should
+    // not retroactively apply to messages already queued behind it.
+    const preference = await getPreferences(supabase)
+    const preferredModel = preference?.default_model ?? null
+
+    let turn = await runTurn({ supabase, userId, conversation, message: stored, preferredModel })
     const intents = [...(turn.intents ?? [])]
 
     // Drain what arrived while this turn was running. Bounded, because a
     // queue that refills itself is a bill rather than a conversation.
     for (let drained = 0; turn.next && drained < MAX_DRAIN; drained += 1) {
-      turn = await runTurn({ supabase, userId, conversation, message: turn.next })
+      turn = await runTurn({ supabase, userId, conversation, message: turn.next, preferredModel })
       intents.push(...(turn.intents ?? []))
     }
 

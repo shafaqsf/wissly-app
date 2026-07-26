@@ -70,6 +70,9 @@ function transcript(messages) {
  * @param {string} params.userId
  * @param {object} params.conversation
  * @param {object} params.message the learner's message, already stored
+ * @param {string|null} [params.preferredModel] the learner's stored default
+ *   model (Settings → Model), one tier above the environment and one below
+ *   whatever this message chose
  * @param {(event: object) => void} [params.onEvent] the stream, as it happens
  * @param {() => Promise<boolean>} [params.shouldStop] has Stop been pressed?
  * @param {number} [params.persistEveryMs]
@@ -85,6 +88,7 @@ export async function runTurn({
   userId,
   conversation,
   message,
+  preferredModel = null,
   onEvent,
   shouldStop,
   persistEveryMs = PERSIST_EVERY_MS,
@@ -97,9 +101,10 @@ export async function runTurn({
 
   // Before any row exists. A malformed model id is the learner's mistake to
   // correct, not a failed turn for them to read about in the thread.
-  const { model: fallback } = configure()
+  const { model: fallback, apiKey, siteUrl, siteName } = configure()
   const model = resolveModel({
     chosen: message?.model ?? conversation?.model ?? null,
+    preferred: preferredModel,
     env: { OPENROUTER_MODEL: fallback },
   })
 
@@ -148,8 +153,13 @@ export async function runTurn({
     runId: runRow.id,
     // Artefact generation goes through the structured client, not the SDK: the
     // format schemas and their repair loop already live there, and a second
-    // path to the same rows would drift from the first.
-    client: conversation.mode === 'agent' ? createClient() : null,
+    // path to the same rows would drift from the first. It is built with the
+    // same resolved `model` the SDK agent above got — chosen for this
+    // message, else the learner's stored preference, else the environment —
+    // rather than a client of its own reading `OPENROUTER_MODEL` straight
+    // from the environment. Before this, a model chosen or preferred for the
+    // conversation still generated on whatever the environment named.
+    client: conversation.mode === 'agent' ? createClient({ apiKey, model, siteUrl, siteName }) : null,
     passagesRead: () => passagesRead,
     onIntent: (intent) => {
       intents.push(intent)

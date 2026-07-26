@@ -26,6 +26,10 @@ vi.mock('@/lib/agent/run.js', () => ({
   runTurn: vi.fn(async () => ({ message: { id: 'answer' }, run: { id: 'r1' }, next: null, intents: [], completed: [] })),
 }))
 
+vi.mock('@/lib/data/preferences.js', () => ({
+  getPreferences: vi.fn(async () => ({ user_id: null, default_model: null, updated_at: null })),
+}))
+
 vi.mock('@/lib/data/agent-runs.js', () => ({
   actionsFor: vi.fn(async () => []),
   runsFor: vi.fn(async () => []),
@@ -45,6 +49,7 @@ const {
 const { runTurn } = await import('@/lib/agent/run.js')
 const { runsFor, actionsFor } = await import('@/lib/data/agent-runs.js')
 const { undoRun } = await import('@/lib/agent/undo.js')
+const { getPreferences } = await import('@/lib/data/preferences.js')
 
 const {
   resumeThreadAction,
@@ -66,9 +71,22 @@ beforeEach(() => {
     intents: [],
     completed: [],
   })
+  getPreferences.mockResolvedValue({ user_id: null, default_model: null, updated_at: null })
 })
 
 describe('sendMessageAction', () => {
+  it('hands the learner’s stored default model to the turn, below whatever this message chose', async () => {
+    getPreferences.mockResolvedValue({
+      user_id: 'u1',
+      default_model: 'deepseek/deepseek-v4-pro',
+      updated_at: 't',
+    })
+
+    await sendMessageAction({ conversationId: 'c1', content: 'what is a martingale?' })
+
+    expect(runTurn.mock.calls[0][0].preferredModel).toBe('deepseek/deepseek-v4-pro')
+  })
+
   it('records which model was chosen for this message', async () => {
     await sendMessageAction({
       conversationId: 'c1',

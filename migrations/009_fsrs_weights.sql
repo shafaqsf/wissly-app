@@ -1,4 +1,4 @@
--- 007_fsrs_weights.sql
+-- 009_fsrs_weights.sql
 --
 -- Per-user FSRS weights, fitted from a learner's own review log.
 --

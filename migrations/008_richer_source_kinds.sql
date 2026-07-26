@@ -1,4 +1,4 @@
--- 007_richer_source_kinds.sql
+-- 008_richer_source_kinds.sql
 --
 -- Three more ways material arrives: a slide deck, a web link, a photo of a
 -- page. Stage 1 ingested `text` and `pdf`; this widens `sources.kind` to

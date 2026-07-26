@@ -1,4 +1,4 @@
--- 007_notifications.sql
+-- 014_notifications.sql
 --
 -- The notification centre: one row per thing the app decided was worth
 -- telling a learner about. Today that is a review reminder — see

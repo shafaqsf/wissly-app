@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   listSources: vi.fn(),
   listArtefacts: vi.fn(),
   listConversations: vi.fn(),
+  streakFor: vi.fn(),
   undoAgentAction: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ vi.mock('@/lib/data/artefacts', () => ({
   RECALL_FORMATS: ['flashcard', 'cloze', 'multiple_choice', 'open_question'],
 }));
 vi.mock('@/lib/data/conversations', () => ({ listConversations: mocks.listConversations }));
+vi.mock('@/lib/data/streak', () => ({ streakFor: mocks.streakFor }));
 vi.mock('./actions', () => ({ undoAgentAction: mocks.undoAgentAction }));
 
 import {
@@ -37,6 +39,7 @@ import {
   CoursesPanel,
   EffortPanel,
   RecentlyPanel,
+  StreakPanel,
   WeakestPanel,
   WeekPanel,
 } from './panels';
@@ -54,6 +57,7 @@ beforeEach(() => {
   mocks.listSources.mockResolvedValue([]);
   mocks.listArtefacts.mockResolvedValue([]);
   mocks.listConversations.mockResolvedValue([]);
+  mocks.streakFor.mockResolvedValue({ days: 0, milestone: null });
 });
 
 describe('the action', () => {
@@ -168,6 +172,24 @@ describe('weakest', () => {
       '/tasks/due',
     );
   });
+
+  /* The mastery gradient — v0.15 — sits beside every mark on the one panel
+     that already carries the field, and never in place of it. */
+  it('carries the mastery gradient colour beside each mark', async () => {
+    mocks.listConceptMastery.mockResolvedValue(concepts);
+
+    const { container } = render(await WeakestPanel());
+
+    const marks = container.querySelectorAll('.grain-mark');
+    expect(marks.length).toBeGreaterThan(0);
+
+    for (const mark of marks) {
+      expect(mark).toHaveClass('mastery-gradient');
+      expect(mark.style.getPropertyValue('--mastery-color')).toMatch(
+        /^var\(--color-mastery-(low|mid|high)\)$/,
+      );
+    }
+  });
 });
 
 describe('courses', () => {
@@ -237,6 +259,37 @@ describe('recently', () => {
     expect(screen.getByRole('link', { name: 'Add material' })).toHaveAttribute(
       'href',
       '/courses',
+    );
+  });
+});
+
+describe('streak', () => {
+  it('says how many days in a row, in a real number', async () => {
+    mocks.streakFor.mockResolvedValue({ days: 12, milestone: 7 });
+
+    render(await StreakPanel());
+
+    expect(screen.getByText('12 days streak')).toBeInTheDocument();
+    expect(screen.getByText('7-day milestone reached')).toBeInTheDocument();
+  });
+
+  it('uses the singular for one day', async () => {
+    mocks.streakFor.mockResolvedValue({ days: 1, milestone: null });
+
+    render(await StreakPanel());
+
+    expect(screen.getByText('1 day streak')).toBeInTheDocument();
+  });
+
+  it('invites a round instead of showing a zero-day streak', async () => {
+    mocks.streakFor.mockResolvedValue({ days: 0, milestone: null });
+
+    render(await StreakPanel());
+
+    expect(screen.queryByText(/streak$/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start a round' })).toHaveAttribute(
+      'href',
+      '/tasks/due',
     );
   });
 });

@@ -21,6 +21,8 @@ describe('the task types', () => {
       'cloze',
       'multiple-choice',
       'open-questions',
+      'ordering',
+      'practice-exams',
     ])
   })
 
@@ -40,6 +42,8 @@ describe('the task types', () => {
       cloze: 'Cloze',
       multiple_choice: 'Multiple choice',
       open_question: 'Open question',
+      ordering: 'Ordering',
+      practice_exam: 'Practice exam',
     })
   })
 })

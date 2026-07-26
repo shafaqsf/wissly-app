@@ -71,6 +71,28 @@ describe('Panel', () => {
     ).toHaveClass('text-ink-muted')
   })
 
+  /* task item 7 in v0.15: an empty panel is allowed an illustration now, so
+     `empty` accepts an element as well as a sentence — composed as given,
+     rather than nested inside a second paragraph. */
+  it('renders an illustrated empty state as given, rather than wrapping it again', () => {
+    render(
+      <Panel
+        title="Courses"
+        empty={
+          <div data-testid="illustrated-empty">
+            <p className="text-body-s text-ink-muted">Start your first course.</p>
+          </div>
+        }
+      >
+        <p>content</p>
+      </Panel>,
+    )
+
+    expect(screen.getByTestId('illustrated-empty')).toBeInTheDocument()
+    expect(screen.getByText('Start your first course.')).toBeInTheDocument()
+    expect(screen.queryByText('content')).not.toBeInTheDocument()
+  })
+
   it('states what went wrong and what to do next, without colour', () => {
     const { container } = render(
       <Panel

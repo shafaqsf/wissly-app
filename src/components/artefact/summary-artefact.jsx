@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Prose from './prose';
 import CitationAnchor, { sectionHref } from './citation-anchor';
+import ListenControl from './listen-control';
+import Prose from './prose';
 
 /* A summary is the same material at three depths — the payload has exactly
    three keys and they are these. The learner chooses how far in to go; the
@@ -59,6 +60,9 @@ export default function SummaryArtefact({ artefact }) {
 
       <div className="flex flex-col gap-2">
         <Prose text={layerText(artefact.payload, layerKey)} />
+        <div>
+          <ListenControl text={layerText(artefact.payload, layerKey)} />
+        </div>
         <p className="max-w-measure text-body-s text-ink-muted">
           Summarised from
           <CitationAnchor

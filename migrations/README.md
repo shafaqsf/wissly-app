@@ -29,8 +29,15 @@ NNN_snake_case_description.sql
 ```
 
 `NNN` is a zero-padded three-digit sequence starting at `001`. Pick the next
-free number; if two branches collide on the same number, the second one to
-merge renumbers.
+free number, counting the numbers unmerged branches have already claimed as
+taken; if two branches collide on the same number, the second one to merge
+renumbers.
+
+A number is claimed when the file is written, not when it merges, so a branch
+may carry a gap below its own number — those are the migrations of sibling
+branches still in flight, and the gap closes when they merge. Gaps are fine;
+duplicates are not, because ascending filename order is the only thing that
+decides what runs when.
 
 ```
 001_initial_schema.sql

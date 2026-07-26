@@ -186,30 +186,24 @@ describe('the field mark', () => {
 })
 
 describe('the field palette', () => {
-  /* There is no palette. The field is ink at four dilutions, the same ink
-     everything else on the page is drawn in — see "Colour" in docs/DESIGN.md.
-     A hue token anywhere in the stylesheet is the whole thing coming back. */
-  it('names no hue anywhere in the stylesheet', () => {
+  /* The field itself did not get the accent. It is still ink at four
+     dilutions, the same ink everything else on the page used to be drawn in
+     before the chrome was allowed a palette — see "Colour" in docs/DESIGN.md.
+     A `--color-field-*` token would let hue back into the one place the mark
+     depends on staying legible as a *ratio* rather than a status light, so
+     that token stays banned outright even though other hues are now allowed
+     elsewhere in the stylesheet. */
+  it('names no --color-field-* token anywhere in the stylesheet', () => {
     expect(css).not.toMatch(/--color-field-/)
-
-    const hexes = [...css.matchAll(/#([0-9a-fA-F]{6})\b/g)].map(([, hex]) =>
-      hex.toLowerCase(),
-    )
-    const coloured = hexes.filter(
-      (hex) => new Set([hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)]).size > 1,
-    )
-
-    expect(coloured).toEqual([])
   })
 
-  /* If a `--color-field-*` token ever comes back, it may only live inside a
-     `.field-*` class — and there is no such token today, so the honest form of
-     the rule is that it appears nowhere at all. Hue stays inside a grain field
-     and the chrome stays ink. */
-  it('names no --color-field-* token outside a .field-* class', () => {
-    const outside = css.replace(/\.field-[a-z]+\s*\{[^}]*\}/g, '')
-    expect(outside).not.toMatch(/--color-field-/)
-    expect(css).not.toMatch(/--color-field-/)
+  /* Every `.field-*` fill still has to be ink, not accent and not the mastery
+     gradient. The gradient is a layer beside the mark, never inside its own
+     fill — see "the mastery gradient" below. */
+  it('keeps every accent and mastery token out of a .field-* fill', () => {
+    for (const [, body] of css.matchAll(/\.field-[a-z]+\s*\{([^}]*)\}/g)) {
+      expect(body).not.toMatch(/--color-accent|--color-mastery-/)
+    }
   })
 
   it('defines the three field states', () => {
@@ -232,6 +226,74 @@ describe('the field palette', () => {
     const alphas = [...fieldStates().values()].map(([fill]) => fill.alpha).sort()
 
     expect(alphas).toEqual([0, 0.45, 1])
+  })
+})
+
+/* "No colour in the chrome" was a tested, documented rule: ink on paper, hue
+   nowhere but the field. The maintainer has deliberately loosened it for the
+   chrome — see "Colour" in docs/DESIGN.md — to make the product read as a
+   product rather than a manuscript. "Deliberately loosened" is not "anything
+   goes": every hue anywhere in the stylesheet still has to be one of a short,
+   named list, nothing outside that list may define a colour, and dark mode is
+   still out of scope. This block is what makes that survive contact with a
+   deadline the same way the old rule did. */
+describe('the accent palette', () => {
+  const ACCENT_TOKENS = ['--color-accent', '--color-accent-soft', '--color-accent-deep']
+  const MASTERY_TOKENS = ['--color-mastery-low', '--color-mastery-mid', '--color-mastery-high']
+  const PALETTE_TOKENS = [...ACCENT_TOKENS, ...MASTERY_TOKENS]
+
+  it('defines every palette token as a real hue', () => {
+    for (const name of PALETTE_TOKENS) {
+      const hex = token(name)
+      const channels = new Set([hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)])
+      expect(channels.size, name).toBeGreaterThan(1)
+    }
+  })
+
+  /* Every coloured hex in the stylesheet has to be one of the palette's own
+     values. A hue that is not one of these nine tokens is exactly the
+     "anything goes" the maintainer ruled out. */
+  it('names no hue in the stylesheet outside the defined palette', () => {
+    const known = new Set(PALETTE_TOKENS.map((name) => token(name).toLowerCase()))
+
+    const offenders = [...css.matchAll(/#([0-9a-fA-F]{6})\b/g)]
+      .map(([, hex]) => `#${hex.toLowerCase()}`)
+      .filter((hex) => {
+        const isGrey = new Set([hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)]).size === 1
+        return !isGrey && !known.has(hex)
+      })
+
+    expect(offenders).toEqual([])
+  })
+
+  it('still has no dark mode', () => {
+    expect(css).not.toMatch(/prefers-color-scheme:\s*dark/)
+  })
+})
+
+/* A second, deliberate colour layer beside the mark — never inside it, never
+   a replacement for it. The mark keeps its grain and its fill; this reads the
+   same three tiers `masteryState()` already names as a scale from red toward
+   green, for a sighted learner scanning a column faster than grain alone
+   lets them. See src/lib/mastery.js. */
+describe('the mastery gradient', () => {
+  /* The badge takes its colour from `--mastery-color`, which a component sets
+     from `masteryState().color` — always one of the three mastery tokens, and
+     never invented per component. The fallback keeps a `.mastery-gradient`
+     with no state legible as the low end rather than transparent. */
+  it('reads its colour from --mastery-color, defaulting to the low tier', () => {
+    const rule = css.match(/\.mastery-gradient::after\s*\{([^}]*)\}/)?.[1] ?? ''
+
+    expect(rule).toMatch(/background-color:\s*var\(--mastery-color,\s*var\(--color-mastery-low\)\)/)
+  })
+
+  /* The gradient is a badge beside the mark's own geometry, not a shape of
+     its own — the mark is still what carries the state's grain and fill. */
+  it('is a small mark of its own, not a field surface', () => {
+    const rule = css.match(/\.mastery-gradient::after\s*\{([^}]*)\}/)?.[1] ?? ''
+
+    expect(rule).not.toMatch(/radial-gradient/)
+    expect(css).not.toMatch(/\.mastery-gradient\s*\{[^}]*background-image:\s*radial-gradient/)
   })
 })
 
@@ -342,21 +404,34 @@ describe('the motion catalogue', () => {
 })
 
 describe('colour containment', () => {
-  /* The product is ink on paper, and the mark is the single exception. No
-     source file names a hue — not a token, not a hex, not a Tailwind colour
-     that is not one of the ink and paper steps. */
-  it('names no hue in any source file', () => {
-    const offenders = sourceFiles().filter((file) => {
-      const source = readFileSync(file, 'utf8')
-      if (source.includes('--color-field-')) return true
-      return [...source.matchAll(/#([0-9a-fA-F]{6})\b/g)].some(
-        ([, hex]) =>
-          new Set([hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)].map((p) => p.toLowerCase()))
-            .size > 1,
-      )
-    })
+  /* The chrome may now use the accent and mastery palette, but only through
+     the tokens `globals.css` defines once — a component reaches for
+     `bg-accent` or `var(--color-mastery-low)`, the same way it already
+     reaches for `bg-paper` or `text-ink`, and never writes a hex of its own.
+     `globals.css` is the one file allowed to name a hue literally, because it
+     is the one place the palette is defined; every other source file is
+     still ink, paper and the tokens, exactly as before. */
+  it('names no hue literally outside globals.css', () => {
+    const offenders = sourceFiles()
+      .filter((file) => !file.replace(/\\/g, '/').endsWith('src/app/globals.css'))
+      .filter((file) => {
+        const source = readFileSync(file, 'utf8')
+        if (source.includes('--color-field-')) return true
+        return [...source.matchAll(/#([0-9a-fA-F]{6})\b/g)].some(
+          ([, hex]) =>
+            new Set([hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)].map((p) => p.toLowerCase()))
+              .size > 1,
+        )
+      })
 
     expect(offenders).toEqual([])
+  })
+
+  /* `globals.css` itself keeps the same discipline as everywhere else: no
+     `--color-field-*`, and the only hues it may define are the accent and
+     mastery palette above. */
+  it('names no --color-field- token in globals.css either', () => {
+    expect(css).not.toMatch(/--color-field-/)
   })
 
   /* A header is a position on the page, not a state. A page-wide field band

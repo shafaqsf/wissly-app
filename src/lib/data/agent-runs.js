@@ -178,13 +178,17 @@ export function runCost(run) {
   return (input / PER_MILLION) * price.input + (output / PER_MILLION) * price.output
 }
 
-/** The UTC day a timestamp falls in, as `YYYY-MM-DD`. */
-function dayOf(timestamp) {
+/**
+ * The UTC day a timestamp falls in, as `YYYY-MM-DD`. Exported because every
+ * day-bucketed read in `src/lib/data` — this file's and
+ * `src/lib/data/prediction.js`'s alike — needs the same definition of "day".
+ */
+export function dayOf(timestamp) {
   return new Date(timestamp).toISOString().slice(0, 10)
 }
 
 /** The `days` calendar days ending today, oldest first. */
-function windowOf(days, now) {
+export function windowOf(days, now) {
   const end = new Date(now)
   end.setUTCHours(0, 0, 0, 0)
 

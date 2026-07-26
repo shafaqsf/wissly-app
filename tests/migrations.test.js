@@ -27,9 +27,18 @@ describe('migration files', () => {
     }
   })
 
-  it('are applied in ascending, gap-free order', () => {
-    const numbers = files.map((name) => Number(name.slice(0, 3))).sort((a, b) => a - b)
-    expect(numbers).toEqual(numbers.map((_, index) => index + 1))
+  // Two numbers must never be the same: filename order is the only thing that
+  // decides what runs when, so a duplicate makes the order ambiguous and is
+  // the failure that has actually bitten us. A *gap* is not that failure. A
+  // branch reserves its number when it is written, not when it merges, so
+  // while sibling branches are in flight each one legitimately carries the
+  // numbers below its own that belong to branches it has not seen. The gaps
+  // close as those branches merge; the duplicates never fix themselves.
+  it('are applied in ascending order, each number claimed once', () => {
+    const numbers = files.map((name) => Number(name.slice(0, 3)))
+    expect(numbers).toEqual([...numbers].sort((a, b) => a - b))
+    expect(new Set(numbers).size).toBe(numbers.length)
+    expect(Math.min(...numbers)).toBe(1)
   })
 })
 
@@ -41,6 +50,7 @@ describe('the schema', () => {
       'artefacts',
       'concepts',
       'conversations',
+      'fsrs_weights',
       'messages',
       'notifications',
       'reviews',

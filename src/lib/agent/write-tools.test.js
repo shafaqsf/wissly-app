@@ -9,6 +9,7 @@ import {
   applyUndo,
   archiveSourceTool,
   archiveTasks,
+  composePracticeExam,
   createCourseTool,
   editArtefact,
   makeArtefacts,
@@ -230,6 +231,101 @@ describe('makeArtefacts', () => {
     })
 
     expect(result.formats).toEqual(['summary'])
+  })
+
+  it('refuses to generate a practice_exam, which is composed rather than generated', async () => {
+    await expect(
+      makeArtefacts(supabaseFor(), {
+        ...run,
+        sectionId: 's1',
+        format: 'practice_exam',
+        count: 1,
+        client,
+        record: vi.fn(),
+      }),
+    ).rejects.toThrow(/compose_practice_exam/)
+  })
+})
+
+describe('composePracticeExam', () => {
+  function supabaseFor(rows) {
+    return fakeSupabase({
+      artefacts: [
+        { data: rows, error: null },
+        { data: { id: 'exam1', format: 'practice_exam' }, error: null },
+      ],
+    })
+  }
+
+  const good = {
+    ...run,
+    subjectId: 'sub1',
+    ids: ['a1', 'a2'],
+    title: 'Eigenvalues, timed',
+    instructions: 'Answer both. Ten minutes.',
+    timeLimitMinutes: 10,
+  }
+
+  it('reads back the format of every task it references, rather than trusting the caller', async () => {
+    const supabase = supabaseFor([
+      { id: 'a1', format: 'flashcard' },
+      { id: 'a2', format: 'multiple_choice' },
+    ])
+    const record = vi.fn()
+
+    const result = await composePracticeExam(supabase, { ...good, record })
+
+    expect(result).toMatchObject({ artefact_id: 'exam1', format: 'practice_exam', items: 2 })
+    expect(argsOf(supabase.queries('artefacts')[1], 'insert')[0]).toMatchObject({
+      format: 'practice_exam',
+      payload: {
+        title: 'Eigenvalues, timed',
+        items: [
+          { artefact_id: 'a1', format: 'flashcard' },
+          { artefact_id: 'a2', format: 'multiple_choice' },
+        ],
+      },
+    })
+  })
+
+  it('records the exam it made, so it can be retracted', async () => {
+    const supabase = supabaseFor([
+      { id: 'a1', format: 'flashcard' },
+      { id: 'a2', format: 'multiple_choice' },
+    ])
+    const record = vi.fn()
+
+    await composePracticeExam(supabase, { ...good, record })
+
+    expect(record.mock.calls[0][1]).toMatchObject({
+      tool: 'compose_practice_exam',
+      undo: { kind: 'remove_artefacts', ids: ['exam1'] },
+    })
+  })
+
+  it('refuses a task that was not found', async () => {
+    const supabase = supabaseFor([{ id: 'a1', format: 'flashcard' }])
+
+    await expect(
+      composePracticeExam(supabase, { ...good, record: vi.fn() }),
+    ).rejects.toThrow(/not found.*a2/i)
+  })
+
+  it('refuses to include reading, which cannot be answered', async () => {
+    const supabase = supabaseFor([
+      { id: 'a1', format: 'flashcard' },
+      { id: 'a2', format: 'summary' },
+    ])
+
+    await expect(
+      composePracticeExam(supabase, { ...good, record: vi.fn() }),
+    ).rejects.toThrow(/summary/)
+  })
+
+  it('refuses fewer than two questions', async () => {
+    await expect(
+      composePracticeExam(fakeSupabase(), { ...good, ids: ['a1'], record: vi.fn() }),
+    ).rejects.toThrow(/at least two/)
   })
 })
 
@@ -528,6 +624,7 @@ describe('WRITE_TOOLS', () => {
       'add_material',
       'archive_source',
       'archive_tasks',
+      'compose_practice_exam',
       'create_course',
       'edit_artefact',
       'grade_answer',

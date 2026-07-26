@@ -36,8 +36,8 @@ export default function ConceptMastery({ subject, concepts = [], initialConceptI
         <p className="flex items-center gap-3 font-mono text-label uppercase text-ink">
           <span
             aria-hidden="true"
-            className={`grain grain-mark ${state.field}`}
-            style={{ '--grain': state.grain }}
+            className={`grain grain-mark mastery-gradient ${state.field}`}
+            style={{ '--grain': state.grain, '--mastery-color': state.color }}
           />
           {state.label}
         </p>
@@ -75,8 +75,8 @@ export default function ConceptMastery({ subject, concepts = [], initialConceptI
                   <span className="flex items-center gap-3">
                     <span
                       aria-hidden="true"
-                      className={`grain grain-mark ${conceptState.field}`}
-                      style={{ '--grain': conceptState.grain }}
+                      className={`grain grain-mark mastery-gradient ${conceptState.field}`}
+                      style={{ '--grain': conceptState.grain, '--mastery-color': conceptState.color }}
                     />
                     <span className="text-body">{concept.name}</span>
                   </span>

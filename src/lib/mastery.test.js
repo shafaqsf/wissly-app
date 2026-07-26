@@ -32,14 +32,32 @@ describe('masteryState', () => {
     expect(masteryState(1).grain).toBe('var(--grain-0)')
   })
 
-  /* Grain and colour are one axis, not two. A state that moved its grain
-     without moving its hue would say two different things at once. */
-  it('moves grain and colour together', () => {
+  /* Grain and fill are one axis, not two. A state that moved its grain
+     without moving its fill would say two different things at once. */
+  it('moves grain and fill together', () => {
     const states = [0, 0.5, 1].map(masteryState)
 
     expect(new Set(states.map((state) => state.grain)).size).toBe(3)
     expect(new Set(states.map((state) => state.field)).size).toBe(3)
     expect(states.every((state) => state.field?.startsWith('field-'))).toBe(true)
+  })
+
+  /* The mastery gradient — task item 5, docs/DESIGN.md's "the mastery
+     gradient" — is a colour layer beside the mark, never a replacement for
+     it. It reads the same three tiers as a scale from red toward green, so
+     every state carries a `color` alongside its `grain` and `field`, and the
+     three colours are the three mastery tokens defined once in
+     globals.css. */
+  it('carries a mastery colour alongside its grain and fill', () => {
+    expect(masteryState(0).color).toBe('var(--color-mastery-low)')
+    expect(masteryState(0.5).color).toBe('var(--color-mastery-mid)')
+    expect(masteryState(1).color).toBe('var(--color-mastery-high)')
+  })
+
+  it('moves grain, fill and colour together', () => {
+    const states = [0, 0.5, 1].map(masteryState)
+
+    expect(new Set(states.map((state) => state.color)).size).toBe(3)
   })
 
   it('treats a missing or out of range value as untouched', () => {

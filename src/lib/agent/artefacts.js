@@ -5,6 +5,7 @@ import {
   FORMATS,
   GRADE_SCHEMA,
   PAYLOAD_SCHEMAS,
+  TEACH_BACK_GRADE_SCHEMA,
   validatePayload,
 } from './formats.js'
 
@@ -80,6 +81,12 @@ const FORMAT_GUIDANCE = [
 function sectionBlock(section) {
   const anchor = section.anchor ? ` (anchor: ${JSON.stringify(section.anchor)})` : ''
   return `Section ${section.ordinal}${anchor}:\n"""\n${section.content}\n"""`
+}
+
+/** A section as the model sees it when it has to cite the id back, not just the ordinal. */
+function teachBackSectionBlock(section) {
+  const anchor = section.anchor ? `, anchor: ${JSON.stringify(section.anchor)}` : ''
+  return `Section id ${section.id} (ordinal ${section.ordinal ?? '?'}${anchor}):\n"""\n${section.content}\n"""`
 }
 
 /**
@@ -285,6 +292,86 @@ export async function gradeAnswer({ client, question, answer, section, ...params
   }
   if (grade.verdict === 'incorrect' && missing === 0) {
     throw new TypeError('verdict "incorrect" contradicts nothing being missing')
+  }
+
+  return grade
+}
+
+/**
+ * Grade a teach-back explanation: the learner explains a concept in their own
+ * words, and the model judges it live against the concept's own source
+ * material — there is no pre-written `model_answer` or `criteria` to compare
+ * to, unlike `gradeAnswer`. This is the Feynman technique: if the learner
+ * cannot explain it simply and correctly, that is the gap.
+ *
+ * The citation guarantee holds here exactly as it does everywhere else the
+ * product makes a claim from the material: every point the grade makes —
+ * what was covered, what was missing, what was wrong — has to name the
+ * section it checked that point against. A grade that named a section it was
+ * never given is a fabricated citation, which is worse than no citation, so
+ * it fails the call rather than reaching the learner.
+ *
+ * @param {object} params
+ * @param {object} params.client
+ * @param {{term: string}} params.concept
+ * @param {Array<{id: string, ordinal?: number, content: string, anchor?: object}>} params.sections
+ *   the concept's own source material — everything the grade may cite
+ * @param {string} params.explanation what the learner said, in their own words
+ * @returns {Promise<{covered: Array<{point: string, section_id: string}>,
+ *   gaps: Array<{point: string, section_id: string}>,
+ *   wrong: Array<{claim: string, section_id: string, correction: string}>,
+ *   feedback: string}>}
+ */
+export async function gradeExplanation({ client, concept, sections = [], explanation, ...params }) {
+  if (typeof explanation !== 'string' || explanation.trim() === '') {
+    throw new TypeError('explanation is empty — there is nothing to grade')
+  }
+  if (sections.length === 0) {
+    throw new TypeError('no section was given to grade the explanation against')
+  }
+
+  const grade = await client.chatStructured({
+    ...params,
+    schemaName: 'teach_back_grade',
+    schema: TEACH_BACK_GRADE_SCHEMA,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          SYSTEM_PROMPT,
+          'You are grading a teach-back explanation: the learner has explained a',
+          'concept in their own words, with nothing pre-written to compare it to.',
+          'Judge freshly, against the source sections only. Be exact and',
+          'unsentimental: do not praise, and name what is missing or wrong rather',
+          'than softening it. Every point you make — covered, missing or wrong —',
+          'must name the id of the section you checked it against, and that id must',
+          'be one of the sections given below. Never cite a section you were not',
+          'given.',
+        ].join(' '),
+      },
+      {
+        role: 'user',
+        content: [
+          `Concept: ${concept.term}`,
+          '',
+          'Source sections. Cite each by the exact id given here, never by its',
+          'ordinal:',
+          sections.map((section) => teachBackSectionBlock(section)).join('\n\n'),
+          '',
+          `The learner's explanation, in their own words:\n"""\n${explanation.trim()}\n"""`,
+        ].join('\n'),
+      },
+    ],
+  })
+
+  const knownSections = new Set(sections.map((section) => section.id))
+  const cited = [...grade.covered, ...grade.gaps, ...grade.wrong].map((point) => point.section_id)
+  const invented = cited.filter((sectionId) => !knownSections.has(sectionId))
+
+  if (invented.length > 0) {
+    throw new TypeError(
+      `the grade cited section(s) it was never given: ${[...new Set(invented)].join(', ')}`,
+    )
   }
 
   return grade

@@ -1,4 +1,4 @@
--- 007_exam_dates.sql
+-- 010_exam_dates.sql
 --
 -- A course may carry a target date: the exam it is being prepared for. The
 -- countdown, the adaptive daily goal and the compressed review plan

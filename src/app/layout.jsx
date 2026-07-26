@@ -4,6 +4,7 @@ import { Bricolage_Grotesque, JetBrains_Mono, Newsreader } from "next/font/googl
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import { MARK } from "@/components/brand/brand-mark";
+import SwRegister from "@/components/offline/sw-register";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
           hydrates, and React reports the difference as a mismatch we cannot
           fix from here. Everything inside stays checked. */}
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <SwRegister />
         {children}
       </body>
     </html>

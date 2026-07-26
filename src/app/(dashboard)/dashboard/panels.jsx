@@ -203,8 +203,8 @@ export async function WeakestPanel() {
                 <span className="flex items-center gap-3">
                   <span
                     aria-hidden="true"
-                    className={`grain grain-mark ${state.field}`}
-                    style={{ '--grain': state.grain }}
+                    className={`grain grain-mark mastery-gradient ${state.field}`}
+                    style={{ '--grain': state.grain, '--mastery-color': state.color }}
                   />
                   <span className="text-body-s">{concept.name}</span>
                 </span>

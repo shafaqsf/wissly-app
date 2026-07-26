@@ -168,6 +168,24 @@ describe('weakest', () => {
       '/tasks/due',
     );
   });
+
+  /* The mastery gradient — v0.15 — sits beside every mark on the one panel
+     that already carries the field, and never in place of it. */
+  it('carries the mastery gradient colour beside each mark', async () => {
+    mocks.listConceptMastery.mockResolvedValue(concepts);
+
+    const { container } = render(await WeakestPanel());
+
+    const marks = container.querySelectorAll('.grain-mark');
+    expect(marks.length).toBeGreaterThan(0);
+
+    for (const mark of marks) {
+      expect(mark).toHaveClass('mastery-gradient');
+      expect(mark.style.getPropertyValue('--mastery-color')).toMatch(
+        /^var\(--color-mastery-(low|mid|high)\)$/,
+      );
+    }
+  });
 });
 
 describe('courses', () => {

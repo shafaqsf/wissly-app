@@ -48,7 +48,16 @@ export default function Panel({ title, action, empty, error, wide = false, mark,
             {error}
           </p>
         ) : empty ? (
-          <p className="text-body-s text-ink-muted">{empty}</p>
+          // `empty` is usually a sentence and gets wrapped here. A caller
+          // that has more to say — task item 7 in v0.15, an illustrated
+          // `EmptyState` — passes an element instead, and composes its own
+          // secondary-ink paragraph, so it is rendered as given rather than
+          // nested inside a second one.
+          typeof empty === 'string' ? (
+            <p className="text-body-s text-ink-muted">{empty}</p>
+          ) : (
+            empty
+          )
         ) : (
           children
         )}

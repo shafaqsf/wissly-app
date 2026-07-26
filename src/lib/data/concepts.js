@@ -97,3 +97,46 @@ export async function conceptById(supabase, { id }) {
     'read the concept',
   )
 }
+
+/** Beyond this a relatedness prompt is paying to compare concepts nobody asked about. */
+const CANDIDATE_LIMIT = 60
+
+/**
+ * Every concept elsewhere in the library — the raw material
+ * `suggestConceptLinks` judges relatedness over. Term, definition and the
+ * course it belongs to, which is what the reason in a "see also" link needs
+ * to name.
+ *
+ * Capped and most-recent-first rather than exhaustive: a library that has
+ * grown past a few dozen courses does not need every concept it has ever
+ * held compared, every time one course asks to be linked.
+ */
+export async function candidateConcepts(supabase, { excludeIds = [], limit = CANDIDATE_LIMIT } = {}) {
+  let query = supabase
+    .from('concepts')
+    .select('id, term, definition, subject_id')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (excludeIds.length > 0) {
+    query = query.not('id', 'in', `(${excludeIds.join(',')})`)
+  }
+
+  const concepts = unwrapList(await query, 'read the rest of your library')
+  if (concepts.length === 0) return []
+
+  const subjectIds = [...new Set(concepts.map((concept) => concept.subject_id))]
+  const subjects = unwrapList(
+    await supabase.from('subjects').select('id, title').in('id', subjectIds),
+    'read the rest of your library',
+  )
+  const titleById = new Map(subjects.map((subject) => [subject.id, subject.title]))
+
+  return concepts.map((concept) => ({
+    id: concept.id,
+    term: concept.term,
+    definition: concept.definition,
+    subjectId: concept.subject_id,
+    courseTitle: titleById.get(concept.subject_id),
+  }))
+}

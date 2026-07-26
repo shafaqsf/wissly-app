@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { argsOf, fakeSupabase } from './fake-supabase.js'
 import {
+  candidateConcepts,
   conceptNameFor,
   createConceptsForSections,
   listConceptMastery,
@@ -132,5 +133,47 @@ describe('mastery per concept', () => {
 
     await expect(listConceptMastery(supabase, { subjectId: 'sub-1' })).resolves.toEqual([])
     expect(supabase.query('concept_mastery')).toBeUndefined()
+  })
+})
+
+describe('candidateConcepts', () => {
+  it('names the course each candidate belongs to', async () => {
+    const supabase = fakeSupabase({
+      concepts: {
+        data: [{ id: 'x1', term: 'Cellular respiration', definition: 'Sugar into energy.', subject_id: 'sub-2' }],
+        error: null,
+      },
+      subjects: { data: [{ id: 'sub-2', title: 'Biology' }], error: null },
+    })
+
+    const candidates = await candidateConcepts(supabase, { excludeIds: ['c1'] })
+
+    expect(candidates).toEqual([
+      {
+        id: 'x1',
+        term: 'Cellular respiration',
+        definition: 'Sugar into energy.',
+        subjectId: 'sub-2',
+        courseTitle: 'Biology',
+      },
+    ])
+  })
+
+  it('excludes the given ids from the candidate list', async () => {
+    const supabase = fakeSupabase({
+      concepts: { data: [], error: null },
+      subjects: { data: [], error: null },
+    })
+
+    await candidateConcepts(supabase, { excludeIds: ['c1', 'c2'] })
+
+    expect(argsOf(supabase.query('concepts'), 'not')).toEqual(['id', 'in', '(c1,c2)'])
+  })
+
+  it('asks the database nothing further when there is nothing to name', async () => {
+    const supabase = fakeSupabase({ concepts: { data: [], error: null } })
+
+    await expect(candidateConcepts(supabase, {})).resolves.toEqual([])
+    expect(supabase.query('subjects')).toBeUndefined()
   })
 })

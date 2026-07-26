@@ -41,6 +41,7 @@ describe('the schema', () => {
       'artefacts',
       'concepts',
       'conversations',
+      'fsrs_weights',
       'messages',
       'reviews',
       'sections',

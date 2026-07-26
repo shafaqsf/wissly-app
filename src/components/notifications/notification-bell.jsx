@@ -43,10 +43,17 @@ export default function NotificationBell({ initialNotifications = [], initialUnr
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const containerRef = useRef(null);
 
-  useEffect(() => {
+  // The server re-fetches these on every navigation and this component does
+  // not remount (the bell lives in a persistent layout), so a fresh prop pair
+  // must overwrite the client's optimistic copy. Setting state mid-render
+  // rather than in an effect avoids the extra commit an effect would cause —
+  // see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  const [priorNotifications, setPriorNotifications] = useState(initialNotifications);
+  if (priorNotifications !== initialNotifications) {
+    setPriorNotifications(initialNotifications);
     setNotifications(initialNotifications);
     setUnreadCount(initialUnreadCount);
-  }, [initialNotifications, initialUnreadCount]);
+  }
 
   useEffect(() => {
     if (!open) return undefined;

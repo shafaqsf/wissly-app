@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { argsOf, fakeSupabase } from './fake-supabase.js'
-import { createSubject, listSubjects, subjectByTitle } from './subjects.js'
+import { createSubject, listSubjects, setSubjectPublic, subjectByTitle } from './subjects.js'
 
 describe('listing subjects', () => {
   it('returns them newest first', async () => {
@@ -90,5 +90,39 @@ describe('finding a subject by title', () => {
     const supabase = fakeSupabase({ subjects: { data: null, error: null } })
 
     await expect(subjectByTitle(supabase, { title: 'Optics' })).resolves.toBeNull()
+  })
+})
+
+describe('changing who can see a subject', () => {
+  it('turns is_public on', async () => {
+    const supabase = fakeSupabase({
+      subjects: { data: { id: 's1', title: 'Optics', is_public: true }, error: null },
+    })
+
+    const subject = await setSubjectPublic(supabase, { id: 's1', isPublic: true })
+
+    expect(subject).toEqual({ id: 's1', title: 'Optics', is_public: true })
+    expect(argsOf(supabase.query('subjects'), 'update')).toEqual([{ is_public: true }])
+    expect(argsOf(supabase.query('subjects'), 'eq')).toEqual(['id', 's1'])
+  })
+
+  it('turns is_public off', async () => {
+    const supabase = fakeSupabase({
+      subjects: { data: { id: 's1', title: 'Optics', is_public: false }, error: null },
+    })
+
+    await setSubjectPublic(supabase, { id: 's1', isPublic: false })
+
+    expect(argsOf(supabase.query('subjects'), 'update')).toEqual([{ is_public: false }])
+  })
+
+  it('raises what the database said rather than pretending it worked', async () => {
+    const supabase = fakeSupabase({
+      subjects: { data: null, error: { message: 'permission denied' } },
+    })
+
+    await expect(setSubjectPublic(supabase, { id: 's1', isPublic: true })).rejects.toThrow(
+      'permission denied',
+    )
   })
 })

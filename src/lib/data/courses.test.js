@@ -10,8 +10,8 @@ describe('the courses a learner has', () => {
     const supabase = fakeSupabase({
       subjects: {
         data: [
-          { id: 'sub-1', title: 'Optics' },
-          { id: 'sub-2', title: 'Algebra' },
+          { id: 'sub-1', title: 'Optics', user_id: 'user-1', is_public: false },
+          { id: 'sub-2', title: 'Algebra', user_id: 'user-1', is_public: true },
         ],
         error: null,
       },
@@ -41,20 +41,44 @@ describe('the courses a learner has', () => {
     })
 
     await expect(listCourses(supabase)).resolves.toEqual([
-      { id: 'sub-1', title: 'Optics', sources: 2, concepts: 2, settled: 1 },
-      { id: 'sub-2', title: 'Algebra', sources: 1, concepts: 1, settled: 0 },
+      {
+        id: 'sub-1',
+        title: 'Optics',
+        ownerId: 'user-1',
+        isPublic: false,
+        sources: 2,
+        concepts: 2,
+        settled: 1,
+      },
+      {
+        id: 'sub-2',
+        title: 'Algebra',
+        ownerId: 'user-1',
+        isPublic: true,
+        sources: 1,
+        concepts: 1,
+        settled: 0,
+      },
     ])
   })
 
   it('reads a course nothing has been added to yet as empty, not as missing', async () => {
     const supabase = fakeSupabase({
-      subjects: { data: [{ id: 'sub-1', title: 'Optics' }], error: null },
+      subjects: { data: [{ id: 'sub-1', title: 'Optics', user_id: 'user-1' }], error: null },
       sources: { data: [], error: null },
       concepts: { data: [], error: null },
     })
 
     await expect(listCourses(supabase)).resolves.toEqual([
-      { id: 'sub-1', title: 'Optics', sources: 0, concepts: 0, settled: 0 },
+      {
+        id: 'sub-1',
+        title: 'Optics',
+        ownerId: 'user-1',
+        isPublic: false,
+        sources: 0,
+        concepts: 0,
+        settled: 0,
+      },
     ])
   })
 
@@ -97,7 +121,10 @@ describe('creating a course', () => {
 describe('one course', () => {
   it('answers with its counts, the same shape the list uses', async () => {
     const supabase = fakeSupabase({
-      subjects: { data: { id: 'sub-1', title: 'Optics' }, error: null },
+      subjects: {
+        data: { id: 'sub-1', title: 'Optics', user_id: 'user-1', is_public: false },
+        error: null,
+      },
       sources: { data: [{ id: 'src-1', subject_id: 'sub-1' }], error: null },
       concepts: { data: [{ id: 'c1', subject_id: 'sub-1', term: 'Refraction' }], error: null },
       concept_mastery: { data: [{ concept_id: 'c1', mastery: '0.95' }], error: null },
@@ -106,10 +133,27 @@ describe('one course', () => {
     await expect(courseById(supabase, { id: 'sub-1' })).resolves.toEqual({
       id: 'sub-1',
       title: 'Optics',
+      ownerId: 'user-1',
+      isPublic: false,
       sources: 1,
       concepts: 1,
       settled: 1,
     })
+  })
+
+  it('carries whether it is in the public library', async () => {
+    const supabase = fakeSupabase({
+      subjects: {
+        data: { id: 'sub-1', title: 'Optics', user_id: 'user-1', is_public: true },
+        error: null,
+      },
+      sources: { data: [], error: null },
+      concepts: { data: [], error: null },
+    })
+
+    const course = await courseById(supabase, { id: 'sub-1' })
+
+    expect(course.isPublic).toBe(true)
   })
 
   it('answers null for a course that is not there', async () => {

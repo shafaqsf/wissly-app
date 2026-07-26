@@ -7,7 +7,7 @@ import { unwrap, unwrapList } from './result.js'
  * client is per-request and asynchronous, and a module that reached for it
  * itself could not be tested without standing up a request. */
 
-const COLUMNS = 'id, title, created_at'
+const COLUMNS = 'id, title, user_id, is_public, created_at'
 
 export async function listSubjects(supabase) {
   return unwrapList(
@@ -61,4 +61,21 @@ export async function subjectByTitle(supabase, { title }) {
 /** The subject with this title, created if it is not there yet. */
 export async function subjectForTitle(supabase, { userId, title }) {
   return (await subjectByTitle(supabase, { title })) ?? createSubject(supabase, { userId, title })
+}
+
+/**
+ * Make a subject public or private again. Only the owner's row is ever
+ * touched — RLS enforces that (`subjects` keeps its owner-only update
+ * policy), this is just where the intent to flip it lives in the app.
+ */
+export async function setSubjectPublic(supabase, { id, isPublic }) {
+  return unwrap(
+    await supabase
+      .from('subjects')
+      .update({ is_public: Boolean(isPublic) })
+      .eq('id', id)
+      .select(COLUMNS)
+      .single(),
+    'change who can see this course',
+  )
 }

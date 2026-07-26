@@ -70,6 +70,14 @@ export default async function CoursesPage() {
           ))}
         </ul>
       </Panel>
+
+      {/* A line, not a copy. */}
+      <Link
+        href="/library"
+        className="motion-lift flex min-h-11 items-center rounded-surface border border-rule px-5 py-3 font-mono text-label uppercase text-ink"
+      >
+        Browse the public library →
+      </Link>
     </div>
   );
 }

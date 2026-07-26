@@ -10,8 +10,10 @@ import {
    have, what can I do, how is it going. Named the way a learner would name
    them — "course", "task" — never after the table they read from.
 
-   `Review` is `/tasks/due` now and `Library` dissolved into the course page;
-   both old addresses are redirected in `next.config.mjs`. */
+   `Review` is `/tasks/due` now, redirected in `next.config.mjs`. `Library`
+   dissolved into the course page in v0.14.0; v0.23.0 gives the address a new,
+   unrelated meaning (the public course library, linked from Courses rather
+   than added here as a fifth area) rather than repointing the old redirect. */
 export const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/courses', label: 'Courses', icon: BookOpen },

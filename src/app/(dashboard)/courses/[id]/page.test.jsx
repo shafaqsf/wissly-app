@@ -224,5 +224,21 @@ describe('the course shelf', () => {
     expect(
       screen.getByText(/Summaries and glossary entries you generate land here/),
     ).toBeInTheDocument()
+
+    /* task item 7 in v0.15: the material shelf's empty state carries an
+       illustration, not only a sentence. */
+    expect(document.querySelector('svg[data-empty-illustration]')).toBeInTheDocument()
+  })
+
+  /* task item 6 in v0.15: a course wears the same tag on its own header that
+     it wears on the shelf in /courses, so the two never disagree. */
+  it('wears its own accent tag beside the "Course" label', async () => {
+    const { container } = render(await page())
+
+    const dot = container.querySelector('header span[style*="background-color"]')
+    expect(dot).toBeInTheDocument()
+    // jsdom canonicalises an inline colour to rgb() when it serialises the
+    // style attribute back out, whatever notation courseAccent wrote it in.
+    expect(dot.getAttribute('style')).toMatch(/rgb\(/)
   })
 })

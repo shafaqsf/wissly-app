@@ -7,6 +7,7 @@ import ConceptShelf from '@/components/course/concept-shelf';
 import ReadingShelf from '@/components/course/reading-shelf';
 import SourceShelf from '@/components/course/source-shelf';
 import AddMaterialForm from '@/components/material/add-material-form';
+import EmptyState from '@/components/empty/empty-state';
 import Panel from '@/components/panel/panel';
 import {
   archiveReadingAction,
@@ -18,6 +19,7 @@ import { addMaterialAction } from '@/lib/actions/material';
 import { READING_FORMATS, TASK_FORMATS } from '@/lib/agent/formats';
 import { listArtefacts } from '@/lib/data/artefacts';
 import { listConceptMastery } from '@/lib/data/concepts';
+import { courseAccent } from '@/lib/course-accent';
 import { courseById } from '@/lib/data/courses';
 import { listSourcesWithSections } from '@/lib/data/sources';
 import { createClient } from '@/lib/supabase/server';
@@ -78,7 +80,16 @@ export default async function CoursePage({ params, searchParams }) {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <p className="font-mono text-label uppercase text-ink-muted">Course</p>
+        <p className="flex items-center gap-2 font-mono text-label uppercase text-ink-muted">
+          {/* The course's own tag — task item 6 in v0.15 — the same colour
+              this course wears on the shelf in /courses. */}
+          <span
+            aria-hidden="true"
+            className="size-2.5 shrink-0 rounded-round"
+            style={{ backgroundColor: courseAccent(course.id) }}
+          />
+          Course
+        </p>
         <h1 className="font-display text-display-l font-bold">{course.title}</h1>
         <p className="font-mono text-caption uppercase text-ink-muted">
           {count(sources.length, 'source')} · {course.settled} of{' '}
@@ -93,9 +104,12 @@ export default async function CoursePage({ params, searchParams }) {
       <Panel
         title="Sources"
         empty={
-          sources.length === 0
-            ? 'Add your first material above. wissly reads it, cuts it into sections and names what each one covers.'
-            : undefined
+          sources.length === 0 ? (
+            <EmptyState variant="shelf">
+              Add your first material above. wissly reads it, cuts it into
+              sections and names what each one covers.
+            </EmptyState>
+          ) : undefined
         }
       >
         <div className="flex flex-col gap-4">

@@ -99,6 +99,15 @@ describe('the workbench', () => {
     ).toBeInTheDocument()
   })
 
+  /* task item 7 in v0.15: this is the first thing a new course meets, since
+     nothing is generated on upload any more, so it carries an illustration
+     beside the sentence. */
+  it('draws an illustration beside the invitation to write the first one', () => {
+    const { container } = workbench({ tasks: [] })
+
+    expect(container.querySelector('svg[data-empty-illustration]')).toBeInTheDocument()
+  })
+
   it('narrows the list to one source', async () => {
     const user = userEvent.setup()
     workbench()

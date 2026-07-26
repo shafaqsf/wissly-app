@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import EmptyState from '@/components/empty/empty-state';
+
 /* The results of one search.
 
    Two things are load-bearing here and both are rules from elsewhere.
@@ -82,18 +84,20 @@ export default function SearchResults({ query = '', results = [] }) {
 
   if (results.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-4">
-        <p className="max-w-measure text-body text-ink-muted">
-          Nothing matches “{query}”. Try fewer words, or add material to a course
-          and search again.
-        </p>
-        <Link
-          href="/courses"
-          className="motion-lift inline-flex min-h-11 items-center rounded-control border border-rule px-4 font-mono text-label uppercase"
-        >
-          Go to your courses
-        </Link>
-      </div>
+      <EmptyState
+        variant="search"
+        action={
+          <Link
+            href="/courses"
+            className="motion-lift inline-flex min-h-11 items-center rounded-control border border-rule px-4 font-mono text-label uppercase"
+          >
+            Go to your courses
+          </Link>
+        }
+      >
+        Nothing matches “{query}”. Try fewer words, or add material to a course
+        and search again.
+      </EmptyState>
     );
   }
 

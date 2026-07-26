@@ -50,6 +50,9 @@ describe('the dashboard', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
 
+    /* The hero on this page — task item 4 in v0.15 — wears the accent. */
+    expect(screen.getByText('Today')).toHaveClass('text-accent');
+
     const named = screen
       .getAllByRole('region')
       .map((region) => region.getAttribute('aria-label'));

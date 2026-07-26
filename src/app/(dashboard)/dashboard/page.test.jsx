@@ -25,6 +25,7 @@ function mockPanels(factory) {
     WeakestPanel: factory('Weakest'),
     CoursesPanel: factory('Courses'),
     RecentlyPanel: factory('Recently'),
+    StreakPanel: factory('Streak'),
     WeekPanel: factory('This week'),
     EffortPanel: factory('Effort'),
   }));
@@ -36,6 +37,7 @@ const ORDER = [
   'Weakest',
   'Courses',
   'Recently',
+  'Streak',
   'This week',
   'Effort',
 ];

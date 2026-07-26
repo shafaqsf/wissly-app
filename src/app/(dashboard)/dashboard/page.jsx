@@ -9,6 +9,7 @@ import {
   CoursesPanel,
   EffortPanel,
   RecentlyPanel,
+  StreakPanel,
   WeakestPanel,
   WeekPanel,
 } from './panels';
@@ -22,7 +23,7 @@ export const metadata = {
    Every surface here is an entrance and nothing is decoration: each panel
    leads somewhere, and the ones that cannot lead anywhere yet say what the
    next step is and offer it. Nothing is generated on upload any more, so a
-   new account meets seven empty panels — and each of them has to be worth
+   new account meets eight empty panels — and each of them has to be worth
    meeting.
 
    Reading order is the order of the day: what to do, what happened without
@@ -61,6 +62,10 @@ export default function DashboardPage() {
 
         <Suspense fallback={<PanelSkeleton title="Recently" />}>
           <RecentlyPanel />
+        </Suspense>
+
+        <Suspense fallback={<PanelSkeleton title="Streak" />}>
+          <StreakPanel />
         </Suspense>
 
         <Suspense fallback={<PanelSkeleton title="This week" />}>

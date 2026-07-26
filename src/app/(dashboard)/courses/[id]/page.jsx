@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import CourseArchive from '@/components/course/course-archive';
+import ExamPace from '@/components/course/exam-pace';
 import ExportReading from '@/components/course/export-reading';
 import ConceptShelf from '@/components/course/concept-shelf';
 import ReadingShelf from '@/components/course/reading-shelf';
@@ -14,6 +15,7 @@ import {
   archiveSourceAction,
   restoreReadingAction,
   restoreSourceAction,
+  setExamDateAction,
 } from '@/lib/actions/course';
 import { addMaterialAction } from '@/lib/actions/material';
 import { READING_FORMATS, TASK_FORMATS } from '@/lib/agent/formats';
@@ -21,6 +23,8 @@ import { listArtefacts } from '@/lib/data/artefacts';
 import { listConceptMastery } from '@/lib/data/concepts';
 import { courseAccent } from '@/lib/course-accent';
 import { courseById } from '@/lib/data/courses';
+import { dailyGoalFor } from '@/lib/data/daily-goal';
+import { examPlanFor } from '@/lib/data/exam-plan';
 import { listSourcesWithSections } from '@/lib/data/sources';
 import { createClient } from '@/lib/supabase/server';
 
@@ -58,7 +62,7 @@ export default async function CoursePage({ params, searchParams }) {
 
   if (!course) notFound();
 
-  const [sources, concepts, reading, tasks, archivedSources, archivedReading] =
+  const [sources, concepts, reading, tasks, archivedSources, archivedReading, goal] =
     await Promise.all([
       listSourcesWithSections(supabase, { subjectId: id }),
       listConceptMastery(supabase, { subjectId: id }),
@@ -66,7 +70,11 @@ export default async function CoursePage({ params, searchParams }) {
       listArtefacts(supabase, { subjectId: id, formats: TASK_FORMATS }),
       listSourcesWithSections(supabase, { subjectId: id, archived: true }),
       listArtefacts(supabase, { subjectId: id, formats: READING_FORMATS, archived: true }),
+      dailyGoalFor(supabase, { subjectId: id }),
     ]);
+
+  // Only a course with an exam date has anything to compress a plan against.
+  const plan = goal.examDate ? await examPlanFor(supabase, { subjectId: id }) : null;
 
   /* A link outlives what it points at. A source archived since the link was
      made is not an error and not a 404 — it is still here, one panel down, so
@@ -96,6 +104,16 @@ export default async function CoursePage({ params, searchParams }) {
           {count(concepts.length, 'concept')} settled
         </p>
       </header>
+
+      <Panel title="Exam">
+        <ExamPace
+          courseId={course.id}
+          action={setExamDateAction}
+          examDate={goal.examDate}
+          goal={goal}
+          plan={plan}
+        />
+      </Panel>
 
       <Panel title="Add material">
         <AddMaterialForm action={addMaterialAction} courseId={course.id} />

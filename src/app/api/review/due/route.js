@@ -31,6 +31,11 @@ export async function GET(request) {
     const due = await dueArtefacts(supabase, { subjectId })
     return json({ due })
   } catch (error) {
-    return json({ error: error.message }, 500)
+    // Not `error.message`. `DataError` (src/lib/data/result.js) forwards the
+    // database's own wording verbatim, which names constraints, columns and
+    // sometimes the query itself. That belongs in the server log, not in a
+    // response the browser — or the service worker caching it — can read.
+    console.error('due review fetch failed', error)
+    return json({ error: 'Could not read your queue.' }, 500)
   }
 }

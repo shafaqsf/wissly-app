@@ -48,4 +48,18 @@ describe('GET /api/review/due', () => {
 
     expect(response.status).toBe(500)
   })
+
+  /* A DataError carries the database's own wording — constraint names, column
+     names, sometimes the query. The learner gets told it failed, not how. */
+  it('says a read failed without repeating what the database said', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    dueArtefacts.mockRejectedValue(
+      new Error('relation "public.artefact_schedule" does not exist'),
+    )
+
+    const body = await (await GET(get())).json()
+
+    expect(body.error).not.toMatch(/artefact_schedule|relation/)
+    expect(body.error).toBe('Could not read your queue.')
+  })
 })

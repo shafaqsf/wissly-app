@@ -193,6 +193,64 @@ export const GRADE_SCHEMA = Object.freeze({
   },
 })
 
+/**
+ * The result of grading a teach-back explanation: the learner explains a
+ * concept in their own words, with nothing pre-written to grade it against —
+ * unlike `GRADE_SCHEMA`, which grades an answer against a `model_answer` and
+ * `criteria` the artefact already carries. Here the model has to read the
+ * concept's own source material and judge freshly, which is why every point
+ * it makes has to name the section it checked that point against: a verdict
+ * that cannot say where it came from is a guess wearing a grade.
+ *
+ * Not an artefact format — never stored in `artefacts` — but model output,
+ * so it needs a schema all the same.
+ */
+const gradedPoint = (description) => ({
+  type: 'object',
+  additionalProperties: false,
+  required: ['point', 'section_id'],
+  properties: {
+    point: string(description),
+    section_id: string('the id of the section this point was checked against'),
+  },
+})
+
+export const TEACH_BACK_GRADE_SCHEMA = Object.freeze({
+  type: 'object',
+  additionalProperties: false,
+  required: ['covered', 'gaps', 'wrong', 'feedback'],
+  properties: {
+    covered: {
+      type: 'array',
+      maxItems: 10,
+      items: gradedPoint('one thing the explanation got right, in the learner’s own words'),
+      description: 'what the explanation correctly covered',
+    },
+    gaps: {
+      type: 'array',
+      maxItems: 10,
+      items: gradedPoint('one thing the source covers that the explanation left out'),
+      description: 'depth the explanation missed entirely',
+    },
+    wrong: {
+      type: 'array',
+      maxItems: 10,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['claim', 'section_id', 'correction'],
+        properties: {
+          claim: string('what the learner said that the source contradicts'),
+          section_id: string('the id of the section that contradicts it'),
+          correction: string('what the source actually says'),
+        },
+      },
+      description: 'what was actively wrong, not merely missing',
+    },
+    feedback: string('two or three sentences addressed to the learner, no praise'),
+  },
+})
+
 /** @param {unknown} format */
 export function isFormat(format) {
   return FORMATS.includes(format)

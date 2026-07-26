@@ -6,12 +6,14 @@ import {
   PAYLOAD_SCHEMAS,
   READING_FORMATS,
   TASK_FORMATS,
+  TEACH_BACK_GRADE_SCHEMA,
   formatKind,
   isFormat,
   isReadingFormat,
   isTaskFormat,
   validatePayload,
 } from './formats.js'
+import { validate } from './schema.js'
 
 describe('FORMATS', () => {
   it('is exactly the stage 1 catalogue, in the order the database enumerates it', () => {
@@ -222,5 +224,37 @@ describe('reading and tasks', () => {
     expect(isTaskFormat('open_question')).toBe(true)
     expect(isTaskFormat('summary')).toBe(false)
     expect(isTaskFormat('concept_map')).toBe(false)
+  })
+})
+
+describe('TEACH_BACK_GRADE_SCHEMA', () => {
+  const grade = {
+    covered: [{ point: 'Named the invariant.', section_id: 's1' }],
+    gaps: [{ point: 'Never mentioned termination.', section_id: 's1' }],
+    wrong: [
+      { claim: 'Said it always halts.', section_id: 's1', correction: 'It halts only for finite input.' },
+    ],
+    feedback: 'Good grasp of the invariant. The termination condition is still missing.',
+  }
+
+  it('closes every object, so a model cannot smuggle extra keys past us', () => {
+    expect(TEACH_BACK_GRADE_SCHEMA.additionalProperties).toBe(false)
+    expect(TEACH_BACK_GRADE_SCHEMA.properties.covered.items.additionalProperties).toBe(false)
+    expect(TEACH_BACK_GRADE_SCHEMA.properties.wrong.items.additionalProperties).toBe(false)
+  })
+
+  it('requires a section_id on every covered, gap and wrong point — a grade with no citation is a guess', () => {
+    expect(TEACH_BACK_GRADE_SCHEMA.properties.covered.items.required).toContain('section_id')
+    expect(TEACH_BACK_GRADE_SCHEMA.properties.gaps.items.required).toContain('section_id')
+    expect(TEACH_BACK_GRADE_SCHEMA.properties.wrong.items.required).toContain('section_id')
+  })
+
+  it('validates a well-formed grade', () => {
+    expect(validate(grade, TEACH_BACK_GRADE_SCHEMA)).toEqual({ valid: true, errors: [] })
+  })
+
+  it('rejects a point with no section to check it against', () => {
+    const bad = { ...grade, wrong: [{ claim: 'x', correction: 'y' }] }
+    expect(validate(bad, TEACH_BACK_GRADE_SCHEMA).valid).toBe(false)
   })
 })

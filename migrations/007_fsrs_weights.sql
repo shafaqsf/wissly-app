@@ -14,7 +14,9 @@
 -- same as before this migration existed.
 
 create table if not exists public.fsrs_weights (
-  user_id uuid primary key references auth.users (id) on delete cascade,
+  -- One row per user, at most — user_id is both the foreign key and the
+  -- primary key, so a second fit for the same learner overwrites the first.
+  user_id uuid not null references auth.users (id) on delete cascade,
   -- 17 floats, same order and meaning as DEFAULT_WEIGHTS in fsrs.js.
   weights real[] not null,
   -- How much evidence the fit was made from, and what it cost to explain
@@ -22,8 +24,12 @@ create table if not exists public.fsrs_weights (
   -- can tell a fit backed by five reviews from one backed by five hundred.
   review_count int not null default 0,
   loss real,
-  fitted_at timestamptz not null default now()
+  fitted_at timestamptz not null default now(),
+  primary key (user_id)
 );
+
+create index if not exists fsrs_weights_user_id_idx
+  on public.fsrs_weights (user_id);
 
 alter table public.fsrs_weights enable row level security;
 

@@ -77,4 +77,10 @@ describe('the reading shelf', () => {
     expect(within(form).getByDisplayValue('a1')).toHaveAttribute('type', 'hidden')
     expect(within(form).getByDisplayValue('course-1')).toHaveAttribute('type', 'hidden')
   })
+
+  it('hides the archive control for a viewer who cannot edit', () => {
+    render(<ReadingShelf courseId="course-1" artefacts={artefacts} archiveAction={noop} canEdit={false} />)
+
+    expect(screen.queryByRole('button', { name: /Archive/ })).toBeNull()
+  })
 })

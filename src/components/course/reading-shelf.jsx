@@ -26,7 +26,7 @@ const NAMES = {
   comparison_table: 'this comparison',
 };
 
-export default function ReadingShelf({ courseId, artefacts = [], archiveAction }) {
+export default function ReadingShelf({ courseId, artefacts = [], archiveAction, canEdit = true }) {
   const reading = artefacts.filter((artefact) => isReadingFormat(artefact.format));
 
   return (
@@ -38,17 +38,19 @@ export default function ReadingShelf({ courseId, artefacts = [], archiveAction }
           <li key={artefact.id} className="flex flex-col gap-4">
             <Renderer artefact={artefact} />
 
-            <form action={archiveAction}>
-              <input type="hidden" name="id" value={artefact.id} />
-              <input type="hidden" name="courseId" value={courseId} />
-              <button
-                type="submit"
-                className={quietButtonClass}
-                aria-label={`Archive ${NAMES[artefact.format]}`}
-              >
-                Archive
-              </button>
-            </form>
+            {canEdit ? (
+              <form action={archiveAction}>
+                <input type="hidden" name="id" value={artefact.id} />
+                <input type="hidden" name="courseId" value={courseId} />
+                <button
+                  type="submit"
+                  className={quietButtonClass}
+                  aria-label={`Archive ${NAMES[artefact.format]}`}
+                >
+                  Archive
+                </button>
+              </form>
+            ) : null}
           </li>
         );
       })}

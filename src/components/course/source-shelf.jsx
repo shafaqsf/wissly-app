@@ -52,8 +52,18 @@ export function SectionList({ sections = [] }) {
  *   arrival. Analytics' gap report links straight at the source that leaves a
  *   concept open, and a link that lands on a closed row has shown nobody
  *   anything. An id this course does not have simply opens nothing.
+ * @param {boolean} [props.canEdit] Whether the viewer may archive a source.
+ *   A shared or public viewer reads under a `select` policy only — 015 never
+ *   widens `delete`/`update` — so a form they could submit here would just
+ *   fail in the database. Hiding it is the honest version of that.
  */
-export default function SourceShelf({ courseId, sources = [], archiveAction, openSourceId }) {
+export default function SourceShelf({
+  courseId,
+  sources = [],
+  archiveAction,
+  openSourceId,
+  canEdit = true,
+}) {
   return (
     <ul className="motion-stagger flex flex-col gap-4">
       {sources.map((source) => (
@@ -77,17 +87,19 @@ export default function SourceShelf({ courseId, sources = [], archiveAction, ope
             <div className="flex flex-col gap-6 border-t border-rule px-4 py-4">
               <SectionList sections={source.sections} />
 
-              <form action={archiveAction}>
-                <input type="hidden" name="id" value={source.id} />
-                <input type="hidden" name="courseId" value={courseId} />
-                <button
-                  type="submit"
-                  className={quietButtonClass}
-                  aria-label={`Archive ${source.title}`}
-                >
-                  Archive
-                </button>
-              </form>
+              {canEdit ? (
+                <form action={archiveAction}>
+                  <input type="hidden" name="id" value={source.id} />
+                  <input type="hidden" name="courseId" value={courseId} />
+                  <button
+                    type="submit"
+                    className={quietButtonClass}
+                    aria-label={`Archive ${source.title}`}
+                  >
+                    Archive
+                  </button>
+                </form>
+              ) : null}
             </div>
           </details>
         </li>

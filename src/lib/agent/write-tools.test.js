@@ -9,6 +9,7 @@ import {
   applyUndo,
   archiveSourceTool,
   archiveTasks,
+  buildCourseFromGoal,
   composePracticeExam,
   createCourseTool,
   editArtefact,
@@ -137,6 +138,111 @@ describe('addMaterialTool', () => {
     })
 
     expect(record.mock.calls[0][1].undo).toEqual({ kind: 'archive_source', sourceId: 'src1' })
+  })
+})
+
+describe('buildCourseFromGoal', () => {
+  const outline = {
+    title: 'Eigenvalues for the exam',
+    sections: [
+      { heading: 'What an eigenvector is', content: 'An eigenvector of A is a nonzero v with Av = λv.' },
+      { heading: 'Finding eigenvalues', content: 'Solve det(A - λI) = 0.' },
+    ],
+  }
+
+  function scriptedClient() {
+    let call = 0
+    const answers = [
+      outline,
+      { format: 'flashcard', reason: 'r' },
+      { front: 'q1', back: 'a1' },
+      { format: 'flashcard', reason: 'r' },
+      { front: 'q2', back: 'a2' },
+    ]
+    return { chatStructured: vi.fn(async () => answers[call++]), chat: vi.fn() }
+  }
+
+  function supabaseFor() {
+    return fakeSupabase({
+      subjects: { data: { id: 'sub1', title: 'Eigenvalues for the exam' }, error: null },
+      sources: { data: { id: 'src1', title: 'Eigenvalues for the exam' }, error: null },
+      sections: {
+        data: [
+          { id: 'sec1', ordinal: 1 },
+          { id: 'sec2', ordinal: 2 },
+        ],
+        error: null,
+      },
+      concepts: { data: [{ id: 'con1' }, { id: 'con2' }], error: null },
+      artefacts: {
+        data: [
+          { id: 'a1', format: 'flashcard' },
+          { id: 'a2', format: 'flashcard' },
+        ],
+        error: null,
+      },
+    })
+  }
+
+  it('drafts a course, sections, concepts and a first batch of artefacts, all honestly generated', async () => {
+    const record = vi.fn()
+
+    const result = await buildCourseFromGoal(supabaseFor(), {
+      ...run,
+      goal: 'I want to understand eigenvalues for my exam',
+      client: scriptedClient(),
+      record,
+    })
+
+    expect(result).toMatchObject({
+      course_id: 'sub1',
+      source_id: 'src1',
+      sections: 2,
+      concepts: 2,
+      artefacts: 2,
+      generated: true,
+    })
+  })
+
+  it('marks the source generated, never pretending it was uploaded', async () => {
+    const supabase = supabaseFor()
+
+    await buildCourseFromGoal(supabase, {
+      ...run,
+      goal: 'eigenvalues',
+      client: scriptedClient(),
+      record: vi.fn(),
+    })
+
+    const [insert] = argsOf(supabase.query('sources'), 'insert')
+    expect(insert.generated).toBe(true)
+  })
+
+  it('undoes by archiving the generated source, never by deleting the learner’s course', async () => {
+    const record = vi.fn()
+
+    await buildCourseFromGoal(supabaseFor(), {
+      ...run,
+      goal: 'eigenvalues',
+      client: scriptedClient(),
+      record,
+    })
+
+    expect(record.mock.calls[0][1]).toMatchObject({
+      tool: 'build_course_from_goal',
+      undo: { kind: 'archive_source', sourceId: 'src1' },
+    })
+  })
+
+  it('refuses an empty goal without spending a call', async () => {
+    await expect(
+      buildCourseFromGoal(supabaseFor(), {
+        ...run,
+        goal: '   ',
+        client: scriptedClient(),
+        record: vi.fn(),
+      }),
+    ).rejects.toThrow(/say what you want to learn/i)
   })
 })
 
@@ -624,6 +730,7 @@ describe('WRITE_TOOLS', () => {
       'add_material',
       'archive_source',
       'archive_tasks',
+      'build_course_from_goal',
       'compose_practice_exam',
       'create_course',
       'edit_artefact',

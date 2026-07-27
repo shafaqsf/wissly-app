@@ -338,6 +338,7 @@ describe('the model, per message', () => {
   it('generates on the same resolved model chat gets, not on whatever the environment names', async () => {
     const supabase = supabaseFor()
     const clients = []
+    let handed = null
 
     await runTurn({
       supabase,
@@ -345,7 +346,10 @@ describe('the model, per message', () => {
       conversation: { ...conversation, mode: 'agent' },
       message: { ...message, model: 'deepseek/deepseek-v4-pro' },
       runAgent: async () => ({ finalOutput: 'ok [s:a]' }),
-      createAgent,
+      createAgent: (options) => {
+        handed = options.client
+        return { name: 'Librarian' }
+      },
       configure: () => ({
         model: 'anthropic/claude-opus-5',
         apiKey: 'sk-test',
@@ -354,9 +358,16 @@ describe('the model, per message', () => {
       }),
       createClient: (options) => {
         clients.push(options)
-        return {}
+        return { chatStructured: async () => ({}) }
       },
     })
+
+    // Nothing in this turn asked the client for anything, so nothing built it.
+    expect(clients).toEqual([])
+
+    // The first tool that needs it is what builds it — on the model resolved
+    // for this message, not the one the environment names.
+    await handed.chatStructured()
 
     expect(clients).toEqual([
       {

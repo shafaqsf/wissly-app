@@ -127,6 +127,23 @@ describe('CitationAnchor', () => {
     expect(screen.getByText(/eigenvector of A/)).toBeInTheDocument()
   })
 
+  it('marks a generated citation as such, never as a numbered source', async () => {
+    const user = userEvent.setup()
+    render(
+      <CitationAnchor
+        ordinal={1}
+        anchor={{ generated: true, heading: 'What an eigenvector is' }}
+      />,
+    )
+
+    const anchor = screen.getByRole('button', { name: /generated 1/i })
+    await user.click(anchor)
+
+    expect(screen.getByText('Generated 1')).toBeInTheDocument()
+    expect(screen.queryByText('Source 1')).not.toBeInTheDocument()
+    expect(screen.getByText(/not from your material/i)).toBeInTheDocument()
+  })
+
   it('carries no grain, because a citation is not an unresolved state', async () => {
     const user = userEvent.setup()
     const { container } = render(

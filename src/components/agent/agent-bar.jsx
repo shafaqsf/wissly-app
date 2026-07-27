@@ -1,13 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUp, MessagesSquare, Square, X } from 'lucide-react';
 
 import ModePicker from '@/components/agent/mode-picker';
 import ModelPicker from '@/components/agent/model-picker';
 import Transcript from '@/components/agent/transcript';
+import VoiceToggle from '@/components/agent/voice-toggle';
 import BrandMark from '@/components/brand/brand-mark';
 import ConversationList from '@/components/conversation/conversation-list';
+import {
+  cancelSpeech,
+  createSpeechRecognizer,
+  speak,
+  speakableText,
+  speechSupport,
+} from '@/lib/agent/voice.js';
 
 /* The agent, as the learner meets it.
  *
@@ -47,6 +55,7 @@ import ConversationList from '@/components/conversation/conversation-list';
 
 const PLACEHOLDER = {
   chat: 'Ask about your material',
+  socratic: 'Say what you are trying to work out',
   agent: 'Tell the agent what to do',
 };
 
@@ -103,6 +112,76 @@ export default function AgentBar({
   const [model, setModel] = useState(initialModel);
   const [draft, setDraft] = useState('');
 
+  /* Voice mode: the browser-native Web Speech API, zero external accounts —
+     see `src/lib/agent/voice.js`. `support` is read straight from `window`
+     rather than behind an effect, the same choice `agent-dock.jsx` makes for
+     reduced motion: a browser either ships the API or it does not, so there
+     is no state to settle into after the first paint. In a server render, or
+     in a test that never touches `window.SpeechRecognition`, both halves
+     come back false and `VoiceToggle` renders nothing — the fallback the
+     feature promises. */
+  const support = speechSupport(typeof window !== 'undefined' ? window : undefined);
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognizerRef = useRef(null);
+  const spokenRef = useRef(null);
+
+  function toggleVoice(next) {
+    setVoiceOn(next);
+    if (!next) {
+      recognizerRef.current?.stop();
+      setListening(false);
+      if (typeof window !== 'undefined') cancelSpeech(window);
+    }
+  }
+
+  function toggleListening(next) {
+    if (!next) {
+      recognizerRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    const recognizer = createSpeechRecognizer(window, {
+      onResult: (text) => setDraft(text),
+      onEnd: () => setListening(false),
+      onError: () => setListening(false),
+    });
+    // The API can vanish between the toggle rendering and the click — a
+    // permission just revoked, an extension that shadows the constructor.
+    // Silently doing nothing is the same fallback the missing button gets.
+    if (!recognizer) return;
+
+    recognizerRef.current = recognizer;
+    setListening(true);
+    recognizer.start();
+  }
+
+  /* Read the latest finished reply aloud, once, when voice mode is on. Held
+     in a ref rather than derived fresh each render: without it, a reply that
+     had already been read would be read again on every unrelated re-render —
+     the mode switching, the drift ticking — which is not "hearing the
+     answer", it is the bar talking over itself. */
+  useEffect(() => {
+    if (!voiceOn || typeof window === 'undefined') return;
+
+    const last = [...messages].reverse().find((message) => message.role === 'assistant');
+    if (!last || last.status !== 'done' || last.id === spokenRef.current) return;
+
+    spokenRef.current = last.id;
+    speak(window, speakableText(last.content));
+  }, [voiceOn, messages]);
+
+  /* Leaving the bar lets go of the microphone and the voice, never of the
+     run itself — the same split `agent-dock.jsx` draws for the stream. */
+  useEffect(
+    () => () => {
+      recognizerRef.current?.stop();
+      if (typeof window !== 'undefined') cancelSpeech(window);
+    },
+    [],
+  );
+
   /* Opening another conversation brings its mode with it. Adjusted during the
      render that brings it rather than in an effect afterwards: an effect would
      paint the old mode for a frame, and this is a control the learner may be
@@ -133,6 +212,13 @@ export default function AgentBar({
     setOpen(true);
     setDismissed(false);
     setView(VIEWS.transcript);
+
+    // Sending a question ends any dictation and any reply still being read
+    // aloud. Talking over a question the learner just asked is worse than
+    // stopping short of a sentence.
+    recognizerRef.current?.stop();
+    setListening(false);
+    if (typeof window !== 'undefined') cancelSpeech(window);
 
     // Straight through, working or not. The dock decides whether this becomes
     // a turn or a queued row; the field is available again either way.
@@ -327,6 +413,13 @@ export default function AgentBar({
           <div data-testid="agent-choices" className="flex items-start gap-2">
             <ModePicker mode={mode} onChange={chooseMode} />
             <ModelPicker model={model} onChange={chooseModel} />
+            <VoiceToggle
+              support={support}
+              voiceOn={voiceOn}
+              listening={listening}
+              onToggleVoice={toggleVoice}
+              onToggleListening={toggleListening}
+            />
           </div>
 
           {waiting > 0 ? (

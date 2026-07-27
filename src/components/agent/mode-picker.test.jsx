@@ -5,12 +5,16 @@ import { describe, expect, it, vi } from 'vitest';
 import ModePicker from './mode-picker';
 
 describe('the mode picker', () => {
-  it('is one dropdown rather than two toggles', () => {
+  it('is one dropdown rather than a row of toggles', () => {
     render(<ModePicker mode="chat" />);
 
     const picker = screen.getByLabelText(/what the agent may do/i);
     expect(picker.tagName).toBe('SELECT');
-    expect([...picker.options].map((option) => option.value)).toEqual(['chat', 'agent']);
+    expect([...picker.options].map((option) => option.value)).toEqual([
+      'chat',
+      'socratic',
+      'agent',
+    ]);
   });
 
   it('shows the mode this message will be sent in', () => {
@@ -27,6 +31,7 @@ describe('the mode picker', () => {
     render(<ModePicker mode="chat" />);
 
     expect(screen.getByRole('option', { name: 'Chat' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Socratic' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Agent' })).toBeInTheDocument();
   });
 
@@ -35,9 +40,19 @@ describe('the mode picker', () => {
 
     expect(screen.getByText(/changes nothing/i)).toBeInTheDocument();
 
+    rerender(<ModePicker mode="socratic" />);
+
+    expect(screen.getByText(/question/i)).toBeInTheDocument();
+
     rerender(<ModePicker mode="agent" />);
 
     expect(screen.getByText(/undone/i)).toBeInTheDocument();
+  });
+
+  it('tells the learner socratic mode changes nothing either, the same guarantee chat makes', () => {
+    render(<ModePicker mode="socratic" />);
+
+    expect(screen.getByText(/changes nothing/i)).toBeInTheDocument();
   });
 
   it('reports the mode the learner picked', async () => {

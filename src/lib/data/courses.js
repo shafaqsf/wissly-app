@@ -31,6 +31,8 @@ function countsFor(subject, sources, concepts) {
   return {
     id: subject.id,
     title: subject.title,
+    ownerId: subject.user_id,
+    isPublic: Boolean(subject.is_public),
     sources: sources.filter((source) => source.subject_id === subject.id).length,
     concepts: own.length,
     settled: own.filter((concept) => concept.mastery >= MASTERED_AT).length,

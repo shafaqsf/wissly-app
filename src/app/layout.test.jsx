@@ -44,8 +44,11 @@ describe('the root layout', () => {
   })
 })
 
-/* Three screens moved when the six areas became four. A bookmark, a link in a
-   note, an old tab — none of them may land on a 404. */
+/* Two screens moved when the six areas became four. A bookmark, a link in a
+   note, an old tab — none of them may land on a 404. `/library` used to be
+   among them, but v0.23.0 gives that address a new, unrelated meaning (the
+   public course library) rather than repointing the redirect — see
+   next.config.mjs. */
 describe('the routes that moved', () => {
   it('sends every retired URL to the area that took it over', async () => {
     const { default: nextConfig } = await import('../../next.config.mjs')
@@ -57,7 +60,7 @@ describe('the routes that moved', () => {
 
     expect(map['/review']).toBe('/tasks/due')
     expect(map['/progress']).toBe('/analytics')
-    expect(map['/library']).toBe('/courses')
+    expect(map['/library']).toBeUndefined()
   })
 
   /* Permanent, because these addresses are not coming back — the areas they

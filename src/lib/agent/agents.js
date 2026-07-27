@@ -29,7 +29,7 @@ import { WRITE_TOOLS, writeTools } from './write-tools.js'
 /** How an answer points at the passage it came from. */
 export const ANCHOR_PATTERN = /\[s:([0-9a-zA-Z-]+)\]/g
 
-export const ROLES = Object.freeze(['Librarian', 'Maker', 'Examiner', 'Steward'])
+export const ROLES = Object.freeze(['Librarian', 'Maker', 'Examiner', 'Steward', 'Tutor'])
 
 const READING = READ_ONLY_TOOLS.map((definition) => definition.name)
 const WRITING = WRITE_TOOLS.map((definition) => definition.name)
@@ -59,6 +59,10 @@ export const TOOLS_BY_ROLE = Object.freeze({
     'show_in_interface',
   ]),
   Steward: Object.freeze([...READING, ...WRITING]),
+  // Grounded in exactly the same tools as the Librarian — the guarantee is
+  // not "the Tutor is told to hold back", it is that the agent this role
+  // produces cannot write, because it was never handed a tool that does.
+  Tutor: Object.freeze([...READING]),
 })
 
 const CITATION_RULE = [
@@ -149,6 +153,29 @@ export const STEWARD_INSTRUCTIONS = [
   CITATION_RULE,
 ].join('\n')
 
+export const TUTOR_INSTRUCTIONS = [
+  'You are a Socratic tutor for wissly. The learner is trying to reach an',
+  'answer themselves, and your job is to walk them there rather than hand it',
+  'over.',
+  '',
+  'Never answer directly. When asked what something means or how something',
+  'works, respond with a guiding question that narrows the distance between',
+  'what the learner already said and the idea they are reaching for — not a',
+  'restatement of the question, and not a hint so complete it is the answer',
+  'in disguise. If the learner is stuck after two or three questions, or asks',
+  'plainly to just be told, say the smallest true thing that unsticks them and',
+  'return to asking.',
+  '',
+  'Search before you question. A guiding question grounded in nothing is a',
+  'guess wearing a question mark; read the material first so the question you',
+  'ask actually narrows toward what the source says.',
+  '',
+  CITATION_RULE,
+  '',
+  'Write in the language the learner writes in. One question at a time — a',
+  'list of them is a quiz, not a conversation.',
+].join('\n')
+
 export const ROUTER_INSTRUCTIONS = [
   'You decide who answers, and you answer nothing yourself.',
   '',
@@ -234,7 +261,7 @@ function role(
     instructions,
     model,
     tools: [
-      ...readOnlyTools(supabase),
+      ...readOnlyTools(supabase, { client }),
       ...(writing.length > 0
         ? writeTools(supabase, { userId, runId, client, onIntent, only: writing })
         : []),
@@ -246,6 +273,19 @@ function role(
 /** The Librarian: finds material, answers from it, always with an anchor. */
 export function createLibrarian(params) {
   return role('Librarian', LIBRARIAN_INSTRUCTIONS, params)
+}
+
+/**
+ * The Tutor: a Socratic guide, grounded in the same read-only tools as the
+ * Librarian and holding nothing that writes.
+ *
+ * It is a separate role rather than a prompt toggle on the Librarian for the
+ * same reason every role here is separate: the guarantee the bar makes has to
+ * be a property of the agent object, not of which instructions happened to be
+ * loaded into an agent that could otherwise write.
+ */
+export function createTutor(params) {
+  return role('Tutor', TUTOR_INSTRUCTIONS, params)
 }
 
 /** The Maker: turns passages into tasks and reading. */
@@ -306,5 +346,7 @@ export function createRouter(params) {
  * Sonnet while the Agent works on DeepSeek is an ordinary configuration.
  */
 export function agentForMode({ mode, ...params }) {
-  return mode === 'agent' ? createRouter(params) : createLibrarian(params)
+  if (mode === 'agent') return createRouter(params)
+  if (mode === 'socratic') return createTutor(params)
+  return createLibrarian(params)
 }

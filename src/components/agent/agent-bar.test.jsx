@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import AgentBar from './agent-bar';
 
@@ -366,5 +366,127 @@ describe('the agent bar', () => {
     const { container } = render(<AgentBar messages={[said()]} />);
 
     expect(container.textContent).not.toMatch(/artefact/i);
+  });
+});
+
+/* Voice mode. `src/lib/agent/voice.js` owns the Web Speech API wrapping and
+   has its own unit tests; what belongs here is the bar's side of the
+   contract — that it hides the control on a browser with neither half of the
+   API, that dictation lands in the field, and that a finished reply is read
+   aloud once and never re-read. */
+describe('the agent bar — voice mode', () => {
+  function fakeRecognitionConstructor() {
+    const instances = [];
+    function Recognition() {
+      this.start = vi.fn();
+      this.stop = vi.fn();
+      this.abort = vi.fn();
+      instances.push(this);
+    }
+    Recognition.instances = instances;
+    return Recognition;
+  }
+
+  function fakeSynth() {
+    const spoken = [];
+    const synth = { cancel: vi.fn(), speak: vi.fn((utterance) => spoken.push(utterance)) };
+    function SpeechSynthesisUtterance(text) {
+      this.text = text;
+    }
+    return { synth, SpeechSynthesisUtterance, spoken };
+  }
+
+  afterEach(() => {
+    delete window.SpeechRecognition;
+    delete window.speechSynthesis;
+    delete window.SpeechSynthesisUtterance;
+  });
+
+  it('hides voice mode on a browser with neither half of the API', async () => {
+    const user = userEvent.setup();
+    render(<AgentBar />);
+
+    await user.click(screen.getByLabelText(FIELD));
+
+    expect(screen.queryByRole('button', { name: /turn voice mode on/i })).not.toBeInTheDocument();
+  });
+
+  it('offers voice mode once the browser supports it', async () => {
+    const user = userEvent.setup();
+    window.SpeechRecognition = fakeRecognitionConstructor();
+    const { synth, SpeechSynthesisUtterance } = fakeSynth();
+    window.speechSynthesis = synth;
+    window.SpeechSynthesisUtterance = SpeechSynthesisUtterance;
+
+    render(<AgentBar />);
+    await user.click(screen.getByLabelText(FIELD));
+
+    expect(screen.getByRole('button', { name: /turn voice mode on/i })).toBeInTheDocument();
+  });
+
+  it('fills the field with what dictation heard', async () => {
+    const user = userEvent.setup();
+    const SpeechRecognition = fakeRecognitionConstructor();
+    window.SpeechRecognition = SpeechRecognition;
+
+    render(<AgentBar />);
+    await user.click(screen.getByLabelText(FIELD));
+    await user.click(screen.getByRole('button', { name: /turn voice mode on/i }));
+    await user.click(screen.getByRole('button', { name: /speak your question/i }));
+
+    const [instance] = SpeechRecognition.instances;
+    // The real SpeechRecognition fires this from outside React; calling it
+    // directly leaves the state update unflushed unless it is wrapped.
+    act(() => {
+      instance.onresult({ results: [{ 0: { transcript: 'what is a martingale' }, isFinal: true }] });
+    });
+
+    expect(screen.getByLabelText(FIELD)).toHaveValue('what is a martingale');
+  });
+
+  it('reads a finished reply aloud once voice mode is on', async () => {
+    const user = userEvent.setup();
+    window.SpeechRecognition = fakeRecognitionConstructor();
+    const { synth, SpeechSynthesisUtterance, spoken } = fakeSynth();
+    window.speechSynthesis = synth;
+    window.SpeechSynthesisUtterance = SpeechSynthesisUtterance;
+
+    const messages = [said(), said({ id: 'm2', role: 'assistant', content: 'A fair game. [s:a1]', status: 'done' })];
+    const { rerender } = render(<AgentBar messages={messages} />);
+    await user.click(screen.getByLabelText(FIELD));
+    await user.click(screen.getByRole('button', { name: /turn voice mode on/i }));
+
+    expect(synth.speak).toHaveBeenCalledTimes(1);
+    expect(spoken[0].text).toBe('A fair game.');
+
+    // A re-render with the same messages must not read the same reply twice.
+    rerender(<AgentBar messages={messages} />);
+    expect(synth.speak).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays silent about a reply that has not finished yet', async () => {
+    const user = userEvent.setup();
+    window.SpeechRecognition = fakeRecognitionConstructor();
+    const { synth, SpeechSynthesisUtterance } = fakeSynth();
+    window.speechSynthesis = synth;
+    window.SpeechSynthesisUtterance = SpeechSynthesisUtterance;
+
+    const messages = [said({ role: 'assistant', content: 'still working', status: 'running' })];
+    render(<AgentBar messages={messages} />);
+    await user.click(screen.getByLabelText(FIELD));
+    await user.click(screen.getByRole('button', { name: /turn voice mode on/i }));
+
+    expect(synth.speak).not.toHaveBeenCalled();
+  });
+
+  it('says nothing aloud until voice mode is turned on', () => {
+    window.SpeechRecognition = fakeRecognitionConstructor();
+    const { synth, SpeechSynthesisUtterance } = fakeSynth();
+    window.speechSynthesis = synth;
+    window.SpeechSynthesisUtterance = SpeechSynthesisUtterance;
+
+    render(<AgentBar messages={[said({ role: 'assistant', content: 'done', status: 'done' })]} />);
+
+    expect(synth.speak).not.toHaveBeenCalled();
   });
 });

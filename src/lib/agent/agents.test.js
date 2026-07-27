@@ -10,6 +10,7 @@ import {
   ROLES,
   STEWARD_INSTRUCTIONS,
   TOOLS_BY_ROLE,
+  TUTOR_INSTRUCTIONS,
   agentForMode,
   anchorGuardrail,
   citedSections,
@@ -18,6 +19,7 @@ import {
   createMaker,
   createRouter,
   createSteward,
+  createTutor,
   missingAnchors,
 } from './agents.js'
 
@@ -127,6 +129,34 @@ describe('the librarian', () => {
   })
 })
 
+describe('the tutor', () => {
+  it('holds every reading tool and nothing that writes, the same guarantee chat mode has', () => {
+    const agent = createTutor(context())
+
+    expect(named(agent)).toEqual(READ_ONLY_TOOLS.map((d) => d.name).sort())
+
+    const writes = WRITE_TOOLS.map((definition) => definition.name)
+    for (const name of named(agent)) expect(writes).not.toContain(name)
+  })
+
+  it('carries the guardrail that keeps the citation promise', () => {
+    expect(createTutor(context()).outputGuardrails).toHaveLength(1)
+  })
+
+  it('is told to guide with questions rather than answer directly', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(/question/i)
+    expect(TUTOR_INSTRUCTIONS).toMatch(/never answer directly/i)
+  })
+
+  it('is told the exact citation syntax the interface renders', () => {
+    expect(TUTOR_INSTRUCTIONS).toContain('[s:SECTION_ID]')
+  })
+
+  it('needs no run, because it holds nothing that writes', () => {
+    expect(() => createTutor({ ...context(), runId: undefined })).not.toThrow()
+  })
+})
+
 describe('the specialists', () => {
   it('gives the Maker what it needs to generate and nothing to grade with', () => {
     const agent = createMaker(context())
@@ -158,7 +188,7 @@ describe('the specialists', () => {
   })
 
   it('lets no specialist reach auth or export', () => {
-    for (const create of [createLibrarian, createMaker, createExaminer, createSteward]) {
+    for (const create of [createLibrarian, createMaker, createExaminer, createSteward, createTutor]) {
       for (const name of named(create(context()))) {
         expect(name, `${create.name}: ${name}`).not.toMatch(
           /email|password|account|auth|export|share|sign_?out/i,
@@ -200,6 +230,15 @@ describe('the mode switch', () => {
 
   it('treats an unknown mode as chat, the one that cannot write', () => {
     expect(agentForMode({ ...context(), mode: 'root' }).name).toBe('Librarian')
+  })
+
+  it('gives socratic mode the tutor, which holds nothing that writes', () => {
+    const agent = agentForMode({ ...context(), mode: 'socratic' })
+
+    expect(agent.name).toBe('Tutor')
+    for (const definition of WRITE_TOOLS) {
+      expect(named(agent)).not.toContain(definition.name)
+    }
   })
 
   it('refuses to build a writing agent with no run to attribute actions to', () => {

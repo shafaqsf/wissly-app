@@ -3,29 +3,38 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   courseById,
+  currentUserId,
   dailyGoalFor,
   examPlanFor,
   listArtefacts,
   listConceptMastery,
+  listShares,
   listSourcesWithSections,
   notFound,
+  subjectLeaderboard,
 } = vi.hoisted(() => ({
   courseById: vi.fn(),
+  currentUserId: vi.fn(),
   dailyGoalFor: vi.fn(),
   examPlanFor: vi.fn(),
   listArtefacts: vi.fn(),
   listConceptMastery: vi.fn(),
+  listShares: vi.fn(),
   listSourcesWithSections: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('NEXT_NOT_FOUND')
   }),
+  subjectLeaderboard: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({})) }))
+vi.mock('@/lib/auth/user', () => ({ currentUserId }))
 vi.mock('@/lib/data/courses', () => ({ courseById }))
 vi.mock('@/lib/data/sources', () => ({ listSourcesWithSections }))
 vi.mock('@/lib/data/concepts', () => ({ listConceptMastery }))
 vi.mock('@/lib/data/artefacts', () => ({ listArtefacts }))
+vi.mock('@/lib/data/shares', () => ({ listShares }))
+vi.mock('@/lib/data/leaderboard', () => ({ subjectLeaderboard }))
 vi.mock('@/lib/data/daily-goal', () => ({ dailyGoalFor }))
 vi.mock('@/lib/data/exam-plan', () => ({ examPlanFor }))
 vi.mock('next/navigation', () => ({ notFound }))
@@ -37,10 +46,23 @@ vi.mock('@/lib/actions/course', () => ({
   restoreSourceAction: vi.fn(),
   setExamDateAction: vi.fn(),
 }))
+vi.mock('@/lib/actions/share', () => ({
+  revokeShareAction: vi.fn(),
+  setCourseVisibilityAction: vi.fn(),
+  shareCourseAction: vi.fn(),
+}))
 
 import CoursePage from './page'
 
-const course = { id: 'course-1', title: 'Optics', sources: 1, concepts: 3, settled: 1 }
+const course = {
+  id: 'course-1',
+  title: 'Optics',
+  ownerId: 'user-1',
+  isPublic: false,
+  sources: 1,
+  concepts: 3,
+  settled: 1,
+}
 
 const source = {
   id: 'source-1',
@@ -60,9 +82,13 @@ const reading = {
   passage: 'Light bends at a boundary.',
 }
 
-/** Sensible defaults: one source, three concepts, one glossary entry, no archive. */
+/** Sensible defaults: signed in as the owner, one source, three concepts,
+ *  one glossary entry, no archive, no shares, no leaderboard members. */
 function stock() {
   courseById.mockResolvedValue(course)
+  currentUserId.mockResolvedValue('user-1')
+  listShares.mockResolvedValue([])
+  subjectLeaderboard.mockResolvedValue([])
   listSourcesWithSections.mockImplementation(async (_supabase, { archived } = {}) =>
     archived ? [] : [source],
   )
@@ -227,6 +253,14 @@ describe('the course shelf', () => {
     expect(screen.getByRole('button', { name: 'Export reading' })).toBeInTheDocument()
   })
 
+  it('offers sharing and visibility controls to the owner', async () => {
+    render(await page())
+
+    expect(screen.getByRole('region', { name: 'Sharing' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Make public' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/share with/i)).toBeInTheDocument()
+  })
+
   it('shows the pace panel, reading only this course’s goal', async () => {
     render(await page())
 
@@ -296,5 +330,82 @@ describe('the course shelf', () => {
     // jsdom canonicalises an inline colour to rgb() when it serialises the
     // style attribute back out, whatever notation courseAccent wrote it in.
     expect(dot.getAttribute('style')).toMatch(/rgb\(/)
+  })
+})
+
+describe('a member with reviews on the leaderboard', () => {
+  it('shows the leaderboard when the viewer is a member', async () => {
+    subjectLeaderboard.mockResolvedValue([{ memberId: 'user-1', reviewsThisWeek: 4, rank: 1 }])
+
+    render(await page())
+
+    expect(screen.getByRole('region', { name: 'Leaderboard' })).toBeInTheDocument()
+    expect(screen.getByText('You')).toBeInTheDocument()
+  })
+
+  it('says nothing about a leaderboard when the viewer is not a member', async () => {
+    subjectLeaderboard.mockResolvedValue([])
+
+    render(await page())
+
+    expect(screen.queryByRole('region', { name: 'Leaderboard' })).toBeNull()
+  })
+})
+
+describe('a viewer who does not own the course', () => {
+  beforeEach(() => {
+    currentUserId.mockResolvedValue('user-2')
+  })
+
+  it('is shown the material but not the owner-only controls', async () => {
+    render(await page())
+
+    expect(screen.getByRole('region', { name: 'Sources' })).toBeInTheDocument()
+    expect(screen.getByText('Lecture 3')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Add material' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Sharing' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Archive' })).toBeNull()
+  })
+
+  /* The Exam panel writes `subjects.exam_date`, and the pace it reports comes
+     from `artefact_schedule` and `reviews` — neither of which migration 015
+     widens for a share. A shared reader would get a form they cannot submit
+     over numbers that are not theirs, so the panel does not open for them. */
+  it('is not offered the exam panel, which writes and reads owner-only rows', async () => {
+    render(await page())
+
+    expect(screen.queryByRole('region', { name: 'Exam' })).toBeNull()
+    expect(screen.queryByLabelText('Exam date')).toBeNull()
+  })
+
+  it('never asks the database for what only an owner may see', async () => {
+    await page()
+
+    expect(listShares).not.toHaveBeenCalled()
+    expect(dailyGoalFor).not.toHaveBeenCalled()
+    expect(examPlanFor).not.toHaveBeenCalled()
+  })
+
+  it('cannot archive a source or a piece of reading', async () => {
+    render(await page())
+
+    expect(screen.queryByRole('button', { name: /Archive/ })).toBeNull()
+  })
+
+  it('says it is a shared course rather than "Course"', async () => {
+    render(await page())
+
+    expect(screen.getByText('Shared course')).toBeInTheDocument()
+  })
+
+  it('sees the leaderboard once the database says they are a member', async () => {
+    subjectLeaderboard.mockResolvedValue([
+      { memberId: 'user-1', reviewsThisWeek: 4, rank: 1 },
+      { memberId: 'user-2', reviewsThisWeek: 2, rank: 2 },
+    ])
+
+    render(await page())
+
+    expect(screen.getByRole('region', { name: 'Leaderboard' })).toBeInTheDocument()
   })
 })

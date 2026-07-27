@@ -39,6 +39,12 @@ branches still in flight, and the gap closes when they merge. Gaps are fine;
 duplicates are not, because ascending filename order is the only thing that
 decides what runs when.
 
+Free means free across every branch in flight, not just the ones already on
+`main`. Two files claiming the same number apply in an order nothing defines,
+so uniqueness is the rule that is enforced. A **gap** is not: a branch that
+steps over a number a sibling has already claimed is doing the right thing,
+and the gap closes on `main` when that sibling lands.
+
 ```
 001_initial_schema.sql
 002_learning_paths.sql

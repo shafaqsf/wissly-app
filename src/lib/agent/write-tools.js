@@ -13,12 +13,15 @@ import {
   saveArtefacts,
   updateArtefact,
 } from '../data/artefacts.js'
+import { createConceptsForSections } from '../data/concepts.js'
 import { createCourse } from '../data/courses.js'
 import { unwrap, unwrapList } from '../data/result.js'
 import { fsrsState, recordReview, scheduleFor } from '../data/review.js'
-import { archiveSource, restoreSource } from '../data/sources.js'
+import { archiveSource, createSource, restoreSource } from '../data/sources.js'
+import { subjectForTitle } from '../data/subjects.js'
 import { addMaterial as addMaterialToLibrary } from '../material/add-material.js'
 import { generateArtefact, gradeAnswer } from './artefacts.js'
+import { draftCourseOutline, sectionsFromOutline } from './course-from-goal.js'
 import { FORMATS, TASK_FORMATS, isFormat, isTaskFormat, validatePayload } from './formats.js'
 import { assertLearnerClient } from './guard.js'
 import { navigationIntent } from './navigation.js'
@@ -240,6 +243,109 @@ export async function restoreSourceTool(supabase, { userId, runId, sourceId, rec
   })
 
   return { source_id: sourceId, title: source.title, archived: false }
+}
+
+/** Sections drafted from a goal that get a first artefact right away. */
+const MAX_GOAL_ARTEFACT_SECTIONS = 3
+
+/**
+ * Build a course from a stated goal, with no material uploaded first.
+ *
+ * "I want to understand X for exam Y" goes to `draftCourseOutline`, which
+ * drafts a title and a small number of parts from the model's own knowledge.
+ * From there the pipeline is the *same* one material-based ingestion uses —
+ * `createSource`, `createConceptsForSections`, `generateArtefact`,
+ * `saveArtefacts` — none of it duplicated or approximated, because a second
+ * path to the same rows is a second thing to keep honest.
+ *
+ * The one place this differs, and the one place it must: every section
+ * `sectionsFromOutline` produces carries `{generated: true}` in its anchor
+ * rather than a page or a character range, and `createSource` is told
+ * `generated: true` so the source itself says so too. Nothing here may cite a
+ * source that does not exist — the product's citation guarantee depends on
+ * that being genuinely impossible, not merely undocumented.
+ */
+export async function buildCourseFromGoal(
+  supabase,
+  { userId, runId, goal, course, maxSections, client, record = recordAction },
+) {
+  assertLearnerClient(supabase)
+
+  const outline = await draftCourseOutline({ client, goal, maxSections })
+  const drafted = sectionsFromOutline(outline)
+
+  if (drafted.length === 0) {
+    throw new Error('Nothing could be drafted from that goal. Say more about what you want to learn.')
+  }
+
+  const subject = await subjectForTitle(supabase, {
+    userId,
+    title: String(course ?? '').trim() || outline.title,
+  })
+
+  const stored = await createSource(supabase, {
+    userId,
+    subjectId: subject.id,
+    kind: 'text',
+    title: outline.title,
+    rawText: null,
+    sections: drafted,
+    generated: true,
+  })
+
+  const concepts = await createConceptsForSections(supabase, {
+    userId,
+    subjectId: subject.id,
+    sections: stored.sections,
+  })
+
+  const made = []
+  for (const section of stored.sections.slice(0, MAX_GOAL_ARTEFACT_SECTIONS)) {
+    made.push(
+      await generateArtefact({
+        client,
+        section: {
+          id: section.id,
+          ordinal: section.ordinal,
+          content: section.content,
+          anchor: section.anchor,
+        },
+        subjectId: subject.id,
+      }),
+    )
+  }
+  const artefacts = made.length > 0 ? await saveArtefacts(supabase, { userId, artefacts: made }) : []
+
+  await record(supabase, {
+    userId,
+    runId,
+    tool: 'build_course_from_goal',
+    args: { goal, course: course || null },
+    result: {
+      course_id: subject.id,
+      source_id: stored.source.id,
+      title: outline.title,
+      sections: stored.sections.length,
+      concepts: concepts.length,
+      artefacts: artefacts.length,
+    },
+    // Soft, like every destruction the agent can reach. Archiving the
+    // generated source takes it and everything filed under it off the shelf.
+    // The course itself is left standing rather than removed — the learner
+    // may already keep real material under the same name, and deciding
+    // whether the course survives an undo is not this tool's call to make.
+    undo: { kind: 'archive_source', sourceId: stored.source.id },
+  })
+
+  return {
+    course_id: subject.id,
+    source_id: stored.source.id,
+    title: outline.title,
+    sections: stored.sections.length,
+    concepts: concepts.length,
+    artefacts: artefacts.length,
+    generated: true,
+  }
 }
 
 /* --- generating ------------------------------------------------------- */
@@ -845,6 +951,17 @@ export const WRITE_TOOLS = [
       text: z.string().describe('The material itself.'),
     }),
     run: (supabase, input) => addMaterialTool(supabase, input),
+  },
+  {
+    name: 'build_course_from_goal',
+    description: `Start a course from a stated learning goal instead of uploaded material — drafts an outline from the model's own knowledge and files it as a course with sections, concepts and up to ${MAX_GOAL_ARTEFACT_SECTIONS} sections' worth of first artefacts. Every section this makes is honestly marked generated: it carries no page or passage anchor, because there is no real source to point at, and the interface shows that plainly. Use this only when the learner has no material yet and wants to start from a goal — prefer add_material whenever they have something to upload.`,
+    parameters: z.object({
+      goal: z.string().describe('What the learner wants to learn, in their own words.'),
+      course: nullableId('The course name to file it under, or null to use the drafted title.'),
+      maxSections: z.number().nullable().describe('How many parts to draft, 1 to 8. Defaults to 8.'),
+    }),
+    run: (supabase, input) =>
+      buildCourseFromGoal(supabase, { ...input, maxSections: input.maxSections ?? undefined }),
   },
   {
     name: 'archive_source',

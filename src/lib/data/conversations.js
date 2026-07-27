@@ -24,14 +24,14 @@ const CONVERSATION_COLUMNS =
 const MESSAGE_COLUMNS =
   'id, conversation_id, role, content, mode, model, status, anchors, created_at'
 
-const MODES = new Set(['chat', 'agent'])
+const MODES = new Set(['chat', 'agent', 'socratic'])
 const STATUSES = new Set(['queued', 'running', 'done', 'stopped', 'failed'])
 const ROLES = new Set(['user', 'assistant', 'system'])
 
 /** The database has the same check constraints. Failing here says why. */
 function assertMode(mode) {
   if (!MODES.has(mode)) {
-    throw new Error(`"${mode}" is not a mode. There are two: chat and agent.`)
+    throw new Error(`"${mode}" is not a mode. There are three: chat, socratic and agent.`)
   }
 }
 

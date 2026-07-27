@@ -1,4 +1,5 @@
 import SignOutButton from '@/components/auth/sign-out-button';
+import WeeklyReportPreview from '@/components/settings/weekly-report-preview';
 import WeightFitPanel from '@/components/settings/weight-fit-panel';
 import { reviewLogFor, weightsFor } from '@/lib/data/fsrs-weights.js';
 import { MIN_REVIEWS_TO_FIT } from '@/lib/review/fit-weights.js';
@@ -9,9 +10,13 @@ export const metadata = {
 };
 
 /* There used to be one setting worth the name — which account this is — and
-   the one action beside it. Now there are two: review scheduling is a real
-   preference, because it is the one place in the product a learner can act
-   on their own review history rather than just read it. */
+   the one action beside it. Two more have earned their place. Review
+   scheduling is a real preference: the one place in the product a learner can
+   act on their own review history rather than just read it. The weekly report
+   is not a preference at all but a preview — what a weekly email would say if
+   delivery existed — and it belongs here because this is where the account
+   lives. A page that listed switches nobody has built would be a promise, not
+   a screen; when a real preference exists, it goes here. */
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -62,6 +67,17 @@ export default async function SettingsPage() {
           reviewCount={reviews.length}
           minReviews={MIN_REVIEWS_TO_FIT}
         />
+      </section>
+
+      <section aria-label="Weekly report" className="flex flex-col gap-6">
+        <h2 className="font-display text-heading font-semibold">Weekly report</h2>
+        <p className="max-w-measure text-body-s text-ink-muted">
+          A summary of reviews done, mastery, your streak and what is coming
+          due — the same report a weekly email would carry. Delivery is not
+          built yet, so this writes the report to the server log instead of
+          sending it.
+        </p>
+        <WeeklyReportPreview />
       </section>
     </div>
   );

@@ -39,12 +39,16 @@ describe('migration files', () => {
   // Ascending and unique, not gap-free. Order is what the database cares
   // about, and a duplicate number is the failure that actually costs data —
   // two files claiming 007 apply in an order nothing defines. A gap costs
-  // nothing: it is a number a sibling branch has already claimed and has yet
-  // to merge, and it closes on `main` when that branch lands.
+  // nothing: a branch reserves its number when it is written, not when it
+  // merges, so while siblings are in flight each one legitimately steps over
+  // numbers belonging to branches it has not seen. The gaps close as those
+  // branches land; the duplicates never fix themselves.
   it('are numbered in ascending order, with no number claimed twice', () => {
     const numbers = [...files].sort().map((name) => Number(name.slice(0, 3)))
     expect(numbers).toEqual([...numbers].sort((a, b) => a - b))
     expect(new Set(numbers).size).toBe(numbers.length)
+    // The sequence still has to start where the schema does.
+    expect(Math.min(...numbers)).toBe(1)
   })
 })
 
@@ -59,6 +63,7 @@ describe('the schema', () => {
       'conversations',
       'fsrs_weights',
       'messages',
+      'notifications',
       'reviews',
       'sections',
       'sources',

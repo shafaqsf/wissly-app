@@ -9,6 +9,20 @@ const SOURCE_COLUMNS =
   'id, subject_id, kind, title, origin, archived_at, generated, created_at'
 const SECTION_COLUMNS = 'id, source_id, ordinal, content, anchor'
 
+/**
+ * Every way material arrives, and the whole of the `sources_kind_check`
+ * constraint in migration 008. It is exported because anything reading a
+ * `kind` back from outside the application — the JSON importer is the one
+ * caller today — has to know which values the database will actually accept,
+ * and a second hand-written copy of this list is a second thing to keep true.
+ */
+export const SOURCE_KINDS = Object.freeze(['text', 'pdf', 'pptx', 'url', 'image'])
+
+/** @param {unknown} kind */
+export function isSourceKind(kind) {
+  return SOURCE_KINDS.includes(kind)
+}
+
 export async function listSources(supabase, { subjectId, archived = false } = {}) {
   let query = supabase.from('sources').select(SOURCE_COLUMNS)
 

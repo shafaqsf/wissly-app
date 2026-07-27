@@ -76,4 +76,32 @@ describe('resolveModel', () => {
   it('says what to do when nothing is configured at all', () => {
     expect(() => resolveModel({ chosen: null, env: {} })).toThrow(/OPENROUTER_MODEL/)
   })
+
+  it('falls back to the learner’s stored preference before the environment', () => {
+    expect(
+      resolveModel({ chosen: null, preferred: 'deepseek/deepseek-v4-pro', env }),
+    ).toBe('deepseek/deepseek-v4-pro')
+  })
+
+  it('prefers what was chosen for this message over the stored preference', () => {
+    expect(
+      resolveModel({
+        chosen: 'openai/gpt-5.6-luna',
+        preferred: 'deepseek/deepseek-v4-pro',
+        env,
+      }),
+    ).toBe('openai/gpt-5.6-luna')
+  })
+
+  it('ignores a blank preference and falls through to the environment', () => {
+    expect(resolveModel({ chosen: null, preferred: '  ', env })).toBe(
+      'anthropic/claude-opus-5',
+    )
+  })
+
+  it('refuses a malformed stored preference rather than sending it to the provider', () => {
+    expect(() => resolveModel({ chosen: null, preferred: 'claude', env })).toThrow(
+      /vendor\/model/i,
+    )
+  })
 })

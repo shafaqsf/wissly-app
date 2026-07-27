@@ -99,6 +99,9 @@ function transcript(messages) {
  * @param {string} params.userId
  * @param {object} params.conversation
  * @param {object} params.message the learner's message, already stored
+ * @param {string|null} [params.preferredModel] the learner's stored default
+ *   model (Settings → Model), one tier above the environment and one below
+ *   whatever this message chose
  * @param {(event: object) => void} [params.onEvent] the stream, as it happens
  * @param {() => Promise<boolean>} [params.shouldStop] has Stop been pressed?
  * @param {number} [params.persistEveryMs]
@@ -114,6 +117,7 @@ export async function runTurn({
   userId,
   conversation,
   message,
+  preferredModel = null,
   onEvent,
   shouldStop,
   persistEveryMs = PERSIST_EVERY_MS,
@@ -126,9 +130,10 @@ export async function runTurn({
 
   // Before any row exists. A malformed model id is the learner's mistake to
   // correct, not a failed turn for them to read about in the thread.
-  const { model: fallback } = configure()
+  const { model: fallback, apiKey, siteUrl, siteName } = configure()
   const model = resolveModel({
     chosen: message?.model ?? conversation?.model ?? null,
+    preferred: preferredModel,
     env: { OPENROUTER_MODEL: fallback },
   })
 
@@ -183,8 +188,13 @@ export async function runTurn({
     // (it changes no row) that still needs a model call, so the client has to
     // be there for it to use. Built lazily: a turn that never calls a
     // client-needing tool — nearly every Chat and Socratic turn — must not
-    // pay the cost, or the risk, of constructing one it never uses.
-    client: lazyClient(createClient),
+    // pay the cost, or the risk, of constructing one it never uses. And built
+    // with the same resolved `model` the SDK agent above got — chosen for this
+    // message, else the learner's stored preference, else the environment —
+    // rather than reading `OPENROUTER_MODEL` straight from the environment,
+    // which used to mean a model chosen for the conversation still generated
+    // on whatever the environment named.
+    client: lazyClient(() => createClient({ apiKey, model, siteUrl, siteName })),
     passagesRead: () => passagesRead,
     onIntent: (intent) => {
       intents.push(intent)

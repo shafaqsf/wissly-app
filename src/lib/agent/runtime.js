@@ -47,7 +47,10 @@ let configured = null
  * @param {Function} [options.setDefaultOpenAIClient]
  * @param {Function} [options.setOpenAIAPI]
  * @param {Function} [options.setTracingDisabled]
- * @returns {{model: string}} the configured default model
+ * @returns {{model: string, apiKey: string, siteUrl?: string, siteName?: string}}
+ *   the resolved config, so a second OpenRouter client — the structured one
+ *   generation uses — can be built from it without reading the environment
+ *   a second time.
  */
 export function configureAgentRuntime({
   env = process.env,
@@ -77,7 +80,12 @@ export function configureAgentRuntime({
   setOpenAIAPI('chat_completions')
   setTracingDisabled(true)
 
-  configured = { model: config.model }
+  configured = {
+    model: config.model,
+    apiKey: config.apiKey,
+    siteUrl: config.siteUrl,
+    siteName: config.siteName,
+  }
   return configured
 }
 

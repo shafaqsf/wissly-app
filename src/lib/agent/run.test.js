@@ -297,6 +297,88 @@ describe('the model, per message', () => {
     expect(supabase.calls).toHaveLength(0)
   })
 
+  it('falls back to the learner’s stored preference before the environment', async () => {
+    const supabase = supabaseFor()
+
+    await runTurn({
+      supabase,
+      userId: 'u1',
+      conversation,
+      message,
+      preferredModel: 'deepseek/deepseek-v4-pro',
+      runAgent: async () => ({ finalOutput: 'ok [s:a]' }),
+      createAgent,
+      configure,
+    })
+
+    expect(argsOf(supabase.queries('agent_runs')[0], 'insert')[0].model).toBe(
+      'deepseek/deepseek-v4-pro',
+    )
+  })
+
+  it('prefers what this message chose over the stored preference', async () => {
+    const supabase = supabaseFor()
+
+    await runTurn({
+      supabase,
+      userId: 'u1',
+      conversation,
+      message: { ...message, model: 'openai/gpt-5.6-luna' },
+      preferredModel: 'deepseek/deepseek-v4-pro',
+      runAgent: async () => ({ finalOutput: 'ok [s:a]' }),
+      createAgent,
+      configure,
+    })
+
+    expect(argsOf(supabase.queries('agent_runs')[0], 'insert')[0].model).toBe(
+      'openai/gpt-5.6-luna',
+    )
+  })
+
+  it('generates on the same resolved model chat gets, not on whatever the environment names', async () => {
+    const supabase = supabaseFor()
+    const clients = []
+    let handed = null
+
+    await runTurn({
+      supabase,
+      userId: 'u1',
+      conversation: { ...conversation, mode: 'agent' },
+      message: { ...message, model: 'deepseek/deepseek-v4-pro' },
+      runAgent: async () => ({ finalOutput: 'ok [s:a]' }),
+      createAgent: (options) => {
+        handed = options.client
+        return { name: 'Librarian' }
+      },
+      configure: () => ({
+        model: 'anthropic/claude-opus-5',
+        apiKey: 'sk-test',
+        siteUrl: 'https://wissly.test',
+        siteName: 'wissly',
+      }),
+      createClient: (options) => {
+        clients.push(options)
+        return { chatStructured: async () => ({}) }
+      },
+    })
+
+    // Nothing in this turn asked the client for anything, so nothing built it.
+    expect(clients).toEqual([])
+
+    // The first tool that needs it is what builds it — on the model resolved
+    // for this message, not the one the environment names.
+    await handed.chatStructured()
+
+    expect(clients).toEqual([
+      {
+        apiKey: 'sk-test',
+        model: 'deepseek/deepseek-v4-pro',
+        siteUrl: 'https://wissly.test',
+        siteName: 'wissly',
+      },
+    ])
+  })
+
   it('takes chat on one model while the agent works on another', async () => {
     // Two turns in one thread, two models, and neither is a function of mode.
     for (const [mode, model] of [

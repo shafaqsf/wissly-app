@@ -75,6 +75,7 @@ describe('the schema', () => {
       'sources',
       'subject_shares',
       'subjects',
+      'user_preferences',
     ])
   })
 

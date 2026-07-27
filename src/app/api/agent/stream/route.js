@@ -213,7 +213,13 @@ export async function POST(request) {
 
     return new Response(stream, { headers: SSE_HEADERS })
   } catch (error) {
-    return json({ error: error.message }, 500)
+    // Not `error.message`. Everything reaching here is unexpected, and the
+    // unexpected ones carry the most detail: `DataError` (src/lib/data/
+    // result.js) forwards the database's own wording verbatim, which names
+    // constraints, columns and sometimes the query. That belongs in the
+    // server log, not in a response the browser can read.
+    console.error('agent stream failed', error)
+    return json({ error: 'Something went wrong starting that run.' }, 500)
   }
 }
 

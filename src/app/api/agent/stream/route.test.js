@@ -30,7 +30,7 @@ vi.mock('@/lib/actions/conversation.js', () => ({
 }))
 
 const { currentUserId } = await import('@/lib/auth/user.js')
-const { appendMessage, messagesFor, setConversationMode } = await import(
+const { appendMessage, getConversation, messagesFor, setConversationMode } = await import(
   '@/lib/data/conversations.js'
 )
 const { runTurn } = await import('@/lib/agent/run.js')
@@ -224,6 +224,24 @@ describe('the turn', () => {
 
     expect(sent.at(-1).event).toBe('failed')
     expect(sent.at(-1).data.content).toMatch(/provider fell over/)
+  })
+
+  /* A DataError carries the database's own wording — constraint names, column
+     names, sometimes the query. Nothing that reaches this handler was expected,
+     which is exactly why it is the path most likely to be carrying detail the
+     browser has no business reading. */
+  it('says starting the run failed without repeating what the database said', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    getConversation.mockRejectedValue(
+      new Error('relation "public.conversations" does not exist'),
+    )
+
+    const response = await POST(post({ conversationId: 'c1', content: 'hi' }))
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body.error).not.toMatch(/relation|conversations/)
+    expect(body.error).toBe('Something went wrong starting that run.')
   })
 })
 

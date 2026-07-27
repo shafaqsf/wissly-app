@@ -29,8 +29,33 @@ NNN_snake_case_description.sql
 ```
 
 `NNN` is a zero-padded three-digit sequence starting at `001`. Pick the next
-free number; if two branches collide on the same number, the second one to
-merge renumbers.
+free number, counting the numbers unmerged branches have already claimed as
+taken; if two branches collide on the same number, the second one to merge
+renumbers.
+
+A number is claimed when the file is written, not when it merges, so a branch
+may carry a gap below its own number — those are the migrations of sibling
+branches still in flight, and the gap closes when they merge. Gaps are fine;
+duplicates are not, because ascending filename order is the only thing that
+decides what runs when.
+
+Free means free across every branch in flight, not just the ones already on
+`main`. Two files claiming the same number apply in an order nothing defines,
+so uniqueness is the rule that is enforced. A **gap** is not: a branch that
+steps over a number a sibling has already claimed is doing the right thing,
+and the gap closes on `main` when that sibling lands.
+
+Free means free across every branch in flight, not just the ones already on
+`main`. Two files claiming the same number apply in an order nothing defines,
+so uniqueness is the rule that is enforced. A **gap** is not: a branch that
+steps over a number a sibling has already claimed is doing the right thing,
+and the gap closes on `main` when that sibling lands.
+
+Free means free across every branch in flight, not just the ones already on
+`main`. Two files claiming the same number apply in an order nothing defines,
+so uniqueness is the rule that is enforced. A **gap** is not: a branch that
+steps over a number a sibling has already claimed is doing the right thing,
+and the gap closes on `main` when that sibling lands.
 
 ```
 001_initial_schema.sql

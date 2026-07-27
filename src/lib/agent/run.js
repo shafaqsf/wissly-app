@@ -54,6 +54,35 @@ const HISTORY_LIMIT = 20
 /** How often a streaming answer is written down, and Stop is asked about. */
 const PERSIST_EVERY_MS = 400
 
+/** Which named agent a mode's turn is attributed to, in `agent_runs.agent`. */
+const AGENT_NAME_BY_MODE = Object.freeze({
+  agent: 'Router',
+  socratic: 'Tutor',
+  chat: 'Librarian',
+})
+
+/**
+ * A structured client that does not exist until something actually calls it.
+ *
+ * `createClient` (`createOpenRouterClient` in production) reads
+ * `OPENROUTER_API_KEY` and throws if it is missing — a fine failure for a
+ * turn that is about to spend a model call, and the wrong one for a Chat
+ * question that was never going to touch the client at all. Deferring
+ * construction to the first real call means the vast majority of turns never
+ * run it, and a turn that does still gets the same client every subsequent
+ * call in that turn would have got, because `real` is memoised the moment it
+ * is built.
+ */
+function lazyClient(createClient) {
+  let real = null
+  const client = () => (real ??= createClient())
+
+  return {
+    chatStructured: (...args) => client().chatStructured(...args),
+    chat: (...args) => client().chat(...args),
+  }
+}
+
 function transcript(messages) {
   return messages
     .filter((message) => message.status === 'done' || message.role === 'user')
@@ -70,6 +99,9 @@ function transcript(messages) {
  * @param {string} params.userId
  * @param {object} params.conversation
  * @param {object} params.message the learner's message, already stored
+ * @param {string|null} [params.preferredModel] the learner's stored default
+ *   model (Settings → Model), one tier above the environment and one below
+ *   whatever this message chose
  * @param {(event: object) => void} [params.onEvent] the stream, as it happens
  * @param {() => Promise<boolean>} [params.shouldStop] has Stop been pressed?
  * @param {number} [params.persistEveryMs]
@@ -85,6 +117,7 @@ export async function runTurn({
   userId,
   conversation,
   message,
+  preferredModel = null,
   onEvent,
   shouldStop,
   persistEveryMs = PERSIST_EVERY_MS,
@@ -97,9 +130,10 @@ export async function runTurn({
 
   // Before any row exists. A malformed model id is the learner's mistake to
   // correct, not a failed turn for them to read about in the thread.
-  const { model: fallback } = configure()
+  const { model: fallback, apiKey, siteUrl, siteName } = configure()
   const model = resolveModel({
     chosen: message?.model ?? conversation?.model ?? null,
+    preferred: preferredModel,
     env: { OPENROUTER_MODEL: fallback },
   })
 
@@ -135,7 +169,7 @@ export async function runTurn({
     userId,
     conversationId: conversation.id,
     messageId: answerRow.id,
-    agent: conversation.mode === 'agent' ? 'Router' : 'Librarian',
+    agent: AGENT_NAME_BY_MODE[conversation.mode] ?? 'Librarian',
     model,
     mode: conversation.mode,
   })
@@ -146,10 +180,21 @@ export async function runTurn({
     mode: conversation.mode,
     userId,
     runId: runRow.id,
-    // Artefact generation goes through the structured client, not the SDK: the
-    // format schemas and their repair loop already live there, and a second
-    // path to the same rows would drift from the first.
-    client: conversation.mode === 'agent' ? createClient() : null,
+    // Artefact generation and teach-back grading both go through the
+    // structured client rather than the SDK: the format schemas and their
+    // repair loop already live there, and a second path to the same
+    // judgement would drift from the first. Every mode gets one — Chat and
+    // Socratic never hold a tool that writes, but grade_explanation is a read
+    // (it changes no row) that still needs a model call, so the client has to
+    // be there for it to use. Built lazily: a turn that never calls a
+    // client-needing tool — nearly every Chat and Socratic turn — must not
+    // pay the cost, or the risk, of constructing one it never uses. And built
+    // with the same resolved `model` the SDK agent above got — chosen for this
+    // message, else the learner's stored preference, else the environment —
+    // rather than reading `OPENROUTER_MODEL` straight from the environment,
+    // which used to mean a model chosen for the conversation still generated
+    // on whatever the environment named.
+    client: lazyClient(() => createClient({ apiKey, model, siteUrl, siteName })),
     passagesRead: () => passagesRead,
     onIntent: (intent) => {
       intents.push(intent)

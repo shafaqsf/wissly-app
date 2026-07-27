@@ -3,13 +3,17 @@ import 'server-only'
 import { tool } from '@openai/agents'
 import { z } from 'zod'
 
+import { gapConcepts } from '../data/agent-runs.js'
 import { listArtefacts } from '../data/artefacts.js'
+import { conceptById } from '../data/concepts.js'
 import { unwrap, unwrapList } from '../data/result.js'
 import { dueArtefacts } from '../data/review.js'
 import { search, SEARCH_KINDS } from '../data/search.js'
 import { listSourcesWithSections } from '../data/sources.js'
-import { READING_FORMATS, TASK_FORMATS, isTaskFormat } from './formats.js'
+import { gradeExplanation } from './artefacts.js'
+import { FORMATS, READING_FORMATS, TASK_FORMATS, isTaskFormat } from './formats.js'
 import { assertLearnerClient } from './guard.js'
+import { buildStudyPlan } from './plan.js'
 
 /**
  * What the agent can do.
@@ -244,21 +248,124 @@ export async function searchEverything(supabase, { query, subjectId, kinds, limi
 }
 
 /**
+ * What demonstrably does not hold yet: concepts that have been answered and
+ * scored below mastery, worst first, each naming the section it came from.
+ *
+ * "Demonstrably" is the whole point, and it is `gapConcepts`' definition, not
+ * a new one: a concept never attempted has produced no evidence and is not a
+ * gap, it is untouched. This is a read — nothing is generated or scheduled —
+ * so the agent surfaces it as a suggestion ("you seem to be struggling with
+ * X, want more practice on it?") and only calls make_artefacts if the learner
+ * says yes, through the ordinary write path with its usual undo.
+ */
+export async function detectGaps(supabase, { subjectId, limit = 20 } = {}) {
+  assertLearnerClient(supabase)
+
+  return gapConcepts(supabase, { subjectId, limit })
+}
+
+/**
+ * A suggested plan for one course: what to clear, what to strengthen, what to
+ * read next — built from what is due, `detectGaps`' own gap report, and which
+ * sections have nothing generated from them yet.
+ *
+ * The composing is pure and lives in `plan.js`; this is the read that feeds
+ * it. Like `detectGaps`, it changes nothing — accepting an item is a separate
+ * request that reaches make_artefacts the ordinary way.
+ */
+export async function suggestLearningPlan(supabase, { subjectId, sessionSize } = {}) {
+  assertLearnerClient(supabase)
+
+  const [sources, made, due, gaps] = await Promise.all([
+    listSourcesWithSections(supabase, { subjectId }),
+    listArtefacts(supabase, { subjectId, formats: [...FORMATS] }),
+    dueArtefacts(supabase, { subjectId, limit: MAX_DUE }),
+    gapConcepts(supabase, { subjectId }),
+  ])
+
+  const generated = new Set(made.map((artefact) => artefact.section_id).filter(Boolean))
+
+  const ungenerated = sources.flatMap((source) =>
+    (source.sections ?? [])
+      .filter((section) => !generated.has(section.id))
+      .map((section) => ({
+        id: section.id,
+        ordinal: section.ordinal,
+        sourceId: source.id,
+        sourceTitle: source.title,
+      })),
+  )
+
+  return buildStudyPlan({
+    dueCount: due.length,
+    gaps: gaps.map((gap) => ({
+      id: gap.id,
+      name: gap.name,
+      mastery: gap.mastery,
+      sectionOrdinal: gap.sectionOrdinal,
+    })),
+    ungenerated,
+    sessionSize,
+  })
+}
+
+/**
+ * Grade a teach-back explanation live, against the concept's own section.
+ *
+ * This is a read: it changes no row and is never recorded in `agent_actions`,
+ * so it belongs beside `search_sections` rather than in the writing surface —
+ * every mode, including Chat and the Socratic Tutor, holds it. It differs
+ * from every other tool in this file in one way: it needs a model call, so it
+ * is one of the few read-only tools that also needs the structured client —
+ * see `needsClient` below.
+ */
+export async function gradeExplanationTool(supabase, { conceptId, explanation, client }) {
+  assertLearnerClient(supabase)
+
+  const concept = await conceptById(supabase, { id: conceptId })
+  if (!concept) throw new Error(`Concept ${conceptId} was not found.`)
+
+  const sections = []
+  if (concept.section_id) {
+    const section = await readSection(supabase, { sectionId: concept.section_id })
+    sections.push({
+      id: section.section_id,
+      ordinal: section.ordinal,
+      content: section.content,
+      anchor: section.anchor,
+    })
+  }
+
+  return gradeExplanation({ client, concept: { term: concept.term }, sections, explanation })
+}
+
+/**
  * Bind the read-only tools to one request's client.
  *
  * The SDK calls `execute` with the model's arguments. The client is closed
  * over rather than passed through the model, because an identity the model
  * can name is an identity the model can be talked into changing.
  *
+ * A read is not always free of the model — `grade_explanation` judges an
+ * explanation and that judgement is a completion, not a query. `needsClient`
+ * on a tool's definition is the one bit that says so; every other tool never
+ * sees `client` at all, so a definition that never declared it cannot be
+ * talked into spending a call it was not written to spend.
+ *
  * @param {object} supabase the request-scoped client
+ * @param {{client?: object}} [context]
  */
-export function readOnlyTools(supabase) {
+export function readOnlyTools(supabase, { client } = {}) {
   return READ_ONLY_TOOLS.map((definition) =>
     tool({
       name: definition.name,
       description: definition.description,
       parameters: definition.parameters,
-      execute: (input) => definition.run(supabase, input ?? {}),
+      execute: (input) =>
+        definition.run(supabase, {
+          ...(input ?? {}),
+          ...(definition.needsClient ? { client } : {}),
+        }),
     }),
   )
 }
@@ -358,5 +465,38 @@ export const READ_ONLY_TOOLS = [
     }),
     run: (supabase, input) =>
       searchEverything(supabase, { ...input, kinds: input.kinds ?? undefined }),
+  },
+  {
+    name: 'detect_gaps',
+    description:
+      'What demonstrably does not hold yet, worst first: concepts that have been answered and scored below mastery, each naming the section it came from. A concept never attempted is not a gap — nothing has been demonstrated about it, so it is left out. Use this to suggest practice, in words — "you seem to be struggling with X, want more artefacts on it?" — and only call make_artefacts if the learner says yes.',
+    parameters: z.object({
+      subjectId: z.string().nullable().describe('The course, or null for all of them.'),
+      limit: z.number().nullable().describe('How many to return, worst first. Defaults to 20.'),
+    }),
+    run: (supabase, input) =>
+      detectGaps(supabase, { ...input, limit: input.limit ?? undefined }),
+  },
+  {
+    name: 'suggest_learning_plan',
+    description:
+      'A suggested session-by-session plan for one course: clear what is due, strengthen the weakest concepts, then read sections nothing has been generated from yet. This is a suggestion to read out to the learner, never a write — nothing is scheduled or generated until they ask for a specific item.',
+    parameters: z.object({
+      subjectId: z.string().nullable().describe('The course to plan, or null to plan across all of them.'),
+      sessionSize: z.number().nullable().describe('Items per session, 1 to 10. Defaults to 3.'),
+    }),
+    run: (supabase, input) =>
+      suggestLearningPlan(supabase, { ...input, sessionSize: input.sessionSize ?? undefined }),
+  },
+  {
+    name: 'grade_explanation',
+    description:
+      'Grade a teach-back explanation: the learner explains a concept in their own words and this judges it live against the concept’s own source material — there is nothing pre-written to compare it to. Returns what was covered, what depth was missing, and what was actively wrong, each naming the section it was checked against. Changes nothing and needs no run to attribute — it is a read that happens to need a model call.',
+    parameters: z.object({
+      conceptId: z.string().describe('The concept the learner is explaining, from list_courses or a search.'),
+      explanation: z.string().describe('What the learner said, in their own words.'),
+    }),
+    needsClient: true,
+    run: (supabase, input) => gradeExplanationTool(supabase, input),
   },
 ]

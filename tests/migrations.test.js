@@ -19,6 +19,21 @@ const tables = [...all.matchAll(/create table if not exists public\.(\w+)/g)].ma
   (match) => match[1],
 )
 
+// 015 widens read access on the material a course is made of. `reviews`,
+// `conversations`, `messages`, `agent_runs` and `agent_actions` stay owner-
+// only end to end — a share or a public flag never reaches personal review
+// history or the agent's transcript.
+const SHARED_READ_TABLES = ['subjects', 'sources', 'sections', 'concepts', 'artefacts']
+
+/**
+ * Tables with no `update` policy, on purpose. A row here is a judgement made
+ * once — wrong or stale, it is deleted and regenerated, never edited in
+ * place — so there is nothing for `update` to do, and (per migrations/
+ * README.md) an `update` policy with no work behind it is a trap, not a
+ * completeness requirement.
+ */
+const NO_UPDATE = new Set(['concept_links'])
+
 describe('migration files', () => {
   it('are numbered NNN_snake_case.sql', () => {
     expect(files.length).toBeGreaterThan(0)
@@ -27,9 +42,19 @@ describe('migration files', () => {
     }
   })
 
-  it('are applied in ascending, gap-free order', () => {
-    const numbers = files.map((name) => Number(name.slice(0, 3))).sort((a, b) => a - b)
-    expect(numbers).toEqual(numbers.map((_, index) => index + 1))
+  // Ascending and unique, not gap-free. Order is what the database cares
+  // about, and a duplicate number is the failure that actually costs data —
+  // two files claiming 007 apply in an order nothing defines. A gap costs
+  // nothing: a branch reserves its number when it is written, not when it
+  // merges, so while siblings are in flight each one legitimately steps over
+  // numbers belonging to branches it has not seen. The gaps close as those
+  // branches land; the duplicates never fix themselves.
+  it('are numbered in ascending order, with no number claimed twice', () => {
+    const numbers = [...files].sort().map((name) => Number(name.slice(0, 3)))
+    expect(numbers).toEqual([...numbers].sort((a, b) => a - b))
+    expect(new Set(numbers).size).toBe(numbers.length)
+    // The sequence still has to start where the schema does.
+    expect(Math.min(...numbers)).toBe(1)
   })
 })
 
@@ -39,14 +64,18 @@ describe('the schema', () => {
       'agent_actions',
       'agent_runs',
       'artefacts',
+      'concept_links',
       'concepts',
       'conversations',
       'fsrs_weights',
       'messages',
+      'notifications',
       'reviews',
       'sections',
       'sources',
+      'subject_shares',
       'subjects',
+      'user_preferences',
     ])
   })
 
@@ -57,6 +86,12 @@ describe('the schema', () => {
         /user_id uuid not null references auth\.users \(id\) on delete cascade/,
       )
     }
+  })
+
+  it('gives subjects a public flag that defaults closed', () => {
+    expect(all).toMatch(
+      /alter table public\.subjects\s+add column if not exists is_public boolean not null default false/,
+    )
   })
 })
 
@@ -70,29 +105,42 @@ describe('row level security', () => {
   it('gives every table a policy for all four commands', () => {
     for (const table of tables) {
       for (const command of ['select', 'insert', 'update', 'delete']) {
-        const policy = new RegExp(
-          `on public\\.${table} for ${command}\\b`,
-        )
+        if (NO_UPDATE.has(table) && command === 'update') continue
+        const policy = new RegExp(`on public\\.${table} for ${command}\\b`)
         expect(all, `${table}.${command}`).toMatch(policy)
       }
     }
   })
 
-  it('scopes every policy to the owning user', () => {
-    const policies = allPolicies()
-    expect(policies.length).toBe(tables.length * 4)
-    for (const policy of policies) {
-      expect(policy).toContain('to authenticated')
-      expect(policy).toContain('(select auth.uid()) = user_id')
+  it('scopes insert, update and delete to the owning user on every table', () => {
+    // Sharing and the public library only ever widen `select`. Proving this
+    // holds for every table, including the two new sharing surfaces, is what
+    // stands between "read-only by design" and "read-only by accident".
+    for (const table of tables) {
+      for (const command of ['insert', 'update', 'delete']) {
+        if (NO_UPDATE.has(table) && command === 'update') continue
+        const policies = policiesFor(table, command)
+        expect(policies, `${table}.${command}`).toHaveLength(1)
+        expect(policies[0], `${table}.${command}`).toContain('to authenticated')
+        expect(policies[0], `${table}.${command}`).toContain('(select auth.uid()) = user_id')
+      }
     }
   })
 
   it('gives every update policy both using and with check', () => {
-    const updates = allPolicies().filter((policy) => / for update\b/.test(policy))
-    expect(updates.length).toBe(tables.length)
-    for (const policy of updates) {
-      expect(policy).toMatch(/using \(\(select auth\.uid\(\)\) = user_id\)/)
-      expect(policy).toMatch(/with check \(\(select auth\.uid\(\)\) = user_id\)/)
+    for (const table of tables.filter((t) => !NO_UPDATE.has(t))) {
+      const [policy] = policiesFor(table, 'update')
+      expect(policy, table).toMatch(/using \(\(select auth\.uid\(\)\) = user_id\)/)
+      expect(policy, table).toMatch(/with check \(\(select auth\.uid\(\)\) = user_id\)/)
+    }
+  })
+
+  it('scopes every non-shared table to exactly one owner-only select policy', () => {
+    for (const table of tables.filter((t) => !SHARED_READ_TABLES.includes(t))) {
+      const policies = policiesFor(table, 'select')
+      expect(policies, table).toHaveLength(1)
+      expect(policies[0], table).toContain('to authenticated')
+      expect(policies[0], table).toContain('(select auth.uid()) = user_id')
     }
   })
 
@@ -102,6 +150,166 @@ describe('row level security', () => {
     for (const [, name, options] of views) {
       expect(options, name).toContain('security_invoker = true')
     }
+  })
+})
+
+describe('subject_shares', () => {
+  it('names the sharer and the recipient as two different columns', () => {
+    const body = tableBody('subject_shares')
+    expect(body).toMatch(/shared_with_user_id uuid not null references auth\.users/)
+    expect(body).toContain('subject_shares_not_self')
+    expect(body).toMatch(/unique \(subject_id, shared_with_user_id\)/)
+  })
+
+  it('keeps the invitee email so the owner can see who they shared with', () => {
+    const body = tableBody('subject_shares')
+    expect(body).toMatch(/invitee_email text not null/)
+    // subject_shares carries no policy that reads auth.users, so this can
+    // only ever be filled in by the definer function, from the row it just
+    // matched — never from the caller's raw input.
+    const fn = functionBody('share_subject_by_email')
+    expect(fn).toMatch(/select id, email into invitee, invitee_actual_email/)
+    expect(fn).toMatch(/values \(caller, target_subject_id, invitee, invitee_actual_email\)/)
+  })
+
+  it('is read-only: access_level only ever means view', () => {
+    const body = tableBody('subject_shares')
+    expect(body).toMatch(/access_level text not null default 'view' check \(access_level in \('view'\)\)/)
+  })
+
+  it('lets the owner see and manage a share, and the recipient see and leave it', () => {
+    const [select] = policiesFor('subject_shares', 'select')
+    const [del] = policiesFor('subject_shares', 'delete')
+
+    for (const policy of [select, del]) {
+      expect(policy).toContain('(select auth.uid()) = user_id')
+      expect(policy).toContain('(select auth.uid()) = shared_with_user_id')
+    }
+  })
+
+  it('lets only the subject owner create a share, and only for a subject they own', () => {
+    const [insert] = policiesFor('subject_shares', 'insert')
+
+    expect(insert).toContain('(select auth.uid()) = user_id')
+    expect(insert).toMatch(/exists \(\s*select 1 from public\.subjects s/)
+    expect(insert).toContain('s.user_id = (select auth.uid())')
+  })
+
+  it('lets only the owner change an existing share', () => {
+    const [update] = policiesFor('subject_shares', 'update')
+
+    expect(update).not.toContain('shared_with_user_id')
+  })
+})
+
+describe('widened read access for sharing and the public library', () => {
+  it('leaves the original owner select policy on every shared-read table untouched', () => {
+    for (const table of SHARED_READ_TABLES) {
+      const owner = policiesFor(table, 'select').find(
+        (policy) => !policy.includes('subject_shares') && !policy.includes('is_public'),
+      )
+      expect(owner, table).toBeDefined()
+      expect(owner).toContain('to authenticated')
+      expect(owner).toContain('(select auth.uid()) = user_id')
+    }
+  })
+
+  it('adds exactly one share-scoped select policy per shared-read table', () => {
+    for (const table of SHARED_READ_TABLES) {
+      const shared = policiesFor(table, 'select').filter((policy) =>
+        policy.includes('subject_shares'),
+      )
+      expect(shared, table).toHaveLength(1)
+      expect(shared[0], table).toContain('to authenticated')
+      expect(shared[0], table).toContain('shared_with_user_id = (select auth.uid())')
+    }
+  })
+
+  it('adds exactly one public select policy per shared-read table, open to anon', () => {
+    for (const table of SHARED_READ_TABLES) {
+      const pub = policiesFor(table, 'select').filter((policy) => policy.includes('is_public'))
+      expect(pub, table).toHaveLength(1)
+      expect(pub[0], table).toContain('to anon, authenticated')
+    }
+  })
+
+  it('never widens insert, update or delete on a shared-read table', () => {
+    for (const table of SHARED_READ_TABLES) {
+      for (const command of ['insert', 'update', 'delete']) {
+        expect(policiesFor(table, command), `${table}.${command}`).toHaveLength(1)
+      }
+    }
+  })
+
+  it('reaches sections through sources, the one table with no subject_id of its own', () => {
+    const [shared] = policiesFor('sections', 'select').filter((policy) =>
+      policy.includes('subject_shares'),
+    )
+    const [pub] = policiesFor('sections', 'select').filter((policy) => policy.includes('is_public'))
+
+    expect(shared).toMatch(/join public\.subject_shares sh on sh\.subject_id = src\.subject_id/)
+    expect(pub).toMatch(/join public\.subjects s on s\.id = src\.subject_id/)
+  })
+
+  it('opens the anon role to exactly these five policies and nowhere else', () => {
+    const anonPolicies = [...all.matchAll(/create policy[^;]*to anon, authenticated[^;]*;/g)]
+    expect(anonPolicies).toHaveLength(SHARED_READ_TABLES.length)
+  })
+
+  it('never grants anon anything on the tables sharing does not touch', () => {
+    const personalTables = tables.filter(
+      (table) => !SHARED_READ_TABLES.includes(table) && table !== 'subject_shares',
+    )
+    for (const table of personalTables) {
+      for (const command of ['select', 'insert', 'update', 'delete']) {
+        for (const policy of policiesFor(table, command)) {
+          expect(policy, `${table}.${command}`).not.toContain('anon')
+        }
+      }
+    }
+    // subject_shares itself is never anon-reachable either — a share is
+    // between two named accounts, never a public artefact.
+    for (const command of ['select', 'insert', 'update', 'delete']) {
+      for (const policy of policiesFor('subject_shares', command)) {
+        expect(policy, `subject_shares.${command}`).not.toContain('anon')
+      }
+    }
+  })
+})
+
+describe('the definer functions stay narrow', () => {
+  it('does not widen reviews RLS to compute the leaderboard', () => {
+    // The leaderboard's cross-user read happens inside a security definer
+    // function, never through a widened policy. This is the assertion that
+    // would fail first if someone "simplified" the leaderboard by opening
+    // `reviews` up to shared-course members instead.
+    for (const command of ['select', 'insert', 'update', 'delete']) {
+      const policies = policiesFor('reviews', command)
+      expect(policies).toHaveLength(1)
+      expect(policies[0]).not.toContain('subject_shares')
+    }
+  })
+
+  it('defines share_subject_by_email as a narrow, checked security definer function', () => {
+    const body = functionBody('share_subject_by_email')
+    expect(body).toContain('security definer')
+    expect(body).toContain("set search_path = ''")
+    expect(body).toMatch(/only the course owner can share it/i)
+    expect(all).toContain('revoke all on function public.share_subject_by_email(uuid, text) from public')
+    expect(all).toContain(
+      'grant execute on function public.share_subject_by_email(uuid, text) to authenticated',
+    )
+  })
+
+  it('defines subject_leaderboard as a security definer function gated on membership', () => {
+    const body = functionBody('subject_leaderboard')
+    expect(body).toContain('security definer')
+    expect(body).toContain("set search_path = ''")
+    expect(body).toMatch(/where exists \(select 1 from membership\)/)
+    expect(all).toContain('revoke all on function public.subject_leaderboard(uuid) from public')
+    expect(all).toContain(
+      'grant execute on function public.subject_leaderboard(uuid) to authenticated',
+    )
   })
 })
 
@@ -134,8 +342,21 @@ function allPolicies() {
   return [...all.matchAll(/create policy[^;]*;/g)].map((match) => match[0])
 }
 
+/** The policies for one table and one command. */
+function policiesFor(table, command) {
+  const onClause = `on public.${table} for ${command}`
+  return allPolicies().filter((policy) => policy.includes(onClause))
+}
+
 /** The `create table` block for one table, without the rest of the file. */
 function tableBody(table) {
   const start = all.indexOf(`create table if not exists public.${table}`)
   return all.slice(start, all.indexOf('\n);', start))
+}
+
+/** The `create or replace function` block for one function, up to its `$$;`. */
+function functionBody(name) {
+  const start = all.indexOf(`create or replace function public.${name}`)
+  const end = all.indexOf('$$;', start)
+  return all.slice(start, end + 3)
 }

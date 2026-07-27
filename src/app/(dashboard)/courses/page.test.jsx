@@ -90,12 +90,19 @@ describe('the courses page', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
-  it('sends no learner to the dissolved library', async () => {
+  /* /library named a different screen before v0.23.0 (the reading library
+     that dissolved into the course page in v0.14.0). It now names the public
+     course library, and this is its one discoverable entrance — see
+     src/app/(dashboard)/library/page.jsx. */
+  it('opens onto the public library, not the dissolved one', async () => {
     listCourses.mockResolvedValue([])
 
-    const { container } = render(await CoursesPage())
+    render(await CoursesPage())
 
-    expect(container.querySelector('a[href="/library"]')).toBeNull()
+    expect(screen.getByRole('link', { name: /public library/i })).toHaveAttribute(
+      'href',
+      '/library',
+    )
   })
 
   /* Course tags — task item 6 in v0.15 — give every course its own stable

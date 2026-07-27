@@ -14,6 +14,11 @@
 
 export const MODES = [
   { id: 'chat', label: 'Chat', consequence: 'reads your material, changes nothing' },
+  {
+    id: 'socratic',
+    label: 'Socratic',
+    consequence: 'asks guiding questions instead of answering, changes nothing',
+  },
   { id: 'agent', label: 'Agent', consequence: 'acts for you, and every act can be undone' },
 ];
 

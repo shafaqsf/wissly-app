@@ -5,8 +5,23 @@ import { unwrap, unwrapList } from './result.js'
  * cite nothing and generate nothing — it is not a half-done upload, it is a
  * broken one. */
 
-const SOURCE_COLUMNS = 'id, subject_id, kind, title, origin, archived_at, created_at'
+const SOURCE_COLUMNS =
+  'id, subject_id, kind, title, origin, archived_at, generated, created_at'
 const SECTION_COLUMNS = 'id, source_id, ordinal, content, anchor'
+
+/**
+ * Every way material arrives, and the whole of the `sources_kind_check`
+ * constraint in migration 008. It is exported because anything reading a
+ * `kind` back from outside the application — the JSON importer is the one
+ * caller today — has to know which values the database will actually accept,
+ * and a second hand-written copy of this list is a second thing to keep true.
+ */
+export const SOURCE_KINDS = Object.freeze(['text', 'pdf', 'pptx', 'url', 'image'])
+
+/** @param {unknown} kind */
+export function isSourceKind(kind) {
+  return SOURCE_KINDS.includes(kind)
+}
 
 export async function listSources(supabase, { subjectId, archived = false } = {}) {
   let query = supabase.from('sources').select(SOURCE_COLUMNS)
@@ -109,10 +124,20 @@ export async function sectionsForSource(supabase, { sourceId }) {
  * between them would leave a source with no sections. That is why the source
  * is deleted again if the sections do not land: a missing source is a state
  * the learner can retry, an empty one is a ghost in the library.
+ *
+ * `generated` marks a source that was never uploaded — its sections were
+ * drafted by the agent's own knowledge from a stated goal rather than cut
+ * from something the learner brought. It defaults to false because that is
+ * every ordinary path: pasting text, uploading a PDF. The one caller that
+ * passes `true` is `buildCourseFromGoal`, and every section it stores also
+ * carries `{generated: true}` in its own anchor — belt and braces, because the
+ * anchor is what the citation UI actually reads, and a source-level flag that
+ * disagreed with its own sections' anchors would be the inconsistency this
+ * product cannot afford.
  */
 export async function createSource(
   supabase,
-  { userId, subjectId, kind, title, rawText, origin, sections = [] },
+  { userId, subjectId, kind, title, rawText, origin, sections = [], generated = false },
 ) {
   if (sections.length === 0) {
     throw new Error('There was no readable text in that. Check the file and try again.')
@@ -128,6 +153,7 @@ export async function createSource(
         title: String(title ?? '').trim() || 'Untitled',
         raw_text: rawText ?? null,
         origin: origin ?? null,
+        generated,
       })
       .select(SOURCE_COLUMNS)
       .single(),

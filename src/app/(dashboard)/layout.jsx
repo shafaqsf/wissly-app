@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 
 import AgentDock from '@/components/agent/agent-dock';
 import DashboardShell from '@/components/shell/dashboard-shell';
+import { listNotifications, unreadNotificationCount } from '@/lib/data/notifications.js';
+import { ensureReviewReminder } from '@/lib/notifications/ensure-review-reminder.js';
 import { createClient } from '@/lib/supabase/server.js';
 
 /* The route group keeps `/dashboard` out of a nested URL segment while every
@@ -17,15 +19,28 @@ export default async function DashboardLayout({ children }) {
   // `getSession` would only echo the cookie back.
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
 
-  if (!data?.claims?.sub) {
+  if (!userId) {
     redirect('/sign-in');
   }
+
+  // Checking a learner in against their own queue on every load is what
+  // makes the notification centre work without a cron job or a third-party
+  // scheduler — see the module doc on `ensureReviewReminder`. A failure here
+  // (the database is briefly unreachable, say) must never take the page
+  // down with it; the bell just shows what it already knew.
+  await ensureReviewReminder(supabase, { userId }).catch(() => null);
+
+  const [notifications, unreadCount] = await Promise.all([
+    listNotifications(supabase, { limit: 20 }),
+    unreadNotificationCount(supabase),
+  ]);
 
   // The bar sits in the layout rather than on a page: it is the one entry to
   // the agent and it is reachable from every screen behind this frame.
   return (
-    <DashboardShell>
+    <DashboardShell notifications={notifications} unreadCount={unreadCount}>
       {children}
       <AgentDock />
     </DashboardShell>

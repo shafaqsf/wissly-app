@@ -4,12 +4,19 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import Sidebar from '@/components/nav/sidebar';
+import NotificationBell from '@/components/notifications/notification-bell';
 
 /* The dashboard frame: navigation on the left, page content on the right.
    One sidebar element serves both layouts — below 768px it slides in over the
    content, above it sits in the flow. Rendering it twice would duplicate every
-   link in the accessibility tree. */
-export default function DashboardShell({ children }) {
+   link in the accessibility tree.
+
+   The header used to be a mobile-only affordance for opening the sidebar. It
+   is not any more: the bell is reachable from every page behind the frame, on
+   every viewport, so the row that holds it is no longer `md:hidden` — only
+   the menu button and the wordmark inside it still are, because the sidebar
+   is already in the flow above 768px. */
+export default function DashboardShell({ children, notifications = [], unreadCount = 0 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -62,18 +69,21 @@ export default function DashboardShell({ children }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex min-h-16 items-center gap-3 border-b border-rule px-4 md:hidden">
+        <header className="flex min-h-16 items-center gap-3 border-b border-rule px-4 md:px-12">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation"
-            className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:text-ink"
+            className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:text-ink md:hidden"
           >
             <Menu size={20} strokeWidth={1.5} aria-hidden="true" />
           </button>
-          <span className="font-display text-title font-semibold lowercase">
+          <span className="font-display text-title font-semibold lowercase md:hidden">
             wissly
           </span>
+          <div className="ml-auto">
+            <NotificationBell initialNotifications={notifications} initialUnreadCount={unreadCount} />
+          </div>
         </header>
 
         {/* The bottom padding is the agent bar's room. It floats over this

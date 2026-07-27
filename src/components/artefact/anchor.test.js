@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { describeAnchor, sectionHref } from './anchor'
+import { describeAnchor, isGeneratedAnchor, sectionHref } from './anchor'
 
 describe('describeAnchor', () => {
   it('says "source unknown" when there is no anchor at all', () => {
@@ -28,6 +28,42 @@ describe('describeAnchor', () => {
 
   it('describes a web link or photo anchor the same way pasted text is — it was ingested the same way', () => {
     expect(describeAnchor({ start: 0, end: 20 })).toBe('characters 0–20')
+  })
+
+  // The one failure this product cannot afford is a claim that reads as
+  // sourced when it is not. A generated anchor must never be worded as
+  // though it pointed at a real page or a real passage.
+  it('says plainly that a generated passage is not from the material, and never claims a page or a range', () => {
+    const words = describeAnchor({ generated: true, heading: 'What an eigenvector is' })
+
+    expect(words).toMatch(/generated/i)
+    expect(words).toMatch(/not from your material/i)
+    expect(words).not.toMatch(/page/i)
+    expect(words).not.toMatch(/characters/i)
+  })
+
+  it('still carries the heading a generated section was drafted under', () => {
+    expect(describeAnchor({ generated: true, heading: 'Finding eigenvalues' })).toContain(
+      'Finding eigenvalues',
+    )
+  })
+
+  it('says so even with no heading at all', () => {
+    expect(describeAnchor({ generated: true })).toBe('generated, not from your material')
+  })
+})
+
+describe('isGeneratedAnchor', () => {
+  it('recognises a generated anchor', () => {
+    expect(isGeneratedAnchor({ generated: true })).toBe(true)
+  })
+
+  it('treats every real anchor shape as not generated', () => {
+    expect(isGeneratedAnchor({ page: 1 })).toBe(false)
+    expect(isGeneratedAnchor({ slide: 1 })).toBe(false)
+    expect(isGeneratedAnchor({ start: 0, end: 1 })).toBe(false)
+    expect(isGeneratedAnchor(null)).toBe(false)
+    expect(isGeneratedAnchor(undefined)).toBe(false)
   })
 })
 

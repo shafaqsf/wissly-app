@@ -126,4 +126,13 @@ describe('the source shelf', () => {
 
     expect(screen.getByText('No sections were readable in this one.')).toBeInTheDocument()
   })
+
+  /* A shared or public viewer reads under a select policy only — archiving
+     is a write only the owner's policy allows, so a button that would just
+     fail in the database is worse than no button. */
+  it('hides the archive control for a viewer who cannot edit', () => {
+    render(<SourceShelf courseId="course-1" sources={sources} archiveAction={noop} canEdit={false} />)
+
+    expect(screen.queryByRole('button', { name: /Archive/ })).toBeNull()
+  })
 })

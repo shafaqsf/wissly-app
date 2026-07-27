@@ -22,8 +22,8 @@ function clamp(value, min, max) {
 
 /**
  * Lay out a concept graph. The simulation is stepped a fixed number of times
- * and then stopped rather than left to animate on its own — docs/DESIGN.md
- * forbids a page that plays without being asked, and a map still visibly
+ * and then stopped rather than left to animate on its own — a page must
+ * not play without being asked, and a map still visibly
  * settling every time the page opens would be exactly that. `iterations` is
  * generous enough to have converged well
  * before it runs out, for the sizes a course's concept list realistically

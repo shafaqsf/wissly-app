@@ -15,8 +15,8 @@ export const metadata = {
    rather than pulling the whole library back to show none of it.
 
    No grain here. Nothing on this page has a state — a hit is a hit — and
-   inventing one would be exactly the decoration `DESIGN.md` exists to
-   prevent. */
+   inventing one would be exactly the decoration this product exists
+   without. */
 export default async function SearchPage({ searchParams }) {
   const params = (await searchParams) ?? {};
   const query = String(params.q ?? '').trim();

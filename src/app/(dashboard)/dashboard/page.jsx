@@ -36,8 +36,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       {/* The one hero on the product: the eyebrow wears the accent, and
-          nothing else on the page competes with it for the colour — see
-          "Colour" in docs/DESIGN.md. */}
+          nothing else on the page competes with it for the colour. */}
       <header className="flex flex-col gap-2">
         <p className="font-mono text-label uppercase text-accent">Today</p>
         <h1 className="font-display text-display-l font-bold">Dashboard</h1>

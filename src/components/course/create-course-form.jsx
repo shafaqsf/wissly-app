@@ -16,7 +16,7 @@ export default function CreateCourseForm({ action, initialState = {} }) {
     <form action={formAction} className="flex max-w-measure flex-col gap-4">
       {state?.message ? (
         // No colour carries a failure; a 2px ink rule does, and nothing else
-        // in the interface has one. See docs/DESIGN.md, "No status colours".
+        // in the interface has one. There are no status colours.
         <p role="alert" className="border-l-2 border-ink pl-4 text-body-s text-ink">
           {state.message}
         </p>

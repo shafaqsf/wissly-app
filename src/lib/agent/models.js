@@ -51,6 +51,11 @@ export const CURATED_MODELS = Object.freeze([
     name: 'GPT-5.6 Luna',
     pricing: Object.freeze({ input: 1.0, output: 6.0 }),
   }),
+  Object.freeze({
+    id: 'nvidia/nemotron-3-embed-1b:free',
+    name: 'NVIDIA: Nemotron 3 Embed 1B (free)',
+    pricing: Object.freeze({ input: 0, output: 0 }),
+  }),
 ])
 
 /* `vendor/model`, with an optional `:variant` suffix — OpenRouter writes

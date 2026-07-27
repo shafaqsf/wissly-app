@@ -19,8 +19,7 @@ first — do not quietly diverge.
 
 | Document | Read it before |
 | --- | --- |
-| [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Any branch, commit, version bump, worktree or push |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | Any UI: markup, styling, copy, icons, motion |
+| [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Any branch, commit, version bump, worktree, push or pull request |
 | [`migrations/README.md`](migrations/README.md) | Any schema change |
 
 When a document is wrong, fix the document in the same change that breaks its
@@ -44,14 +43,19 @@ bypass RLS unless created `WITH (security_invoker = true)`. The secret key is
 server-only, bypasses RLS entirely, and never reaches a `NEXT_PUBLIC_`
 variable or a client component.
 
-**No pull requests.** Push feature branches; the maintainer opens, reviews and
-merges every PR. Never create, edit, comment on or merge one. On push, hand
-over a suggested Conventional Commit PR title and the CHANGELOG text as plain
-output.
+**Finish the branch yourself.** When the work is done and the suite is green,
+carry out the whole sequence without asking: push, open the pull request with
+a Conventional Commit title and the CHANGELOG entry in the body, squash-merge
+it, pull `main` back into the main worktree, and delete the worktree and the
+branch. The worktree goes in the same run that merged it, not in a later
+cleanup pass — check it is clean first. Stop and leave the PR open only on red
+checks, a conflict with `main`, or a decision that genuinely needs a human.
 
 **Configuration goes straight to `main`.** Tooling, CI, dependency bumps and
 docs do not get a branch or a worktree. Features do, in their own worktree
-named `<type>/v<version>-<description>`.
+named `<type>/<description>` — no version number in a branch or worktree name.
+Versions are cut on `main` at release time, and a branch never touches
+`package.json` or `CHANGELOG.md`.
 
 **No colour in the chrome.** Black ink, white paper, monochrome icons. Every
 control, glyph, border and label is ink on paper. Hue exists in exactly one

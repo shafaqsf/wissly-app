@@ -271,7 +271,7 @@ export default function AgentBar({
                 {/* The state sits on the thing that has it, beside the word
                     that names it. One class moves the grain and the fill
                     together, so the texture and the fill cannot say different
-                    things — see "The field" in docs/DESIGN.md. */}
+                    things. */}
                 <span
                   aria-hidden="true"
                   className={

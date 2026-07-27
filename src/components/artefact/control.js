@@ -11,7 +11,7 @@ export const quietButtonClass =
 
 /* The one filled control in the product: the primary call to action, such as
    the button that commits an account. It is also the one control that wears
-   the accent — see "Colour" in docs/DESIGN.md, v0.15's deliberate loosening
+   the accent — v0.15's deliberate loosening
    of "no colour in the chrome". Nothing else earns a solid fill, and nothing
    else should copy this. */
 export const filledButtonClass =

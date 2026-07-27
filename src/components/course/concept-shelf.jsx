@@ -6,8 +6,7 @@ import { masteryState } from '@/lib/mastery';
  *
  * The mark and the word travel together and both come out of `masteryState`.
  * A component that chose its own grain next to a `.field-*` class it also
- * chose is the one way left to make the signature lie — see docs/DESIGN.md,
- * "Never both by hand".
+ * chose is the one way left to make the signature lie: never both by hand.
  *
  * A row that has been linked to a concept elsewhere carries its "see also"
  * list beneath it — the reason an agent judged the two related, in words,

@@ -103,7 +103,7 @@ describe('ConceptMastery', () => {
   })
 
   /* Every row is a button, and a button with no radius draws a square focus
-     ring. See "Shape" in docs/DESIGN.md. */
+     ring. */
   it('rounds every concept row, so no focus ring is a square', () => {
     render(<ConceptMastery subject="Linear algebra" concepts={conceptsFixture} />)
 

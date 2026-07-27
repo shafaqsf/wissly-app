@@ -112,7 +112,7 @@ describe('the transcript', () => {
   });
 
   /* Status carries no hue. A failed turn gets the one 2px ink rule in the
-     product — see "No status colours" in docs/DESIGN.md. */
+     product; there are no status colours. */
   it('rules a failed turn rather than colouring it', () => {
     render(<Transcript messages={[said({ role: 'assistant', status: 'failed', content: 'Ran out of tokens.' })]} />);
 

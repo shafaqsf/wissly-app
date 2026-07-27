@@ -123,7 +123,7 @@ export default function AddMaterialForm({ action, courseId, initialState = {} })
 
       {pending ? (
         /* A mark, not a surface. A field under the submit button is still a
-           field on a surface the learner is reading — docs/DESIGN.md: beside a
+           field on a surface the learner is reading: beside a
            form, never behind or below one. The mark drifts while the work is
            unresolved and says the same thing at a fraction of the area. */
         <p

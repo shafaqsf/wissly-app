@@ -70,8 +70,8 @@ describe('NavItem', () => {
   })
 
   /* v0.15 loosened "no colour in the chrome" for a handful of deliberate
-     spots, and the active nav destination is one of them — see "Colour" in
-     docs/DESIGN.md. `--paper-sunk` stays so the row reads even without it. */
+     spots, and the active nav destination is one of them.
+     `--paper-sunk` stays so the row reads even without it. */
   it('wears the accent on the current destination', () => {
     usePathname.mockReturnValue('/courses')
     render(<NavItem href="/courses" label="Courses" icon={BookOpen} />)

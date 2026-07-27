@@ -42,8 +42,7 @@ describe('masteryState', () => {
     expect(states.every((state) => state.field?.startsWith('field-'))).toBe(true)
   })
 
-  /* The mastery gradient — task item 5, docs/DESIGN.md's "the mastery
-     gradient" — is a colour layer beside the mark, never a replacement for
+  /* The mastery gradient — task item 5 — is a colour layer beside the mark, never a replacement for
      it. It reads the same three tiers as a scale from red toward green, so
      every state carries a `color` alongside its `grain` and `field`, and the
      three colours are the three mastery tokens defined once in

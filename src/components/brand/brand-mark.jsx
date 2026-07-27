@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 /* The wissly mark: the one coloured thing in the product.
 
-   docs/DESIGN.md keeps hue out of the product entirely — a field is ink at a
+   Hue stays out of the product entirely — a field is ink at a
    dilution, and nothing on a page carries a colour. The mark is the single
    named exception, and it is exactly one object rather than a licence: hue
    here means "this is wissly" and never anything else. It is not an icon in

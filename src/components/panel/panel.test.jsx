@@ -51,7 +51,7 @@ describe('Panel', () => {
 
   /* An empty panel used to take a tinted surface, on the grounds that a
      surface with nothing on it is unresolved. It was a grey rectangle under a
-     sentence — see "The field" in docs/DESIGN.md. A panel whose emptiness is a
+     sentence. A panel whose emptiness is a
      state worth showing wears a `mark` in its header, like every other state. */
   it('paints nothing behind an empty panel', () => {
     const { container } = render(

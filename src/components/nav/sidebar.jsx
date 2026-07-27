@@ -9,10 +9,9 @@ import { accountItem, navItems } from './nav-items';
    overlay are owned by the shell, so both can be reasoned about in one place.
 
    No brand mark here, and this is deliberate: the product names itself once
-   per viewport, and the agent bar is that one place — see docs/DESIGN.md,
-   "The mark". A second mark in the rail would be the repetition the document
-   forbids, so do not add one back. What makes the collapsed rail
-   recognisable is the nav itself: four named destinations, each keeping its
+   per viewport, and the agent bar is that one place. A second mark in the
+   rail would be a repetition, so do not add one back. What makes the
+   collapsed rail recognisable is the nav itself: four named destinations, each keeping its
    name on hover and to a screen reader at 64px, with the current one filled. */
 export default function Sidebar({
   collapsed = false,

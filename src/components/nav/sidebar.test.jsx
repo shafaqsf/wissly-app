@@ -14,8 +14,7 @@ describe('the sidebar', () => {
   })
 
   /* A focus outline follows the element's own corner, so a control with no
-     radius draws a square ring in an interface that has none — see "Shape" in
-     docs/DESIGN.md. */
+     radius draws a square ring in an interface that has none. */
   it('rounds the wordmark so its focus ring is not a square', () => {
     render(<Sidebar />)
 
@@ -27,7 +26,7 @@ describe('the sidebar', () => {
   /* This assertion used to require exactly one mark here, because the product
      names itself once per viewport and the frame was the only thing that could
      carry it. The agent bar carries it now, so a mark in the rail would be the
-     second one on the screen — see docs/DESIGN.md, "The mark". */
+     second one on the screen. */
   it('wears no brand mark, because the agent bar is the one that does', () => {
     const { container } = render(<Sidebar />)
 

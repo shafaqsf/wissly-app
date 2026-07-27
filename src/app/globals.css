@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-/* Tokens are defined in docs/DESIGN.md. Change them there first. */
-
 @theme {
   /* Colour — ink on paper. The chrome has no hue anywhere. */
   --color-paper: #ffffff;
@@ -11,14 +9,14 @@
   --color-ink-muted: #5c5c5c;
   --color-ink: #000000;
 
-  /* There is no field palette. A field is ink, diluted — see "Colour" in
-     docs/DESIGN.md. `globals.css.test.js` fails on any hue inside a
+  /* There is no field palette. A field is ink, diluted.
+     `globals.css.test.js` fails on any hue inside a
      `.field-*` fill, so the rule cannot quietly come back one component at a
      time. */
 
   /* Accent — a small, deliberate palette for the chrome. "No colour in the
      chrome" held from v0.9 to v0.14; the maintainer has deliberately loosened
-     it for a more SaaS-friendly surface — see "Colour" in docs/DESIGN.md.
+     it for a more SaaS-friendly surface.
      Loosened is not open: this is the whole palette, it is defined once,
      here, and `globals.css.test.js` fails on a hue anywhere in the
      stylesheet that is not one of these six values. Reach for it as
@@ -63,7 +61,7 @@
   --text-caption--line-height: 1.4;
 
   /* Shape — three steps, soft but calm. Controls, surfaces, and the marks
-     that are meant to read as marks. See "Shape" in docs/DESIGN.md. */
+     that are meant to read as marks. */
   --radius-control: 8px;
   --radius-surface: 14px;
   --radius-round: 9999px;
@@ -73,7 +71,7 @@
 }
 
 :root {
-  /* Grain intensities. See "Grain" in docs/DESIGN.md. */
+  /* Grain intensities. */
   --grain-0: 0;
   --grain-1: 0.035;
   --grain-2: 0.07;
@@ -87,7 +85,7 @@
      specks instead of an even wash. The four intensity tokens keep their
      values and their meanings; only the image behind them changed. */
   /* Motion. Seven movements, each with a duration and a curve written down
-     once. See "Motion" in docs/DESIGN.md. A component reaches for a class
+     once. A component reaches for a class
      below rather than inventing an eighth timing. */
   --motion-settle: 600ms;
   --motion-settle-curve: cubic-bezier(0.16, 1, 0.3, 1);

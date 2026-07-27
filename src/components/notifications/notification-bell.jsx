@@ -10,7 +10,7 @@ import { markAllNotificationsReadAction, markNotificationReadAction } from '@/li
    runs — it is the truth the next full load reads back — but the interface
    does not make the learner wait for it.
 
-   No colour marks "unread": DESIGN.md reserves hue for the grain field and
+   No colour marks "unread": hue is reserved for the grain field and
    the mark, and neither belongs to a notification's read state. An unread
    row keeps a plain ink dot and its bold title; a read one loses both. */
 

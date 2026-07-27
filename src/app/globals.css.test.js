@@ -30,7 +30,7 @@ const css = readFileSync(
 )
 
 /* Which grain intensity each field state is painted with. This is the design
-   contract from docs/DESIGN.md, and it belongs in the test because the worst
+   contract, and it belongs in the test because the worst
    case for contrast is the field *plus* its grain, never the field alone. */
 const GRAIN_FOR_STATE = {
   unresolved: '--grain-3',
@@ -140,8 +140,7 @@ describe('no field surface', () => {
      in from the edges of a card, a whole panel or a whole heading tinted by how
      resolved the thing under it was. Grey behind a paragraph is a background —
      read as chrome whatever it was meant to encode — and it spent its whole
-     life competing with the text sitting on top of it. See "The field" in
-     docs/DESIGN.md. The state is worn as a mark, and only as a mark. */
+     life competing with the text sitting on top of it. The state is worn as a mark, and only as a mark. */
   it('defines no surface class to paint one with', () => {
     expect(css).not.toMatch(/\.grain-field|\.grain-wash/)
   })
@@ -188,7 +187,7 @@ describe('the field mark', () => {
 describe('the field palette', () => {
   /* The field itself did not get the accent. It is still ink at four
      dilutions, the same ink everything else on the page used to be drawn in
-     before the chrome was allowed a palette — see "Colour" in docs/DESIGN.md.
+     before the chrome was allowed a palette.
      A `--color-field-*` token would let hue back into the one place the mark
      depends on staying legible as a *ratio* rather than a status light, so
      that token stays banned outright even though other hues are now allowed
@@ -231,7 +230,7 @@ describe('the field palette', () => {
 
 /* "No colour in the chrome" was a tested, documented rule: ink on paper, hue
    nowhere but the field. The maintainer has deliberately loosened it for the
-   chrome — see "Colour" in docs/DESIGN.md — to make the product read as a
+   chrome — to make the product read as a
    product rather than a manuscript. "Deliberately loosened" is not "anything
    goes": every hue anywhere in the stylesheet still has to be one of a short,
    named list, nothing outside that list may define a colour, and dark mode is
@@ -326,7 +325,7 @@ describe('no text on a field', () => {
 
 describe('the motion catalogue', () => {
   /* Motion is named, not improvised. Seven movements, each with a duration and
-     a curve written down once — see "Motion" in docs/DESIGN.md. A component
+     a curve written down once. A component
      that needs movement reaches for one of these classes rather than inventing
      an eighth timing nobody agreed to. */
   const MOTION_TOKENS = [
@@ -436,7 +435,7 @@ describe('colour containment', () => {
 
   /* A header is a position on the page, not a state. A page-wide field band
      is how the field ended up describing the furniture rather than the
-     subject — see "Where a field goes" in docs/DESIGN.md. */
+     subject. */
   it('never turns a header into a field', () => {
     const offenders = sourceFiles()
       .filter((file) => file.endsWith('.jsx'))
@@ -446,7 +445,7 @@ describe('colour containment', () => {
   })
 
   /* The brand mark is the one coloured asset in the product, and it is a named
-     exception rather than a loophole — see "The mark" in docs/DESIGN.md. One
+     exception rather than a loophole. One
      component owns the file; everything else composes that component, so the
      exception cannot quietly become a habit. */
   it('keeps the brand mark to the one component that owns it', () => {

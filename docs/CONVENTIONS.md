@@ -17,25 +17,26 @@ request — commit it to `main` and, if it is worth a version, release it there.
 ## Branch names
 
 ```
-<type>/v<version>-<short-description>
+<type>/<short-description>
 ```
 
 - `<type>` — `feat` `fix` `refactor` `perf` `test`
-- `<version>` — the version this branch will produce once merged
 - `<short-description>` — lower case, kebab-case, two to four words
 
 ```
-feat/v0.2.0-supabase-migrations
-feat/v0.3.0-openrouter-client
-fix/v0.3.1-openrouter-retry-backoff
-refactor/v0.4.0-agent-run-store
+feat/supabase-migrations
+feat/openrouter-client
+fix/openrouter-retry-backoff
+refactor/agent-run-store
 ```
 
-The version in the name is a statement of intent. If the scope of the branch
-changes, rename the branch (`git branch -m`) before pushing it.
+**No version number in the branch name.** A branch says what it does, not what
+release it thinks it will land in. Versions are decided on `main`, at release
+time, from what has actually been merged — see [Versioning](#versioning).
 
-Two branches must never claim the same version. Check `git tag` and the open
-branches before you pick one.
+The description carries the whole meaning now, so make it say something —
+`fix/openrouter-retry-backoff`, not `fix/bug`. If the scope of the branch
+changes enough that the name lies, rename it (`git branch -m`) before pushing.
 
 ## Versioning
 
@@ -50,26 +51,35 @@ Semantic versioning, pre-1.0:
 `1.0.0` is the point at which the public surface — the database schema, the
 agent API and the env contract — is considered stable.
 
-### Where the bump happens
+### Releasing
 
-A branch that is the only one in flight bumps `package.json` and writes its
-own `CHANGELOG.md` entry, in a `chore(release)` commit of its own. The tag
-still belongs to `main` and is cut after the merge:
+**A branch never touches `package.json` or `CHANGELOG.md`.** It does not know
+which version it will end up in, and it must not guess — two branches guessing
+in parallel is how the number in `package.json` stopped describing the code.
 
-```bash
-git tag -a v0.3.0 -m "0.3.0" && git push --tags
+A branch hands over its changelog text in the PR body instead:
+
+```markdown
+### Added
+- OpenRouter chat completion client with configurable model and retry on 429.
 ```
 
-The rule this replaces sent both files to `main` unconditionally, on the
-grounds that parallel worktrees would otherwise fight over them. That cost is
-real but it is only paid when branches actually overlap, and the price of
-avoiding it was that six versions shipped without ever being bumped — the
-number in `package.json` stopped describing the code. A conflict you can see
-beats a ritual you can skip.
+Releasing happens on `main`, on its own, whenever the merged work is worth a
+version. The bump reads what has actually landed since the last tag and picks
+minor or patch from the table above:
 
-**So when more than one branch is in flight, the old rule still applies**:
-leave both files alone, hand the entry over with the push, and let `main`
-carry the bump.
+```bash
+# on main, after the merges that make up the release
+npm version minor -m "chore(release): %s"   # bumps package.json, commits, tags
+git push --follow-tags
+```
+
+The `CHANGELOG.md` entry — assembled from the PR bodies in the release — goes
+in that same `chore(release)` commit.
+
+Because releases are cut on `main` rather than claimed up front, nothing has
+to be checked or reserved before starting a branch, and two branches can never
+collide over a number neither of them owns.
 
 ## Commits
 
@@ -97,58 +107,81 @@ The repository lives in `wissly-app/`. Feature worktrees are its siblings:
 ```
 Softwareprojekte/
 └── wissly/
-    ├── wissly-app/                          <- main
-    ├── feat-v0.3.0-openrouter-client/       <- worktree
-    └── fix-v0.3.1-openrouter-retry/         <- worktree
+    ├── wissly-app/                   <- main
+    ├── feat-openrouter-client/       <- worktree
+    └── fix-openrouter-retry/         <- worktree
 ```
 
-The directory name is the branch name with `/` replaced by `-`.
+The directory name is the branch name with `/` replaced by `-` — no version in
+either.
 
 ```bash
 # start
-git worktree add ../feat-v0.3.0-openrouter-client -b feat/v0.3.0-openrouter-client
-cd ../feat-v0.3.0-openrouter-client && npm install
+git worktree add ../feat-openrouter-client -b feat/openrouter-client
+cd ../feat-openrouter-client && npm install
 
-# finish — push only; the maintainer opens and squash-merges the PR
-git push -u origin feat/v0.3.0-openrouter-client
-
-# after the maintainer has merged it
-cd ../wissly-app
-git worktree remove ../feat-v0.3.0-openrouter-client
-git branch -d feat/v0.3.0-openrouter-client
+# finish — push, PR, squash-merge, pull, then delete this worktree.
+# The full sequence is below, under "Finishing a branch".
 ```
+
+A worktree lives exactly as long as its branch is unmerged. It is created
+when the branch starts and deleted in the same run that merges it — see
+[Finishing a branch](#finishing-a-branch-push-pr-merge-pull-delete).
 
 Each worktree needs its own `npm install` and its own `.env.local` — neither
 is tracked by git.
 
-## Handover: push, then stop
+## Finishing a branch: push, PR, merge, pull, delete
 
-**Pull requests are opened, reviewed and merged by the maintainer. Nobody
-else — no contributor tooling, no coding agent — creates, edits, comments on
-or merges them.** Work on a branch ends at the push:
+**Finishing a branch is one uninterrupted sequence, carried out automatically —
+push, open the pull request, squash-merge it, pull `main`, delete the
+worktree.** No handover, no waiting for a maintainer.
 
 ```bash
-git push -u origin feat/v0.3.0-openrouter-client
+# 1. push
+git push -u origin feat/openrouter-client
+
+# 2. open the PR — title is the squash commit, body carries the changelog text
+gh pr create --title "feat(agent): add OpenRouter chat completion client" --body "..."
+
+# 3. squash-merge it
+gh pr merge --squash --delete-branch
+
+# 4. pull the merged main back into the main worktree
+cd ../wissly-app && git pull
+
+# 5. the pull succeeded, so the branch is in main — remove the worktree
+git worktree remove ../feat-openrouter-client
+git branch -d feat/openrouter-client
+git worktree prune
 ```
 
-Along with the push, hand over two things as plain output — not committed,
-not written into any file:
+Step 5 is not optional and does not wait for a later cleanup pass. The
+worktree is deleted in the same run that merged it, immediately after the
+pull confirms the work is on `main` — a merged worktree left on disk is the
+thing that turns into a directory nobody dares delete a month later. `git
+branch -d` is the safe form on purpose: it refuses a branch that is not
+merged, so a failed step 3 cannot take the work with it.
 
-1. A suggested PR title, formatted as a Conventional Commit. PRs are
-   squash-merged, so this title becomes the single commit on `main`.
+The one thing to check before step 5: the worktree must be clean. Anything
+uncommitted in it was never part of the PR and would be lost. If
+`git status` there is not empty, stop, say what is uncommitted, and leave the
+worktree in place.
 
-   ```
-   feat(agent): add OpenRouter chat completion client
-   ```
+The PR title is a Conventional Commit. PRs are squash-merged, so that title
+becomes the single commit on `main` — it is the changelog-facing line, not a
+throwaway.
 
-2. The CHANGELOG entry for the target version, ready to paste.
+The PR body carries the changelog text for this change — no version number on
+it, since which release it lands in is decided later, on `main`. See
+[Releasing](#releasing).
 
-   ```markdown
-   ### Added
-   - OpenRouter chat completion client with configurable model and retry on 429.
-   ```
+Stop before merging only when the checks are red, the branch conflicts with
+`main`, or the change is one you have flagged as needing a human decision. In
+that case say so and leave the PR open.
 
-The maintainer decides what to do with both.
+The full test suite must be green before step 1. See
+[Test-driven development](#test-driven-development).
 
 ## Test-driven development
 

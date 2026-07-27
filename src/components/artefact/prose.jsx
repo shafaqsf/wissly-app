@@ -12,7 +12,7 @@ import katex from 'katex';
    survives a round trip through the database and a prompt unchanged. */
 
 // Keywords are the only thing weight distinguishes. Hue is not available and
-// would not be used if it were — see docs/DESIGN.md.
+// would not be used if it were.
 const KEYWORDS = {
   python: ['def', 'return', 'import', 'from', 'class', 'if', 'else', 'elif', 'for', 'while', 'in', 'not', 'and', 'or', 'None', 'True', 'False', 'lambda', 'yield', 'with', 'as'],
   javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'new', 'import', 'export', 'from', 'default', 'await', 'async', 'null', 'true', 'false'],

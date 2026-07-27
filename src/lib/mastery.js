@@ -2,8 +2,8 @@
    evidence a learner has produced. It is rendered as a field — grain density
    and depth of ink, moving together — plus, since v0.15, a colour layer
    beside the mark: no bar, no percentage, no second *numeric* display, but a
-   mark is now allowed a second way to be read at a glance. See "the mastery
-   gradient" in docs/DESIGN.md.
+   mark is now allowed a second way to be read at a glance — the mastery
+   gradient.
 
    Three states, because grain has three meaningful intensities. The 0.9
    threshold is where the scheduler stops asking often enough for the concept

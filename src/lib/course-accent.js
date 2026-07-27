@@ -6,8 +6,7 @@
    It is derived from the course id, not chosen and not stored: the same id
    always turns the same colour, two different ids almost always turn two
    different colours, and there is no palette to maintain as courses are
-   added. That is not the same freedom as picking any hue — see "Colour" in
-   docs/DESIGN.md — so only the hue moves. Saturation and lightness are fixed
+   added. That is not the same freedom as picking any hue, so only the hue moves. Saturation and lightness are fixed
    at the values below for every course, which is what keeps a shelf of tags
    reading as one product's palette instead of a colour wheel. Because the
    value is computed at request time rather than written as a literal, it

@@ -2,7 +2,7 @@
 
    This is not a progress bar and the distinction is not pedantry. A progress
    bar says how far along one thing is, out of a whole — that is the display
-   `DESIGN.md` forbids, because progress in wissly is grain and depth. This
+   this product does without, because progress in wissly is grain and depth. This
    says how often something happened on each of seven days. It has no whole to
    be a fraction of, so there is no percentage to show and none is shown.
 

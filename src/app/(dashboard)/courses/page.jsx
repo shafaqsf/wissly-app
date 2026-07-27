@@ -58,8 +58,8 @@ export default async function CoursesPage() {
         <ul className="motion-stagger flex flex-col gap-3">
           {courses.map((course) => (
             <li key={course.id}>
-              {/* The lift darkens a hairline, so the row has to have one —
-                  see "Motion" in docs/DESIGN.md. A row with a transparent
+              {/* The lift darkens a hairline, so the row has to have one.
+                  A row with a transparent
                   border would rise and say nothing. The tag is the course's
                   own accent — task item 6 in v0.15 — derived from its id so
                   the same course always wears the same colour. */}

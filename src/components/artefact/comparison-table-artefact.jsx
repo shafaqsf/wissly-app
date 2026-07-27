@@ -5,7 +5,7 @@ import { renderInline } from './prose';
    answered — see the note on READING_FORMATS in src/lib/agent/formats.js. A
    table is one of the two things the design allows to break the 66-character
    measure ("Tables and graphs may break out of it; running text never
-   does" — docs/DESIGN.md, Rendering); a grid this shape cannot be read at
+   does"); a grid this shape cannot be read at
    one column wide.
 
    `cells` arrives flat, one entry per (item, dimension) pair rather than

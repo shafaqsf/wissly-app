@@ -17,7 +17,7 @@ describe('the concept shelf', () => {
     expect(screen.getByText('Total internal reflection')).toBeInTheDocument()
   })
 
-  /* A mark is never the only carrier of meaning — docs/DESIGN.md. Twelve
+  /* A mark is never the only carrier of meaning. Twelve
      pixels of grey say nothing to a screen reader. */
   it('names the state each mark encodes, in words beside it', () => {
     render(<ConceptShelf concepts={concepts} />)

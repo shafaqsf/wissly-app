@@ -259,25 +259,21 @@ background: a tint behind a paragraph reads as chrome whatever it was meant to
 mean, which is why the product has none.
 
 The rules are binding and enforced by tests that read the stylesheet itself.
-They live in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Contributing
 
-Two documents, both binding:
-
-- [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) — branch naming, versioning,
-  worktrees, commit format, the test-driven workflow.
-- [`docs/DESIGN.md`](docs/DESIGN.md) — colour, type, space, shape, icons,
-  grain, motion, interface copy.
+[`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) is binding: branch naming,
+versioning, worktrees, commit format, the test-driven workflow, and how a
+branch is finished.
 
 Every behaviour change starts with a failing test: write it, watch it fail for
 the reason you expect, then write the smallest code that makes it pass.
 `npm test` before every commit.
 
-Features go on a branch named `<type>/v<version>-<description>`; configuration,
-tooling and docs go straight to `main`. Pull requests are opened, reviewed and
-merged by the maintainer — contributors push branches and hand over a suggested
-title.
+Features go on a branch named `<type>/<description>`; configuration,
+tooling and docs go straight to `main`. A finished branch is pushed, opened as
+a pull request, squash-merged, `main` is pulled back, and the worktree is
+deleted — one sequence, no handover.
 
 ## License
 

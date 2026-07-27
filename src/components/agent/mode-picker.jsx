@@ -40,7 +40,7 @@ export default function ModePicker({ mode = 'chat', onChange, disabled = false, 
         onChange={(event) => onChange?.(event.target.value)}
         // The radius is here for the focus ring: an outline takes the
         // element's own corner, so a square control draws a square ring in an
-        // interface that has none — see "Shape" in docs/DESIGN.md.
+        // interface that has none.
         className="min-h-11 w-full rounded-control border border-rule bg-paper px-3 font-mono text-label uppercase text-ink"
       >
         {MODES.map(({ id: value, label }) => (

@@ -2,7 +2,7 @@ import { ILLUSTRATIONS } from './illustrations';
 
 /* An empty list, illustrated — task item 7 in v0.15. The words still do the
    work: "Empty states are an invitation to act, not an apology for
-   emptiness" (see "Writing" in docs/DESIGN.md), and every caller still writes
+   emptiness"), and every caller still writes
    the sentence that says what to do next. This only adds a small picture
    beside it, the way a mark sits beside a word rather than instead of one.
 

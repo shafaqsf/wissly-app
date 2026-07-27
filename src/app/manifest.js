@@ -1,8 +1,8 @@
 import { MARK } from '@/components/brand/brand-mark';
 
 /* Installable, so the review queue is a shortcut a learner can open straight
- * into rather than a browser tab they have to find again — see docs/DESIGN.md
- * for why the colours below are ink and paper, not a "brand" palette. */
+ * into rather than a browser tab they have to find again. The colours below
+ * are ink and paper, not a "brand" palette. */
 export default function manifest() {
   return {
     name: 'wissly',

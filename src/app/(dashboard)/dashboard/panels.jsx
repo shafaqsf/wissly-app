@@ -31,7 +31,7 @@ import { undoAgentAction } from './actions';
    **One grain field on this viewport, and it is Weakest.** Six of these seven
    panels report a state of some kind, and a mark on each would turn the
    dashboard into a column of grey dots — texture, which is the one thing
-   `DESIGN.md` forbids grain to become. So the field goes on the panel whose
+   grain must never become. So the field goes on the panel whose
    entire subject is how resolved things are, where five marks read as one
    legend; every other panel says its state in words and counts. Courses says
    "3 of 12 concepts settled" rather than wearing a mark, and it is not worse

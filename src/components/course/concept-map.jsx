@@ -12,7 +12,7 @@ import { layoutConceptGraph } from '@/lib/graph/layout';
    same legend on both screens rather than a second one invented for this
    page. Edges are a
    plain hairline, `--rule`, the same colour every border in the product
-   already uses: nothing here reaches for a hue docs/DESIGN.md has not
+   already uses: nothing here reaches for a hue the product has not
    already named.
 
    The layout is computed once per render from `layoutConceptGraph`, a pure

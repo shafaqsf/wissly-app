@@ -6,8 +6,7 @@ import { usePathname } from 'next/navigation';
 /* A single destination in the sidebar. Collapsed it keeps its accessible
    name — the label moves off screen, it does not disappear.
 
-   The current destination wears the accent now — see "Colour" in
-   docs/DESIGN.md — beside `--paper-sunk`, which stays so the row is still
+   The current destination wears the accent now, beside `--paper-sunk`, which stays so the row is still
    legible to anyone who cannot tell the accent from ink. */
 export default function NavItem({ href, label, icon: Icon, collapsed = false }) {
   const pathname = usePathname() ?? '';

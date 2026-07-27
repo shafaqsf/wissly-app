@@ -15,7 +15,7 @@ describe('courseAccent', () => {
     expect(courseAccent('course-1')).not.toBe(courseAccent('course-2'))
   })
 
-  /* Derived is not "anything goes" either — see "Colour" in docs/DESIGN.md.
+  /* Derived is not "anything goes" either.
      Every course colour stays inside the same tasteful register as the rest
      of the accent palette: a fixed saturation and lightness, only the hue
      turns. That is what keeps a shelf of course tags looking like one

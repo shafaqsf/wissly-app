@@ -6,6 +6,7 @@ import {
   generateArtefact,
   generateArtefacts,
   gradeAnswer,
+  gradeExplanation,
 } from './artefacts.js'
 
 const section = {
@@ -337,5 +338,68 @@ describe('gradeAnswer', () => {
     await expect(
       gradeAnswer({ client, question, answer: 'It is a monoid.' }),
     ).rejects.toThrow(/verdict "incorrect" contradicts nothing being missing/)
+  })
+})
+
+describe('gradeExplanation', () => {
+  const concept = { term: 'Monads' }
+  const sections = [
+    { id: 'sec-1', ordinal: 3, content: 'A monad is a monoid in the category of endofunctors.', anchor: { page: 7 } },
+  ]
+
+  const teachBackGrade = {
+    covered: [{ point: 'Called it a monoid.', section_id: 'sec-1' }],
+    gaps: [{ point: 'Never named the category it lives in.', section_id: 'sec-1' }],
+    wrong: [],
+    feedback: 'You have the algebra. Name the category next time.',
+  }
+
+  it('grades a live explanation against the concept’s own sections, with no model_answer to compare to', async () => {
+    const client = stubClient(teachBackGrade)
+
+    await expect(
+      gradeExplanation({ client, concept, sections, explanation: 'It is a monoid.' }),
+    ).resolves.toEqual(teachBackGrade)
+  })
+
+  it('puts the concept, the explanation and every section in the prompt', async () => {
+    const client = stubClient(teachBackGrade)
+
+    await gradeExplanation({ client, concept, sections, explanation: 'It is a monoid.' })
+
+    const prompt = client.chatStructured.mock.calls[0][0].messages.at(-1).content
+    expect(prompt).toContain('Monads')
+    expect(prompt).toContain('It is a monoid.')
+    expect(prompt).toContain(sections[0].content)
+    expect(prompt).toContain('sec-1')
+  })
+
+  it('refuses an empty explanation without spending a call', async () => {
+    const client = stubClient(teachBackGrade)
+
+    await expect(
+      gradeExplanation({ client, concept, sections, explanation: '   ' }),
+    ).rejects.toThrow(/explanation is empty/)
+    expect(client.chatStructured).not.toHaveBeenCalled()
+  })
+
+  it('refuses to grade against no source material at all', async () => {
+    const client = stubClient(teachBackGrade)
+
+    await expect(
+      gradeExplanation({ client, concept, sections: [], explanation: 'It is a monoid.' }),
+    ).rejects.toThrow(/no section/i)
+    expect(client.chatStructured).not.toHaveBeenCalled()
+  })
+
+  it('rejects a grade that cites a section it was never given — a hallucinated citation is worse than none', async () => {
+    const client = stubClient({
+      ...teachBackGrade,
+      wrong: [{ claim: 'x', section_id: 'sec-9', correction: 'y' }],
+    })
+
+    await expect(
+      gradeExplanation({ client, concept, sections, explanation: 'It is a monoid.' }),
+    ).rejects.toThrow(/sec-9/)
   })
 })

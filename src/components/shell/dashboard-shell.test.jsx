@@ -6,6 +6,14 @@ import DashboardShell from './dashboard-shell'
 const { usePathname } = vi.hoisted(() => ({ usePathname: vi.fn() }))
 
 vi.mock('next/navigation', () => ({ usePathname }))
+// The bell's server actions reach the database through next/headers, which
+// has nothing to read outside a real request. Only DashboardShell's own
+// wiring is under test here, so the actions are stubbed rather than mocked
+// away entirely — the bell's own test file covers what they are called with.
+vi.mock('@/lib/actions/notifications.js', () => ({
+  markAllNotificationsReadAction: vi.fn(async () => {}),
+  markNotificationReadAction: vi.fn(async () => {}),
+}))
 
 describe('DashboardShell', () => {
   beforeEach(() => {
@@ -108,6 +116,33 @@ describe('DashboardShell', () => {
     const { container } = render(<DashboardShell>content</DashboardShell>)
 
     expect(container.querySelectorAll('[data-brand-mark]')).toHaveLength(0)
+  })
+
+  it('carries the notification bell, reachable from every page behind the frame', () => {
+    render(
+      <DashboardShell
+        notifications={[
+          {
+            id: 'n1',
+            title: '8 reviews are due',
+            body: 'A few minutes now keeps them from slipping further.',
+            created_at: '2026-07-26T09:00:00.000Z',
+            read_at: null,
+          },
+        ]}
+        unreadCount={1}
+      >
+        content
+      </DashboardShell>,
+    )
+
+    expect(screen.getByRole('button', { name: /notifications.*1 unread/i })).toBeInTheDocument()
+  })
+
+  it('offers the bell with nothing unread when no notifications are given', () => {
+    render(<DashboardShell>content</DashboardShell>)
+
+    expect(screen.getByRole('button', { name: /^notifications$/i })).toBeInTheDocument()
   })
 
   it('closes the open navigation when the route changes', async () => {

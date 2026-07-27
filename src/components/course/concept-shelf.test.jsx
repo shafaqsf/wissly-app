@@ -59,4 +59,43 @@ describe('the concept shelf', () => {
     expect(within(row).getByText('Snell’s law')).toBeInTheDocument()
     expect(within(row).getByText('In progress')).toBeInTheDocument()
   })
+
+  it('is silent about "see also" when nothing has been linked yet', () => {
+    render(<ConceptShelf concepts={[concepts[0]]} />)
+
+    expect(screen.queryByText('See also')).toBeNull()
+  })
+
+  it('lists what a concept was linked to, with the reason', () => {
+    const seeAlso = new Map([
+      [
+        'c1',
+        [
+          {
+            id: 'link-1',
+            conceptId: 'x1',
+            term: 'Cellular respiration',
+            subjectId: 'sub-2',
+            reason: 'Both are about turning one form of energy into another.',
+          },
+        ],
+      ],
+    ])
+
+    render(<ConceptShelf concepts={[concepts[0]]} seeAlso={seeAlso} />)
+
+    expect(screen.getByText('See also')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Cellular respiration' }),
+    ).toHaveAttribute('href', '/courses/sub-2#concept-x1')
+    expect(
+      screen.getByText(/Both are about turning one form of energy into another\./),
+    ).toBeInTheDocument()
+  })
+
+  it('gives every row an anchor a "see also" link elsewhere can jump to', () => {
+    const { container } = render(<ConceptShelf concepts={[concepts[0]]} />)
+
+    expect(container.querySelector('#concept-c1')).toBeInTheDocument()
+  })
 })

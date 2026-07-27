@@ -25,6 +25,15 @@ const tables = [...all.matchAll(/create table if not exists public\.(\w+)/g)].ma
 // history or the agent's transcript.
 const SHARED_READ_TABLES = ['subjects', 'sources', 'sections', 'concepts', 'artefacts']
 
+/**
+ * Tables with no `update` policy, on purpose. A row here is a judgement made
+ * once — wrong or stale, it is deleted and regenerated, never edited in
+ * place — so there is nothing for `update` to do, and (per migrations/
+ * README.md) an `update` policy with no work behind it is a trap, not a
+ * completeness requirement.
+ */
+const NO_UPDATE = new Set(['concept_links'])
+
 describe('migration files', () => {
   it('are numbered NNN_snake_case.sql', () => {
     expect(files.length).toBeGreaterThan(0)
@@ -36,12 +45,16 @@ describe('migration files', () => {
   // Ascending and unique, not gap-free. Order is what the database cares
   // about, and a duplicate number is the failure that actually costs data —
   // two files claiming 007 apply in an order nothing defines. A gap costs
-  // nothing: it is a number a sibling branch has already claimed and has yet
-  // to merge, and it closes on `main` when that branch lands.
+  // nothing: a branch reserves its number when it is written, not when it
+  // merges, so while siblings are in flight each one legitimately steps over
+  // numbers belonging to branches it has not seen. The gaps close as those
+  // branches land; the duplicates never fix themselves.
   it('are numbered in ascending order, with no number claimed twice', () => {
     const numbers = [...files].sort().map((name) => Number(name.slice(0, 3)))
     expect(numbers).toEqual([...numbers].sort((a, b) => a - b))
     expect(new Set(numbers).size).toBe(numbers.length)
+    // The sequence still has to start where the schema does.
+    expect(Math.min(...numbers)).toBe(1)
   })
 })
 
@@ -51,10 +64,12 @@ describe('the schema', () => {
       'agent_actions',
       'agent_runs',
       'artefacts',
+      'concept_links',
       'concepts',
       'conversations',
       'fsrs_weights',
       'messages',
+      'notifications',
       'reviews',
       'sections',
       'sources',
@@ -89,6 +104,7 @@ describe('row level security', () => {
   it('gives every table a policy for all four commands', () => {
     for (const table of tables) {
       for (const command of ['select', 'insert', 'update', 'delete']) {
+        if (NO_UPDATE.has(table) && command === 'update') continue
         const policy = new RegExp(`on public\\.${table} for ${command}\\b`)
         expect(all, `${table}.${command}`).toMatch(policy)
       }
@@ -101,6 +117,7 @@ describe('row level security', () => {
     // stands between "read-only by design" and "read-only by accident".
     for (const table of tables) {
       for (const command of ['insert', 'update', 'delete']) {
+        if (NO_UPDATE.has(table) && command === 'update') continue
         const policies = policiesFor(table, command)
         expect(policies, `${table}.${command}`).toHaveLength(1)
         expect(policies[0], `${table}.${command}`).toContain('to authenticated')
@@ -110,7 +127,7 @@ describe('row level security', () => {
   })
 
   it('gives every update policy both using and with check', () => {
-    for (const table of tables) {
+    for (const table of tables.filter((t) => !NO_UPDATE.has(t))) {
       const [policy] = policiesFor(table, 'update')
       expect(policy, table).toMatch(/using \(\(select auth\.uid\(\)\) = user_id\)/)
       expect(policy, table).toMatch(/with check \(\(select auth\.uid\(\)\) = user_id\)/)

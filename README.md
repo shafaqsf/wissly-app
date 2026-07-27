@@ -98,19 +98,40 @@ purpose — see [Design](#design).
 
 ### The agent
 
-One bar, on every screen, in two modes. The switch says what the agent may
+One bar, on every screen, in three modes. The switch says what the agent may
 *do*, not which model is behind it:
 
 - **Chat** reads your material and answers. It changes nothing. Its tools are
-  `search_sections`, `read_section` and `list_courses`, and that is all it has.
-- **Agent** also writes. It holds those three plus `make_artefacts` and
-  `rename_course`, and is told to read before it writes and to take the
-  smallest reading of a vague request — guessing large fills your review queue
-  with work you did not choose.
+  read-only — search, read a passage, list your courses and tasks, what is
+  due, a gap report, a suggested study plan, and grading a teach-back
+  explanation live against the source — and that is all it has.
+- **Socratic** holds exactly the same read-only tools as Chat. It answers
+  with a guiding question instead of the fact itself, grounded in your own
+  material, so you reach the answer rather than being handed it.
+- **Agent** also writes. It holds every read-only tool plus the full writing
+  surface — courses, material, every task type, moving, archiving,
+  rescheduling, and starting a course from a stated goal instead of uploaded
+  material — and is told to read before it writes and to take the smallest
+  reading of a vague request — guessing large fills your review queue with
+  work you did not choose.
 
-The guarantee is structural rather than a promise in a prompt. Chat mode cannot
-write because the agent it produces holds no tool that writes — not because it
-was asked nicely, and not because a button was disabled.
+The guarantee is structural rather than a promise in a prompt. Chat and
+Socratic cannot write because the agent each one produces holds no tool that
+writes — not because either was asked nicely, and not because a button was
+disabled.
+
+Say what you want to learn instead of what you explained: the agent can teach
+you back the concept you already have, or draft a starting course from
+nothing but a goal — "I want to understand eigenvalues for my exam." Material
+drafted this way is generated, not sourced, and is marked as such everywhere
+it appears — in its citation, and on the course shelf — because pretending a
+fabricated passage has a real page is exactly the confidently-wrong failure
+this product exists to prevent.
+
+If your browser ships the Web Speech API, a voice toggle on the bar lets you
+speak your question and hear the reply — no external account, nothing sent
+anywhere the rest of the product does not already go. A browser without it
+never shows the control.
 
 Everything the agent writes is logged as an action together with its inverse, so
 **every run can be taken back**. Undo replays those inverses newest first,
@@ -134,7 +155,7 @@ Built and wired end to end:
 - Concept and artefact generation across the six Stage 1 formats
 - The review queue, FSRS scheduling, and model-marked free recall
 - Concept mastery, the dashboard, the library and the progress page
-- The agent bar in both modes, with citations, queueing and undo
+- The agent bar in three modes, with citations, queueing and undo
 
 Not built yet:
 

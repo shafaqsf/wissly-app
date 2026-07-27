@@ -2,7 +2,12 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { FetchUrlError, fetchReadableText, readableTextFromHtml } from './fetch-url.js'
+import {
+  FetchUrlError,
+  fetchReadableText,
+  makeGuardedLookup,
+  readableTextFromHtml,
+} from './fetch-url.js'
 
 /** A response the way `fetch` hands it back. */
 function reply(body, { status = 200, contentType = 'text/html; charset=utf-8' } = {}) {
@@ -215,5 +220,182 @@ describe('fetchReadableText', () => {
         fetchReadableText('https://example.com/', { fetch: fetchImpl, lookup: publicLookup() }),
       ).rejects.toThrow(/redirected too many times/)
     })
+  })
+
+  /* The ceiling has to bite while the body is arriving, not after it has all
+     been held in memory — otherwise it is a report, not a limit. */
+  describe('the size ceiling', () => {
+    /** A response that streams `chunkCount` chunks of `chunkSize` bytes. */
+    function streamingReply(chunkCount, chunkSize) {
+      let sent = 0
+      const cancelled = { yes: false }
+
+      return {
+        response: {
+          ok: true,
+          status: 200,
+          headers: { get: () => 'text/html' },
+          body: {
+            getReader: () => ({
+              read: async () =>
+                sent++ < chunkCount
+                  ? { done: false, value: new Uint8Array(chunkSize) }
+                  : { done: true, value: undefined },
+              cancel: async () => {
+                cancelled.yes = true
+              },
+            }),
+          },
+          text: async () => {
+            throw new Error('the streaming path should not fall back to text()')
+          },
+        },
+        cancelled,
+        sentChunks: () => sent,
+      }
+    }
+
+    it('stops reading a body once it passes the ceiling, rather than buffering it all first', async () => {
+      const { response, cancelled, sentChunks } = streamingReply(1000, 1024)
+
+      await expect(
+        fetchReadableText('https://example.com/huge', {
+          fetch: async () => response,
+          lookup: publicLookup(),
+          maxBytes: 4096,
+        }),
+      ).rejects.toThrow(/too large/)
+
+      expect(cancelled.yes).toBe(true)
+      // Five 1KiB chunks is enough to pass a 4KiB ceiling; it must not have
+      // read on to the thousandth.
+      expect(sentChunks()).toBeLessThan(10)
+    })
+
+    it('reads a body that stays under the ceiling', async () => {
+      const html = '<article><p>Small enough.</p></article>'
+      const encoded = new TextEncoder().encode(html)
+      let sent = false
+
+      const result = await fetchReadableText('https://example.com/small', {
+        fetch: async () => ({
+          ok: true,
+          status: 200,
+          headers: { get: () => 'text/html' },
+          body: {
+            getReader: () => ({
+              read: async () =>
+                sent ? { done: true } : ((sent = true), { done: false, value: encoded }),
+              cancel: async () => {},
+            }),
+          },
+        }),
+        lookup: publicLookup(),
+        maxBytes: 4096,
+      })
+
+      expect(result.text).toBe('Small enough.')
+    })
+
+    it('measures bytes rather than characters, so multi-byte text cannot slip past', async () => {
+      // 3 bytes each in UTF-8, so 40 of them are 120 bytes against a 100-byte
+      // ceiling — but only 40 characters, which a `.length` check would pass.
+      const body = '→'.repeat(40)
+
+      await expect(
+        fetchReadableText('https://example.com/wide', {
+          fetch: async () => reply(body),
+          lookup: publicLookup(),
+          maxBytes: 100,
+        }),
+      ).rejects.toThrow(/too large/)
+    })
+  })
+})
+
+/* The pre-flight check approves an address; this is what the socket actually
+   resolves with. If the two can disagree, the guard is advisory — a name that
+   answers publicly once and privately a moment later would walk straight
+   past it. */
+describe('guardedLookup', () => {
+  /** Run the guard against a canned resolver answer. */
+  function resolveWith(answer, { hostname = 'example.test', options = {} } = {}) {
+    const lookup = makeGuardedLookup((_name, _options, callback) =>
+      Array.isArray(answer)
+        ? callback(null, answer)
+        : callback(null, answer.address, answer.family),
+    )
+
+    return new Promise((resolve) => {
+      lookup(hostname, options, (error, address, family) =>
+        resolve({ error, address, family }),
+      )
+    })
+  }
+
+  it('passes a public address through untouched', async () => {
+    const { error, address, family } = await resolveWith({
+      address: '93.184.216.34',
+      family: 4,
+    })
+
+    expect(error).toBeFalsy()
+    expect(address).toBe('93.184.216.34')
+    expect(family).toBe(4)
+  })
+
+  it('refuses a name that resolves into a private range', async () => {
+    const { error } = await resolveWith({ address: '10.1.2.3', family: 4 })
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error.message).toMatch(/will not fetch/)
+  })
+
+  it('refuses a name that resolves to the metadata endpoint', async () => {
+    const { error } = await resolveWith({ address: '169.254.169.254', family: 4 })
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error.message).toMatch(/will not fetch/)
+  })
+
+  it('refuses when any entry of an all:true answer is private', async () => {
+    const { error } = await resolveWith(
+      [
+        { address: '93.184.216.34', family: 4 },
+        { address: '127.0.0.1', family: 4 },
+      ],
+      { options: { all: true } },
+    )
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error.message).toMatch(/will not fetch/)
+  })
+
+  it('passes an all:true answer whose every entry is public', async () => {
+    const { error, address } = await resolveWith(
+      [
+        { address: '93.184.216.34', family: 4 },
+        { address: '2606:2800:220:1::', family: 6 },
+      ],
+      { options: { all: true } },
+    )
+
+    expect(error).toBeFalsy()
+    expect(address).toEqual([
+      { address: '93.184.216.34', family: 4 },
+      { address: '2606:2800:220:1::', family: 6 },
+    ])
+  })
+
+  it('passes a resolver failure straight back, rather than reading it as approval', async () => {
+    const lookup = makeGuardedLookup((_name, _options, callback) =>
+      callback(new Error('ENOTFOUND')),
+    )
+
+    const error = await new Promise((resolve) =>
+      lookup('gone.test', {}, (err) => resolve(err)),
+    )
+
+    expect(error.message).toBe('ENOTFOUND')
   })
 })

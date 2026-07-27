@@ -1,5 +1,7 @@
 import 'server-only'
+import { lookup as dnsLookupCallback } from 'node:dns'
 import { lookup as dnsLookup } from 'node:dns/promises'
+import { Agent } from 'undici'
 
 /**
  * Web link import — fetch a page server-side and reduce it to the readable
@@ -94,6 +96,56 @@ async function assertPublicHost(url, lookup) {
   }
 }
 
+/**
+ * The same check again, at the moment the socket is opened.
+ *
+ * `assertPublicHost` resolves the name and approves an address, and then
+ * `fetch` resolves the name a second time, independently, to decide where to
+ * connect. A name whose answer differs between those two lookups — a short
+ * TTL, a resolver the attacker controls — is approved on one address and
+ * connected on another, which is the whole guard undone. This closes the
+ * window by making the connection run the check itself: undici calls this
+ * instead of `dns.lookup`, so the address that is approved is by construction
+ * the address that is used.
+ *
+ * The earlier check stays. It is the one that still runs when a caller
+ * injects its own `fetch` (every test does), and it fails a blocked address
+ * before a socket is opened rather than during.
+ *
+ * The resolver is a parameter so the check can be tested without a real name
+ * that resolves the way a test needs; undici only ever calls the bound
+ * `guardedLookup` below.
+ *
+ * @param {typeof dnsLookupCallback} resolve
+ */
+export function makeGuardedLookup(resolve) {
+  return function guarded(hostname, options, callback) {
+    resolve(hostname, options, (error, address, family) => {
+      if (error) return callback(error)
+
+      // `all: true` answers with a list; anything private in it is a refusal,
+      // because the connector is free to try any entry.
+      const entries = Array.isArray(address) ? address : [{ address, family }]
+
+      for (const entry of entries) {
+        if (isBlockedAddress(entry.address, entry.family)) {
+          return callback(
+            new Error(`${hostname} resolves to an address wissly will not fetch.`),
+          )
+        }
+      }
+
+      return callback(null, address, family)
+    })
+  }
+}
+
+export const guardedLookup = makeGuardedLookup(dnsLookupCallback)
+
+/* One dispatcher for the whole module: undici pools connections per agent, and
+   a new one per request would throw that away. */
+const guardedAgent = new Agent({ connect: { lookup: guardedLookup } })
+
 const BLOCK_TAGS = ['script', 'style', 'noscript', 'template', 'svg', 'nav', 'header', 'footer', 'aside', 'form']
 
 function stripElements(html, tag) {
@@ -166,6 +218,50 @@ export function readableTextFromHtml(html) {
 }
 
 /**
+ * Read a response body, giving up as soon as it passes `maxBytes` rather than
+ * after.
+ *
+ * `await response.text()` buffers the whole body first and only then measures
+ * it, so the limit protected nothing that mattered: a page — or an endpoint
+ * pretending to be one — that streams gigabytes has already been held in this
+ * process's memory by the time the check runs. Reading in chunks and
+ * cancelling mid-stream makes the ceiling real.
+ *
+ * `Content-Length` is not trusted for this: it is a claim by the server being
+ * fetched, and the whole point here is that the server is not trusted.
+ *
+ * Falls back to `.text()` when the response carries no readable stream —
+ * which is every response the tests hand in.
+ */
+async function readCapped(response, maxBytes, where) {
+  const tooLarge = () => new FetchUrlError(`${where} is too large a page to import.`)
+  const reader = response.body?.getReader?.()
+
+  if (!reader) {
+    const text = await response.text()
+    if (Buffer.byteLength(text, 'utf8') > maxBytes) throw tooLarge()
+    return text
+  }
+
+  const chunks = []
+  let total = 0
+
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {})
+      throw tooLarge()
+    }
+    chunks.push(value)
+  }
+
+  return new TextDecoder('utf-8').decode(Buffer.concat(chunks))
+}
+
+/**
  * Fetch a URL and reduce it to readable text, ready for `ingestSource({kind:
  * 'url', text })`.
  *
@@ -207,6 +303,10 @@ export async function fetchReadableText(
         signal: controller.signal,
         redirect: 'manual',
         headers: { 'User-Agent': 'wissly/1.0 (+https://wissly.app)' },
+        // Only the real fetch understands this, and only the real fetch
+        // opens a socket that could be pointed somewhere else between the
+        // check above and the connection — see `guardedLookup`.
+        ...(fetchImpl === globalThis.fetch ? { dispatcher: guardedAgent } : {}),
       })
     } catch (cause) {
       throw new FetchUrlError(`Could not reach ${current}. Check the address and try again.`, { cause })
@@ -234,10 +334,7 @@ export async function fetchReadableText(
     throw new FetchUrlError(`${current} is not a web page wissly can read (${contentType.split(';')[0]}).`)
   }
 
-  const html = await response.text()
-  if (html.length > maxBytes) {
-    throw new FetchUrlError(`${current} is too large a page to import.`)
-  }
+  const html = await readCapped(response, maxBytes, current)
 
   const { title, text } = readableTextFromHtml(html)
 
